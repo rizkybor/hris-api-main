@@ -1,0 +1,288 @@
+@baseUrl = http://localhost:8000/api/v1
+@token = YOUR_JWT_TOKEN_HERE
+
+####################################
+# AUTH
+####################################
+
+### Login
+POST {{baseUrl}}/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "employee@gmail.com",
+  "password": "password"
+}
+
+####################################
+# PROFILE
+####################################
+
+### Get My Profile
+GET {{baseUrl}}/me
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# TEAM
+####################################
+
+### Get All Teams
+GET {{baseUrl}}/teams?search=Elang&leader_id=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Teams Paginated
+GET {{baseUrl}}/teams/all/paginated?row_per_page=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Team By ID
+GET {{baseUrl}}/teams/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Team
+POST {{baseUrl}}/teams
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Team Elang",
+  "department": "marketing",
+  "responsibilities": [
+    "Menagih hutang ke customer",
+    "Mencatat keuangan",
+    "Mematikan PDAM"
+  ]
+}
+
+### Update Team
+PUT {{baseUrl}}/teams/3
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Team Elang Update"
+}
+
+### Delete Team
+DELETE {{baseUrl}}/teams/2
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# EMPLOYEE
+####################################
+
+### Get Employees
+GET {{baseUrl}}/employees?status=active&type=full_time&work_location=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Employees Paginated
+GET {{baseUrl}}/employees/all/paginated?row_per_page=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Employee
+POST {{baseUrl}}/employees
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Muhamad Rafli Al Farizqi",
+  "email": "rafli@employee.com",
+  "password": "password",
+  "identity_number": "2311102311",
+  "phone": "085325483259",
+  "date_of_birth": "2006-04-20",
+  "gender": "male",
+  "address": "Jalan Soekarno Hatta No 12",
+  "city": "Jakarta",
+  "postal_code": "52276",
+  "job_title": "Backend Developer",
+  "years_experience": 3,
+  "job_status": "active",
+  "employment_type": "full_time",
+  "work_location": "remote",
+  "start_date": "2025-09-18",
+  "monthly_salary": 5000000,
+  "skill_level": "advanced",
+  "bank_name": "bri",
+  "account_number": "88992131231",
+  "account_holder_name": "Muhamad Rafli Al Farizqi",
+  "account_type": "savings",
+  "emergency_contacts": [
+    "Grashela"
+  ]
+}
+
+### Update Employee
+PUT {{baseUrl}}/employees/2
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Joni",
+  "email": "joni@employee.com",
+  "job_title": "Frontend Developer",
+  "status": "resigned",
+  "employment_type": "contract",
+  "monthly_salary": 300000
+}
+
+### Delete Employee
+DELETE {{baseUrl}}/employees/2
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# PROJECT
+####################################
+
+### Get Projects
+GET {{baseUrl}}/projects?search=design&status=active
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Project
+POST {{baseUrl}}/projects
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "E-commerce Platform Redesign",
+  "type": "design",
+  "priority": "high",
+  "status": "draft",
+  "start_date": "2025-09-20",
+  "budget": 60000000
+}
+
+### Update Project
+PUT {{baseUrl}}/projects/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "budget": 5000000,
+  "teams": [1],
+  "project_leader_id": 2
+}
+
+### Delete Project
+DELETE {{baseUrl}}/projects/2
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# TASK
+####################################
+
+### Get Project Tasks
+GET {{baseUrl}}/project-tasks?project_id=1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Task
+POST {{baseUrl}}/project-tasks
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "project_id": 1,
+  "name": "Design Landing Page",
+  "priority": "high",
+  "status": "todo"
+}
+
+### Update Task
+PUT {{baseUrl}}/project-tasks/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "done"
+}
+
+### Delete Task
+DELETE {{baseUrl}}/project-tasks/2
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# ATTENDANCE
+####################################
+
+### Check In
+POST {{baseUrl}}/attendances/check-in
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "check_in_lat": -7.451584,
+  "check_in_long": 109.259628
+}
+
+### Check Out
+POST {{baseUrl}}/attendances/check-out
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "check_out_lat": -7.451584,
+  "check_out_long": 109.259628
+}
+
+####################################
+# LEAVE REQUEST
+####################################
+
+### Create Leave Request
+POST {{baseUrl}}/leave-requests
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "leave_type": "sick_leave",
+  "start_date": "2025-09-20",
+  "end_date": "2025-09-22",
+  "reason": "lorem"
+}
+
+### Approve Leave
+POST {{baseUrl}}/leave-requests/approve/2
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Reject Leave
+POST {{baseUrl}}/leave-requests/reject/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# PAYROLL
+####################################
+
+### Generate Payroll
+POST {{baseUrl}}/payrolls/generate
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Mark Payroll As Paid
+POST {{baseUrl}}/payrolls/1/mark-as-paid
+Accept: application/json
+Authorization: Bearer {{token}}
