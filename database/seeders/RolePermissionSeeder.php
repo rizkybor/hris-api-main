@@ -41,6 +41,8 @@ class RolePermissionSeeder extends Seeder
                 'task-',
                 'attendance-',
                 'leave-request-',
+                'account-password-',
+                'company-about-'
             ], $employeeSpecific));
 
             $employee->syncPermissions(
@@ -86,6 +88,25 @@ class RolePermissionSeeder extends Seeder
                     'payroll-delete',
                     'payroll-process',
                     'payroll-statistics',
+                    'account-password-menu',
+                    'account-password-list',
+                    'account-password-create',
+                    'account-password-edit',
+                    'account-password-delete',
+                    'account-password-process',
+                    'account-password-statistics',
+                    'files-company-menu',
+                    'files-company-list',
+                    'files-company-create',
+                    'files-company-edit',
+                    'files-company-delete',
+                    'files-company-process',
+                    'files-company-statistics',
+                    'company-about-menu',
+                    'company-about-list',
+                    'company-about-create',
+                    'company-about-edit',
+                    'company-about-delete',
                 ])->get()
             );
         });
