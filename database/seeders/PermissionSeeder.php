@@ -79,6 +79,34 @@ class PermissionSeeder extends Seeder
             'process',
             'statistics',
         ],
+
+        'company-about' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'account-password' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'process',
+            'statistics',
+        ],
+
+        'files-company' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'process',
+            'statistics',
+        ],
     ];
 
     /**

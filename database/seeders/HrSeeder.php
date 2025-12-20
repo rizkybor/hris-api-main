@@ -13,9 +13,9 @@ class HrSeeder extends Seeder
     public function run(): void
     {
         $employee = User::create([
-            'name' => 'Hr',
-            'email' => 'hr@gmail.com',
-            'password' => bcrypt('password'),
+            'name' => 'Aldi PP, S.Ikom.',
+            'email' => 'aldijcd@jcdigital.co.id',
+            'password' => bcrypt('@Benzema09'),
             'profile_photo' => 'profile-pictures/male/3.avif',
         ]);
 
@@ -47,7 +47,7 @@ class HrSeeder extends Seeder
             'employee_id' => $employeeProfile->id,
             'bank_name' => 'bca',
             'account_number' => '244422131',
-            'account_holder_name' => 'Hr',
+            'account_holder_name' => 'Aldi Pratama Putra',
             'account_type' => 'saving',
         ]);
 

@@ -13,9 +13,9 @@ class FinanceSeeder extends Seeder
     public function run(): void
     {
         $employee = User::create([
-            'name' => 'Finance',
-            'email' => 'finance@gmail.com',
-            'password' => bcrypt('password'),
+            'name' => 'Andy S, S.T.',
+            'email' => 'andyjcd@jcdigital.co.id',
+            'password' => bcrypt('mahasuciAllah1'),
             'profile_photo' => 'profile-pictures/female/1.avif',
         ]);
 
@@ -47,7 +47,7 @@ class FinanceSeeder extends Seeder
             'employee_id' => $employeeProfile->id,
             'bank_name' => 'BCA',
             'account_number' => '9876543210',
-            'account_holder_name' => 'Finance',
+            'account_holder_name' => 'Andy Saputra',
             'account_type' => 'saving',
         ]);
 
