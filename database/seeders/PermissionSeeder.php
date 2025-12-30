@@ -98,6 +98,13 @@ class PermissionSeeder extends Seeder
             'statistics',
         ],
 
+        'credential-account' => [
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
         'files-company' => [
             'menu',
             'list',

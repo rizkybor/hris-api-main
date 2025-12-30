@@ -1,5 +1,9 @@
 @baseUrl = http://localhost:8000/api/v1
-@token = YOUR_JWT_TOKEN_HERE
+@token = 2|St6JlNHRgUMYVUQUwsSmbfJG8aE9RcrhNnoNlFzZ0add3c06
+
+
+# 'email' => 'rizkyjcd@jcdigital.co.id'
+# 'password' => atasizinAllah#2511
 
 ####################################
 # AUTH
@@ -11,8 +15,8 @@ Accept: application/json
 Content-Type: application/json
 
 {
-  "email": "employee@gmail.com",
-  "password": "password"
+  "email": "rizkyjcd@jcdigital.co.id",
+  "password": "atasizinAllah#2511"
 }
 
 ####################################
