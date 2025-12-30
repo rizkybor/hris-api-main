@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CredentialAccountController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeProfileController;
+use App\Http\Controllers\FilesCompanyController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\OptionController;
 use App\Http\Controllers\PayrollController;
@@ -86,5 +88,13 @@ Route::prefix('v1')
             // Dashboard routes
             Route::get('dashboard/statistics', [DashboardController::class, 'getStatistics']);
             Route::get('dashboard/my-statistics', [DashboardController::class, 'getEmployeeStatistics']);
+
+            // Credential Account routes
+            Route::get('credential-accounts/all/paginated', [CredentialAccountController::class, 'getAllPaginated']);
+            Route::apiResource('credential-accounts', CredentialAccountController::class);
+
+            // Files Company routes
+            Route::get('files-companies/all/paginated', [FilesCompanyController::class, 'getAllPaginated']);
+            Route::apiResource('files-companies', FilesCompanyController::class);
         });
     });
