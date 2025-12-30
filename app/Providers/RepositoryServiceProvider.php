@@ -5,9 +5,11 @@ namespace App\Providers;
 use App\Interfaces\AttendanceRepositoryInterface;
 use App\Interfaces\AuthRepositoryInterface;
 use App\Interfaces\BankInformationRepositoryInterface;
+use App\Interfaces\CredentialAccountRepositoryInterface;
 use App\Interfaces\DashboardRepositoryInterface;
 use App\Interfaces\EmergencyContactRepositoryInterface;
 use App\Interfaces\EmployeeProfileRepositoryInterface;
+use App\Interfaces\FilesCompanyRepositoryInterface;
 use App\Interfaces\JobInformationRepositoryInterface;
 use App\Interfaces\LeaveRequestRepositoryInterface;
 use App\Interfaces\PayrollRepositoryInterface;
@@ -18,9 +20,11 @@ use App\Interfaces\UserRepositoryInterface;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\AuthRepository;
 use App\Repositories\BankInformationRepository;
+use App\Repositories\CredentialAccountRepository;
 use App\Repositories\DashboardRepository;
 use App\Repositories\EmergencyContactRepository;
 use App\Repositories\EmployeeProfileRepository;
+use App\Repositories\FilesCompanyRepository;
 use App\Repositories\JobInformationRepository;
 use App\Repositories\LeaveRequestRepository;
 use App\Repositories\PayrollRepository;
@@ -50,6 +54,8 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(LeaveRequestRepositoryInterface::class, LeaveRequestRepository::class);
         $this->app->bind(DashboardRepositoryInterface::class, DashboardRepository::class);
         $this->app->bind(PayrollRepositoryInterface::class, PayrollRepository::class);
+        $this->app->bind(CredentialAccountRepositoryInterface::class, CredentialAccountRepository::class);
+        $this->app->bind(FilesCompanyRepositoryInterface::class, FilesCompanyRepository::class);
     }
 
     /**

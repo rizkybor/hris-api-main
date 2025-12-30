@@ -42,6 +42,8 @@ class RolePermissionSeeder extends Seeder
                 'attendance-',
                 'leave-request-',
                 'account-password-',
+                'credential-account-',
+                'files-company-',
                 'company-about-'
             ], $employeeSpecific));
 
@@ -95,6 +97,10 @@ class RolePermissionSeeder extends Seeder
                     'account-password-delete',
                     'account-password-process',
                     'account-password-statistics',
+                    'credential-account-list',
+                    'credential-account-create',
+                    'credential-account-edit',
+                    'credential-account-delete',
                     'files-company-menu',
                     'files-company-list',
                     'files-company-create',
