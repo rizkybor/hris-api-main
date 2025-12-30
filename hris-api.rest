@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8000/api/v1
-@token = 2|St6JlNHRgUMYVUQUwsSmbfJG8aE9RcrhNnoNlFzZ0add3c06
+@token = 2|qi52C33ByT1w0iSIy21wePl06vxp71jT6tki6U8Z2b2efc81
 
 
 # 'email' => 'rizkyjcd@jcdigital.co.id'
@@ -15,8 +15,8 @@ Accept: application/json
 Content-Type: application/json
 
 {
-  "email": "rizkyjcd@jcdigital.co.id",
-  "password": "atasizinAllah#2511"
+  "email": "employee@gmail.com",
+  "password": "password"
 }
 
 ####################################
