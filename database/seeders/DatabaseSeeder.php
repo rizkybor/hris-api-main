@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             EmployeeSeeder::class,
             HrSeeder::class,
             FinanceSeeder::class,
+            CredentialAccountSeeder::class,
+            FilesCompanySeeder::class,
 
             // 3. Seed employee profiles with complete data (User, Profile, Job, Bank, Emergency Contacts)
             // EmployeeProfileSeeder::class,
