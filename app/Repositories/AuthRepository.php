@@ -20,7 +20,9 @@ class AuthRepository implements AuthRepositoryInterface
                 throw new \Exception('Unauthorized', 401);
             }
 
-            $user = Auth::user()->load('roles');
+            /** @var User $user */
+            $user = Auth::user();
+            $user->load('roles');
             $user->token = $user->createToken('auth_token')->plainTextToken;
 
             DB::commit();
@@ -29,7 +31,7 @@ class AuthRepository implements AuthRepositoryInterface
         } catch (\Exception $e) {
             DB::rollBack();
 
-            throw new \Exception($e->getMessage(), $e->getCode());
+            throw new \Exception($e->getMessage(), $e->getCode() ?: 500);
         }
     }
 
@@ -39,7 +41,9 @@ class AuthRepository implements AuthRepositoryInterface
             throw new \Exception('Unauthorized', 401);
         }
 
-        $user = Auth::user()->load(['roles', 'permissions']);
+        /** @var User $user */
+        $user = Auth::user();
+        $user->load(['roles', 'permissions']);
 
         if ($user->hasRole('employee')) {
             $user->load('employeeProfile');
@@ -54,6 +58,7 @@ class AuthRepository implements AuthRepositoryInterface
             throw new \Exception('Unauthorized', 401);
         }
 
+        /** @var User $user */
         $user = Auth::user();
         $user->tokens()->delete();
 
@@ -69,6 +74,7 @@ class AuthRepository implements AuthRepositoryInterface
                 throw new \Exception('Unauthorized', 401);
             }
 
+            /** @var User $user */
             $user = Auth::user();
 
             if (isset($data['name'])) {
@@ -93,7 +99,11 @@ class AuthRepository implements AuthRepositoryInterface
 
             DB::commit();
 
-            return $user->fresh()->load(['roles', 'permissions']);
+            /** @var User $freshUser */
+            $freshUser = $user->fresh();
+            $freshUser->load(['roles', 'permissions']);
+
+            return $freshUser;
         } catch (\Exception $e) {
             DB::rollBack();
             throw new \Exception($e->getMessage(), $e->getCode() ?: 500);
