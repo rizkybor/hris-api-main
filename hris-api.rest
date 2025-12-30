@@ -286,3 +286,103 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/payrolls/1/mark-as-paid
 Accept: application/json
 Authorization: Bearer {{token}}
+
+####################################
+# CREDENTIAL ACCOUNT
+####################################
+
+### Get All Credential Accounts
+GET {{baseUrl}}/credential-accounts?search=GitHub&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Credential Accounts Paginated
+GET {{baseUrl}}/credential-accounts/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Credential Account By ID
+GET {{baseUrl}}/credential-accounts/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Credential Account
+POST {{baseUrl}}/credential-accounts
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account",
+  "username_email": "developer@company.com",
+  "password": "SecurePassword123!",
+  "website": "https://github.com",
+  "notes": "Main development account for version control"
+}
+
+### Update Credential Account
+PUT {{baseUrl}}/credential-accounts/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account Updated",
+  "username_email": "dev@company.com",
+  "password": "NewSecurePassword456!",
+  "website": "https://github.com",
+  "notes": "Updated development account"
+}
+
+### Delete Credential Account
+DELETE {{baseUrl}}/credential-accounts/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# FILES COMPANY
+####################################
+
+### Get All Company Files
+GET {{baseUrl}}/files-companies?search=handbook&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Company Files Paginated
+GET {{baseUrl}}/files-companies/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Company File By ID
+GET {{baseUrl}}/files-companies/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Company File
+POST {{baseUrl}}/files-companies
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "path": "company-files/policies/employee-handbook.pdf",
+  "name": "Employee Handbook 2024",
+  "description": "Complete employee handbook with company policies, code of conduct, and procedures"
+}
+
+### Update Company File
+PUT {{baseUrl}}/files-companies/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "path": "company-files/policies/employee-handbook-2024.pdf",
+  "name": "Employee Handbook 2024 Updated",
+  "description": "Updated employee handbook with latest policies"
+}
+
+### Delete Company File
+DELETE {{baseUrl}}/files-companies/1
+Accept: application/json
+Authorization: Bearer {{token}}
