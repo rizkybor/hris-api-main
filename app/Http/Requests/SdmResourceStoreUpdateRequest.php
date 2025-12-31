@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class SdmResourceStoreUpdateRequest extends FormRequest
+{
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'sdm_component' => ['sometimes', 'required', 'string', 'max:255'],
+            'metrik' => ['sometimes', 'required', 'string', 'max:255'],
+            'capacity_target' => ['sometimes', 'required', 'string', 'max:255'],
+            'actual' => ['sometimes', 'required', 'numeric', 'min:0'],
+            'rag_status' => ['sometimes', 'required', 'string', 'in:active,inactive'],
+        ];
+    }
+
+    public function attributes()
+    {
+        return [
+            'sdm_component' => 'SDM Component',
+            'metrik' => 'Metrik',
+            'capacity_target' => 'Capacity Target',
+            'actual' => 'Actual',
+            'rag_status' => 'RAG Status',
+        ];
+    }
+}
