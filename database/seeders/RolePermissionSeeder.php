@@ -41,10 +41,10 @@ class RolePermissionSeeder extends Seeder
                 'task-',
                 'attendance-',
                 'leave-request-',
-                'account-password-',
                 'credential-account-',
                 'files-company-',
-                'company-about-'
+                'company-about-',
+                'sdm-resource-',
             ], $employeeSpecific));
 
             $employee->syncPermissions(
@@ -68,6 +68,7 @@ class RolePermissionSeeder extends Seeder
                     'task-create',
                     'task-list',
                     'task-edit',
+                    'company-about-menu',
                 ])->get()
             );
 
@@ -90,13 +91,6 @@ class RolePermissionSeeder extends Seeder
                     'payroll-delete',
                     'payroll-process',
                     'payroll-statistics',
-                    'account-password-menu',
-                    'account-password-list',
-                    'account-password-create',
-                    'account-password-edit',
-                    'account-password-delete',
-                    'account-password-process',
-                    'account-password-statistics',
                     'credential-account-list',
                     'credential-account-create',
                     'credential-account-edit',
@@ -109,10 +103,25 @@ class RolePermissionSeeder extends Seeder
                     'files-company-process',
                     'files-company-statistics',
                     'company-about-menu',
-                    'company-about-list',
                     'company-about-create',
                     'company-about-edit',
                     'company-about-delete',
+                    'company-finance-list',
+                    'company-finance-create',
+                    'company-finance-edit',
+                    'company-finance-delete',
+                    'fixed-cost-list',
+                    'fixed-cost-create',
+                    'fixed-cost-edit',
+                    'fixed-cost-delete',
+                    'infrastructure-tool-list',
+                    'infrastructure-tool-create',
+                    'infrastructure-tool-edit',
+                    'infrastructure-tool-delete',
+                    'sdm-resource-list',
+                    'sdm-resource-create',
+                    'sdm-resource-edit',
+                    'sdm-resource-delete',
                 ])->get()
             );
         });
