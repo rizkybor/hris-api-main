@@ -390,3 +390,212 @@ Content-Type: application/json
 DELETE {{baseUrl}}/files-companies/1
 Accept: application/json
 Authorization: Bearer {{token}}
+
+
+####################################
+# COMPANY FINANCE
+####################################
+
+### Get All Company Finances
+GET {{baseUrl}}/company-finances?search=GitHub&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Company Finances Paginated
+GET {{baseUrl}}/company-finances/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Company Finance By ID
+GET {{baseUrl}}/company-finances/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Company Finance
+POST {{baseUrl}}/company-finances
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account",
+  "username_email": "developer@company.com",
+  "password": "SecurePassword123!",
+  "website": "https://github.com",
+  "notes": "Main development account for version control"
+}
+
+### Update Company Finance
+PUT {{baseUrl}}/company-finances/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account Updated",
+  "username_email": "dev@company.com",
+  "password": "NewSecurePassword456!",
+  "website": "https://github.com",
+  "notes": "Updated development account"
+}
+
+### Delete Company Finance
+DELETE {{baseUrl}}/company-finances/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# SDM RESOURCE
+####################################
+
+### Get All SDM Resource
+GET {{baseUrl}}/sdm-resources?search=GitHub&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get SDM Resources Paginated
+GET {{baseUrl}}/sdm-resources/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get SDM Resource By ID
+GET {{baseUrl}}/sdm-resources/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create SDM Resource
+POST {{baseUrl}}/sdm-respurces
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account",
+  "username_email": "developer@company.com",
+  "password": "SecurePassword123!",
+  "website": "https://github.com",
+  "notes": "Main development account for version control"
+}
+
+### Update SDM Resources
+PUT {{baseUrl}}/sdm-resources/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account Updated",
+  "username_email": "dev@company.com",
+  "password": "NewSecurePassword456!",
+  "website": "https://github.com",
+  "notes": "Updated development account"
+}
+
+### Delete SDM Resource
+DELETE {{baseUrl}}/sdm-resources/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# INFRASTRUCTURE TOOL
+####################################
+
+### Get All Infrastructure Tools
+GET {{baseUrl}}/infrastructure-tools?search=GitHub&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Infrastructure Tools Paginated
+GET {{baseUrl}}/infrastructure-tools/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Infrastructure Tool By ID
+GET {{baseUrl}}/infrastructure-tools/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Infrastructure Tool
+POST {{baseUrl}}/infrastructure-tools
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account",
+  "username_email": "developer@company.com",
+  "password": "SecurePassword123!",
+  "website": "https://github.com",
+  "notes": "Main development account for version control"
+}
+
+### Update Infrastructure Tool
+PUT {{baseUrl}}/infrastructure-tools/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account Updated",
+  "username_email": "dev@company.com",
+  "password": "NewSecurePassword456!",
+  "website": "https://github.com",
+  "notes": "Updated development account"
+}
+
+### Delete Infrastructure Tool
+DELETE {{baseUrl}}/infrastructure-tools/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+####################################
+# FIXED COST
+####################################
+
+### Get All Fixed Costs
+GET {{baseUrl}}/fixed-costs?search=GitHub&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Fixed Costs Paginated
+GET {{baseUrl}}/fixed-costs/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Fixed Cost By ID
+GET {{baseUrl}}/fixed-costs/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Fixed Cost
+POST {{baseUrl}}/fixed-costs
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account",
+  "username_email": "developer@company.com",
+  "password": "SecurePassword123!",
+  "website": "https://github.com",
+  "notes": "Main development account for version control"
+}
+
+### Update Fixed Cost
+PUT {{baseUrl}}/fixed-costs/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label_password": "GitHub Account Updated",
+  "username_email": "dev@company.com",
+  "password": "NewSecurePassword456!",
+  "website": "https://github.com",
+  "notes": "Updated development account"
+}
+
+### Delete Fixed Cost
+DELETE {{baseUrl}}/fixed-costs/1
+Accept: application/json
+Authorization: Bearer {{token}}
