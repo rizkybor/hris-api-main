@@ -13,7 +13,6 @@ class SdmResourceDTO
 
     public function __construct(array $data)
     {
-        $this->no = $data['no'];
         $this->sdm_component = $data['sdm_component'];
         $this->metrik = $data['metrik'];
         $this->capacity_target = floatval($data['capacity_target']);
@@ -35,7 +34,6 @@ class SdmResourceDTO
     public function toArray(): array
     {
         return [
-            'no' => $this->no,
             'sdm_component' => $this->sdm_component,
             'metrik' => $this->metrik,
             'capacity_target' => $this->capacity_target,

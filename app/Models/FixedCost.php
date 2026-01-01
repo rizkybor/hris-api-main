@@ -11,7 +11,7 @@ class FixedCost extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'no', 'financial_items', 'description', 'budget', 'actual'
+        'financial_items', 'description', 'budget', 'actual'
     ];
 
     protected $casts = [

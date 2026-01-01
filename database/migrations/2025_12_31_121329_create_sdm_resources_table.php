@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('sdm_resources', function (Blueprint $table) {
             $table->id();
-            $table->integer('no');
             $table->string('sdm_component');
             $table->string('metrik');
             $table->decimal('capacity_target', 15, 2);

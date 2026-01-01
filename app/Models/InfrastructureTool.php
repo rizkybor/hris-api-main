@@ -11,7 +11,7 @@ class InfrastructureTool extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'no', 'tech_stack_component', 'vendor', 'monthly_fee', 'annual_fee', 'expired_date', 'status'
+        'tech_stack_component', 'vendor', 'monthly_fee', 'annual_fee', 'expired_date', 'status'
     ];
 
     protected $casts = [

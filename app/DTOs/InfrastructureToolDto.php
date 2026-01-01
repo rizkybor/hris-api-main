@@ -4,7 +4,6 @@ namespace App\DTOs;
 
 class InfrastructureToolDTO
 {
-    public int $no;
     public string $tech_stack_component;
     public string $vendor;
     public float $monthly_fee;
@@ -14,7 +13,6 @@ class InfrastructureToolDTO
 
     public function __construct(array $data)
     {
-        $this->no = $data['no'];
         $this->tech_stack_component = $data['tech_stack_component'];
         $this->vendor = $data['vendor'];
         $this->monthly_fee = floatval($data['monthly_fee']);
@@ -37,7 +35,6 @@ class InfrastructureToolDTO
     public function toArray(): array
     {
         return [
-            'no' => $this->no,
             'tech_stack_component' => $this->tech_stack_component,
             'vendor' => $this->vendor,
             'monthly_fee' => $this->monthly_fee,

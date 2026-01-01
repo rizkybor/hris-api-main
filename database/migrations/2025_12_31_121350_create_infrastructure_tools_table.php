@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('infrastructure_tools', function (Blueprint $table) {
             $table->id();
-            $table->integer('no');
             $table->string('tech_stack_component');
             $table->string('vendor');
             $table->decimal('monthly_fee', 15, 2);

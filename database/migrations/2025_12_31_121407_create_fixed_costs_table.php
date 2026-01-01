@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('fixed_costs', function (Blueprint $table) {
             $table->id();
-            $table->integer('no');
             $table->string('financial_items');
             $table->text('description');
             $table->decimal('budget', 15, 2);

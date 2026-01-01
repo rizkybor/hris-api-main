@@ -11,7 +11,7 @@ class SdmResource extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'no', 'sdm_component', 'metrik', 'capacity_target', 'actual', 'rag_status'
+        'sdm_component', 'metrik', 'capacity_target', 'actual', 'rag_status'
     ];
 
     protected $casts = [

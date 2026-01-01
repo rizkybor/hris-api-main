@@ -4,7 +4,6 @@ namespace App\DTOs;
 
 class FixedCostDTO
 {
-    public int $no;
     public string $financial_items;
     public string $description;
     public float $budget;
@@ -12,7 +11,6 @@ class FixedCostDTO
 
     public function __construct(array $data)
     {
-        $this->no = $data['no'];
         $this->financial_items = $data['financial_items'];
         $this->description = $data['description'];
         $this->budget = floatval($data['budget']);
@@ -33,7 +31,6 @@ class FixedCostDTO
     public function toArray(): array
     {
         return [
-            'no' => $this->no,
             'financial_items' => $this->financial_items,
             'description' => $this->description,
             'budget' => $this->budget,
