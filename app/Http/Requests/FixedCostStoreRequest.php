@@ -23,8 +23,8 @@ class FixedCostStoreRequest extends FormRequest
     {
         return [
             'financial_items' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'numeric', 'min:0'],
-            'budget' => ['nullable', 'string'],
+            'description' => ['required', 'string', 'max:255'],
+            'budget' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

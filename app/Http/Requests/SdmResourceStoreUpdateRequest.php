@@ -17,7 +17,7 @@ class SdmResourceStoreUpdateRequest extends FormRequest
             'sdm_component' => ['sometimes', 'required', 'string', 'max:255'],
             'metrik' => ['sometimes', 'required', 'string', 'max:255'],
             'capacity_target' => ['sometimes', 'required', 'string', 'max:255'],
-            'actual' => ['sometimes', 'required', 'numeric', 'min:0'],
+            'actual' => ['nullable', 'required', 'numeric', 'min:0'],
             'rag_status' => ['sometimes', 'required', 'string', 'in:active,inactive'],
         ];
     }

@@ -400,6 +400,11 @@ Authorization: Bearer {{token}}
 # COMPANY FINANCE
 ####################################
 
+### Get All SDM Resource
+GET {{baseUrl}}/company-finances?search=GitHub&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
 ### Get Company Finances Paginated
 GET {{baseUrl}}/company-finances/all/paginated?row_per_page=10&search=
 Accept: application/json
@@ -417,11 +422,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "label_password": "GitHub Account",
-  "username_email": "developer@company.com",
-  "password": "SecurePassword123!",
-  "website": "https://github.com",
-  "notes": "Main development account for version control"
+  "saldo_company": 1000000.00
 }
 
 ### Update Company Finance
@@ -431,11 +432,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "label_password": "GitHub Account Updated",
-  "username_email": "dev@company.com",
-  "password": "NewSecurePassword456!",
-  "website": "https://github.com",
-  "notes": "Updated development account"
+  "saldo_company": 1500000.00
 }
 
 ### Delete Company Finance
@@ -469,11 +466,11 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "label_password": "GitHub Account",
-  "username_email": "developer@company.com",
-  "password": "SecurePassword123!",
-  "website": "https://github.com",
-  "notes": "Main development account for version control"
+  "sdm_component": "Laptop",
+  "metrik": "Unit",
+  "capacity_target": 50,
+  "actual": 5000000.00,
+  "rag_status": "Green"
 }
 
 ### Update SDM Resources
@@ -483,11 +480,11 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "label_password": "GitHub Account Updated",
-  "username_email": "dev@company.com",
-  "password": "NewSecurePassword456!",
-  "website": "https://github.com",
-  "notes": "Updated development account"
+  "sdm_component": "Laptop Updated",
+  "metrik": "Unit",
+  "capacity_target": 60,
+  "actual": 6000000.00,
+  "rag_status": "Amber"
 }
 
 ### Delete SDM Resource
@@ -521,11 +518,12 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "label_password": "GitHub Account",
-  "username_email": "developer@company.com",
-  "password": "SecurePassword123!",
-  "website": "https://github.com",
-  "notes": "Main development account for version control"
+  "tech_stack_component": "GitHub",
+  "vendor": "GitHub Inc.",
+  "monthly_fee": 29000000.99,
+  "annual_fee": 299000000.99,
+  "expired_date": "2026-09-18",
+  "status": "active"
 }
 
 ### Update Infrastructure Tool
@@ -535,11 +533,12 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "label_password": "GitHub Account Updated",
-  "username_email": "dev@company.com",
-  "password": "NewSecurePassword456!",
-  "website": "https://github.com",
-  "notes": "Updated development account"
+  "tech_stack_component": "GitHub Updated",
+  "vendor": "GitHub Inc.",
+  "monthly_fee": 30000000.00,
+  "annual_fee": 310000000.00,
+  "expired_date": "2027-09-18",
+  "status": "inactive"
 }
 
 ### Delete Infrastructure Tool
@@ -573,11 +572,10 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "label_password": "GitHub Account",
-  "username_email": "developer@company.com",
-  "password": "SecurePassword123!",
-  "website": "https://github.com",
-  "notes": "Main development account for version control"
+  "financial_items": "GitHub Subscription",
+  "description": "Monthly subscription for GitHub services",
+  "budget": 299000000.99,
+  "actual": 29000000.99
 }
 
 ### Update Fixed Cost

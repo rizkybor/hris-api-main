@@ -24,8 +24,8 @@ class InfrastructureToolStoreRequest extends FormRequest
         return [
             'tech_stack_component' => ['required', 'string', 'max:255'],
             'vendor' => ['required', 'string', 'max:255'],
-            'monthly_fee' => ['required', 'numeric', 'min:0'],
-            'annual_fee' => ['required', 'numeric', 'min:0'],
+            'monthly_fee' => ['nullable', 'numeric', 'min:0'],
+            'annual_fee' => ['nullable', 'numeric', 'min:0'],
             'expired_date' => ['nullable', 'date'],
             'status' => ['required', 'string', 'in:active,inactive'],
         ];

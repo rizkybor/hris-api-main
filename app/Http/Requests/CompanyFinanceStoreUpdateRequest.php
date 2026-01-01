@@ -14,7 +14,7 @@ class CompanyFinanceStoreUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'saldo_company' => ['required', 'numeric', 'min:0'],
+            'saldo_company' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 
