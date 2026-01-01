@@ -12,8 +12,9 @@ return new class extends Migration
             $table->id();
             $table->string('financial_items');
             $table->text('description');
-            $table->decimal('budget', 15, 2);
-            $table->decimal('actual', 15, 2);
+            $table->decimal('budget', 15, 2)->nullable();
+            $table->decimal('actual', 15, 2)->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

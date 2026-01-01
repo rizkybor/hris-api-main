@@ -2,30 +2,34 @@
 
 namespace App\DTOs;
 
+use App\Models\CompanyFinance;
+
 class CompanyFinanceDTO
 {
-    public float $saldo_company;
 
-    public function __construct(array $data)
-    {
-        $this->saldo_company = floatval($data['saldo_company']);
-    }
-
-    public static function fromArray(array $data): self
-    {
-        return new self($data);
-    }
-
-    public static function fromArrayForUpdate(array $data, $model): self
-    {
-        $merged = array_merge($model->toArray(), $data);
-        return new self($merged);
-    }
+    public function __construct(
+        public readonly ?float $saldo_company
+    )
+    {}
 
     public function toArray(): array
     {
         return [
             'saldo_company' => $this->saldo_company
         ];
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            saldo_company: isset($data['saldo_company']) ? (float) $data['saldo_company'] : null,
+        );
+    }
+
+    public static function fromArrayForUpdate(array $data, CompanyFinance $existingCompanyFinance): self
+    {
+        return new self(
+            saldo_company: isset($data['saldo_company']) ? (float) $data['saldo_company'] : $existingCompanyFinance->saldo_company,
+        );
     }
 }

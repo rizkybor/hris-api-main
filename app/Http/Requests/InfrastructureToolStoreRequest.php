@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Enums\InfrastructureToolStatus;
 
 class InfrastructureToolStoreRequest extends FormRequest
 {
@@ -27,7 +28,8 @@ class InfrastructureToolStoreRequest extends FormRequest
             'monthly_fee' => ['nullable', 'numeric', 'min:0'],
             'annual_fee' => ['nullable', 'numeric', 'min:0'],
             'expired_date' => ['nullable', 'date'],
-            'status' => ['required', 'string', 'in:active,inactive'],
+            'status' => ['required', 'string', 'in:'.implode(',', array_column(InfrastructureToolStatus::cases(), 'value'))],
+            'notes' => ['nullable', 'string'],
         ];
     }
 
@@ -40,6 +42,7 @@ class InfrastructureToolStoreRequest extends FormRequest
             'annual_fee' => 'Annual Fee',
             'expired_date' => 'Expired Date',
             'status' => 'Status',
+            'notes' => 'Notes',
         ];
     }
 }

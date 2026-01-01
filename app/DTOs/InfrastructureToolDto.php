@@ -2,35 +2,20 @@
 
 namespace App\DTOs;
 
+use App\Models\InfrastructureTool;
+
 class InfrastructureToolDTO
 {
-    public string $tech_stack_component;
-    public string $vendor;
-    public float $monthly_fee;
-    public float $annual_fee;
-    public string $expired_date;
-    public string $status;
-
-    public function __construct(array $data)
-    {
-        $this->tech_stack_component = $data['tech_stack_component'];
-        $this->vendor = $data['vendor'];
-        $this->monthly_fee = floatval($data['monthly_fee']);
-        $this->annual_fee = floatval($data['annual_fee']);
-        $this->expired_date = $data['expired_date'];
-        $this->status = $data['status'];
-    }
-
-    public static function fromArray(array $data): self
-    {
-        return new self($data);
-    }
-
-    public static function fromArrayForUpdate(array $data, $model): self
-    {
-        $merged = array_merge($model->toArray(), $data);
-        return new self($merged);
-    }
+    public function __construct(
+        public readonly string $tech_stack_component,
+        public readonly string $vendor,
+        public readonly ?float $monthly_fee = null,
+        public readonly ?float $annual_fee = null,
+        public readonly string $expired_date,
+        public readonly string $status,
+        public readonly ?string $notes = null,
+    )
+    {}
 
     public function toArray(): array
     {
@@ -41,6 +26,33 @@ class InfrastructureToolDTO
             'annual_fee' => $this->annual_fee,
             'expired_date' => $this->expired_date,
             'status' => $this->status,
+            'notes' => $this->notes,
         ];
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            tech_stack_component: $data['tech_stack_component'],
+            vendor: $data['vendor'],
+            monthly_fee: isset($data['monthly_fee']) ? (float) $data['monthly_fee'] : null,
+            annual_fee: isset($data['annual_fee']) ? (float) $data['annual_fee'] : null,
+            expired_date: $data['expired_date'],
+            status: $data['status'],
+            notes: $data['notes'] ?? null,
+        );
+    }
+
+    public static function fromArrayForUpdate(array $data, InfrastructureTool $existingInfrastructureTool): self
+    {
+        return new self(
+            tech_stack_component: $data['tech_stack_component'] ?? $existingInfrastructureTool->tech_stack_component,
+            vendor: $data['vendor'] ?? $existingInfrastructureTool->vendor,
+            monthly_fee: isset($data['monthly_fee']) ? (float) $data['monthly_fee'] : $existingInfrastructureTool->monthly_fee,
+            annual_fee: isset($data['annual_fee']) ? (float) $data['annual_fee'] : $existingInfrastructureTool->annual_fee,
+            expired_date: $data['expired_date'] ?? $existingInfrastructureTool->expired_date,
+            status: $data['status'] ?? $existingInfrastructureTool->status,
+            notes: $data['notes'] ?? $existingInfrastructureTool->notes,
+        );
     }
 }

@@ -18,9 +18,11 @@ class SdmResource extends JsonResource
             'id' => $this->id,
             'sdm_component' => $this->sdm_component,
             'metrik' => $this->metrik,
-            'capacity_target' => floatval($this->capacity_target),
-            'actual' => floatval($this->actual),
+            'capacity_target' => $this->capacity_target,
+            'budget' => (float) (string) $this->budget,
+            'actual' => (float) (string) $this->actual,
             'rag_status' => $this->status_rag,
+            'notes' => $this->notes,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

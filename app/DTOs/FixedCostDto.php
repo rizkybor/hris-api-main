@@ -2,31 +2,17 @@
 
 namespace App\DTOs;
 
+use App\Models\FixedCost;
+
 class FixedCostDTO
 {
-    public string $financial_items;
-    public string $description;
-    public float $budget;
-    public float $actual;
-
-    public function __construct(array $data)
-    {
-        $this->financial_items = $data['financial_items'];
-        $this->description = $data['description'];
-        $this->budget = floatval($data['budget']);
-        $this->actual = floatval($data['actual']);
-    }
-
-    public static function fromArray(array $data): self
-    {
-        return new self($data);
-    }
-
-    public static function fromArrayForUpdate(array $data, $model): self
-    {
-        $merged = array_merge($model->toArray(), $data);
-        return new self($merged);
-    }
+    public function __construct(
+        public readonly string $financial_items,
+        public readonly string $description,
+        public readonly ?float $budget = null,
+        public readonly ?float $actual = null,
+        public readonly ?string $notes = null,
+    ) {}
 
     public function toArray(): array
     {
@@ -35,6 +21,29 @@ class FixedCostDTO
             'description' => $this->description,
             'budget' => $this->budget,
             'actual' => $this->actual,
+            'notes' => $this->notes,
         ];
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            financial_items: $data['financial_items'],
+            description: $data['description'],
+            budget: isset($data['budget']) ? (float) $data['budget'] : null,
+            actual: isset($data['actual']) ? (float) $data['actual'] : null,
+            notes: $data['notes'] ?? null,
+        );
+    }
+
+    public static function fromArrayForUpdate(array $data, FixedCost $existingFixedCost): self
+    {
+        return new self(
+            financial_items: $data['financial_items'] ?? $existingFixedCost->financial_items,
+            description: $data['description'] ?? $existingFixedCost->description,
+            budget: isset($data['budget']) ? (float) $data['budget'] : $existingFixedCost->budget,
+            actual: isset($data['actual']) ? (float) $data['actual'] : $existingFixedCost->actual,
+            notes: $data['notes'] ?? $existingFixedCost->notes,
+        );
     }
 }

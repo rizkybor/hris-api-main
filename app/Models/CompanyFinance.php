@@ -15,13 +15,6 @@ class CompanyFinance extends Model
     ];
 
     protected $casts = [
-        'saldo_company' => 'float'
+        'saldo_company' => 'decimal:2'
     ];
-
-    public function scopeSearch($query, $search)
-    {
-        return $query->where(function ($q) use ($search) {
-            $q->where('saldo_company', 'like', '%'.$search.'%');
-        });
-    }
 }

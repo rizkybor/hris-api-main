@@ -466,9 +466,9 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "sdm_component": "Laptop",
-  "metrik": "Unit",
-  "capacity_target": 50,
+  "sdm_component": "Utilisasi Tim",
+  "metrik": "Jam Kerja Proyek vs Internal",
+  "capacity_target": "80% Proyek",
   "actual": 5000000.00,
   "rag_status": "Green"
 }

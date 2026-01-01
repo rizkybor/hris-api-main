@@ -16,7 +16,7 @@ class CompanyFinanceResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'saldo_company' => floatval($this->saldo_company),
+            'saldo_company' => (float) (string) $this->saldo_company,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

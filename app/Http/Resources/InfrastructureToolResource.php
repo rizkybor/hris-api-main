@@ -18,10 +18,11 @@ class InfrastructureToolResource extends JsonResource
             'id' => $this->id,
             'tech_stack_component' => $this->tech_stack_component,
             'vendor' => $this->vendor,
-            'monthly_fee' => floatval($this->monthly_fee),
-            'annual_fee' => floatval($this->annual_fee),
+            'monthly_fee' => (float) (string) $this->monthly_fee,
+            'annual_fee' => (float) (string) $this->annual_fee,
             'expired_date' => $this->expired_date,
             'status' => $this->status,
+            'notes' => $this->notes,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

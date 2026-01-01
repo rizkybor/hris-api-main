@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Enums\SdmResourceStatus;
 
 class SdmResourceStoreRequest extends FormRequest
 {
@@ -25,8 +26,10 @@ class SdmResourceStoreRequest extends FormRequest
             'sdm_component' => ['required', 'string', 'max:255'],
             'metrik' => ['required', 'string', 'max:255'],
             'capacity_target' => ['required', 'string', 'max:255'],
-            'actual' => ['required', 'numeric', 'min:0'],
-            'rag_status' => ['required', 'string', 'in:active,inactive'],
+            'budget' => ['nullable', 'numeric', 'min:0'],
+            'actual' => ['nullable', 'numeric', 'min:0'],
+            'rag_status' => ['required', 'string', 'in:'.implode(',', array_column(SdmResourceStatus::cases(), 'value'))],
+            'notes' => ['nullable', 'string'],
         ];
     }
 
@@ -36,8 +39,10 @@ class SdmResourceStoreRequest extends FormRequest
             'sdm_component' => 'SDM Component',
             'metrik' => 'Metrik',
             'capacity_target' => 'Capacity Target',
+            'budget' => 'Budget',
             'actual' => 'Actual',
             'rag_status' => 'RAG Status',
+            'notes' => 'Notes',
         ];
     }
 }

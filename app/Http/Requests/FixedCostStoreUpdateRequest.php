@@ -18,6 +18,7 @@ class FixedCostStoreUpdateRequest extends FormRequest
             'description' => ['sometimes', 'required', 'string', 'max:255'],
             'budget' => ['nullable', 'required', 'numeric', 'min:0'],
             'actual' => ['nullable', 'required', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string'],
         ];
     }
 
@@ -28,6 +29,7 @@ class FixedCostStoreUpdateRequest extends FormRequest
             'description' => 'Description',
             'budget' => 'Budget',
             'actual' => 'Actual',
+            'notes' => 'Notes',
         ];
     }
 }

@@ -12,10 +12,11 @@ return new class extends Migration
             $table->id();
             $table->string('tech_stack_component');
             $table->string('vendor');
-            $table->decimal('monthly_fee', 15, 2);
-            $table->decimal('annual_fee', 15, 2);
+            $table->decimal('monthly_fee', 15, 2)->nullable();
+            $table->decimal('annual_fee', 15, 2)->nullable();
             $table->date('expired_date');
             $table->string('status');
+            $table->text('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

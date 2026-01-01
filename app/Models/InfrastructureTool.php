@@ -11,12 +11,12 @@ class InfrastructureTool extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'tech_stack_component', 'vendor', 'monthly_fee', 'annual_fee', 'expired_date', 'status'
+        'tech_stack_component', 'vendor', 'monthly_fee', 'annual_fee', 'expired_date', 'status', 'notes'
     ];
 
     protected $casts = [
-        'monthly_fee' => 'float',
-        'annual_fee' => 'float',
+        'monthly_fee' => 'decimal:2',
+        'annual_fee' => 'decimal:2',
         'expired_date' => 'date',
     ];
 
@@ -25,8 +25,6 @@ class InfrastructureTool extends Model
         return $query->where(function ($q) use ($search) {
             $q->where('tech_stack_component', 'like', '%'.$search.'%')
                 ->orWhere('vendor', 'like', '%'.$search.'%')
-                ->orWhere('monthly_fee', 'like', '%'.$search.'%')
-                ->orWhere('annual_fee', 'like', '%'.$search.'%')
                 ->orWhere('expired_date', 'like', '%'.$search.'%')
                 ->orWhere('status', 'like', '%'.$search.'%');
         });

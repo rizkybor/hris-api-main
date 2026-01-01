@@ -5,18 +5,18 @@ namespace App\Interfaces;
 interface SdmResourceRepositoryInterface
 {
     public function getAll(
-        ?string $search = null,
-        ?int $limit = null,
-        bool $execute = true
+        ?string $search,
+        ?int $limit,
+        bool $execute
     );
 
     public function getAllPaginated(
-        ?string $search = null,
-        int $rowPerPage = 15
+        ?string $search,
+        int $rowPerPage
     );
 
     public function getById(
-        int $id
+        string $id
     );
 
     public function create(
@@ -24,12 +24,12 @@ interface SdmResourceRepositoryInterface
     );
 
     public function update(
-        int $id,
+        string $id,
         array $data
     );
 
     public function delete(
-        int $id
+        string $id
     );
 
     public function sum(string $column): float;

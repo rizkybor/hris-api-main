@@ -11,13 +11,12 @@ class SdmResource extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'sdm_component', 'metrik', 'capacity_target', 'actual', 'rag_status'
+        'sdm_component', 'metrik', 'capacity_target', 'budget', 'actual', 'rag_status', 'notes'
     ];
 
     protected $casts = [
-        'capacity_target' => 'float',
-        'actual' => 'float',
-        'rag_status' => 'string',
+        'budget' => 'decimal:2',
+        'actual' => 'decimal:2',
     ];
 
     public function scopeSearch($query, $search)
@@ -26,7 +25,6 @@ class SdmResource extends Model
             $q->where('sdm_component', 'like', '%'.$search.'%')
                 ->orWhere('metrik', 'like', '%'.$search.'%')
                 ->orWhere('capacity_target', 'like', '%'.$search.'%')
-                ->orWhere('actual', 'like', '%'.$search.'%')
                 ->orWhere('rag_status', 'like', '%'.$search.'%');
         });
     }
