@@ -12,6 +12,10 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\FixedCostController;
+use App\Http\Controllers\InfrastructureToolController;
+use App\Http\Controllers\CompanyFinanceController;
+use App\Http\Controllers\SdmResourceController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
@@ -96,5 +100,22 @@ Route::prefix('v1')
             // Files Company routes
             Route::get('files-companies/all/paginated', [FilesCompanyController::class, 'getAllPaginated']);
             Route::apiResource('files-companies', FilesCompanyController::class);
+
+            // Fixed Cost routes
+            Route::get('fixed-costs/all/paginated', [FixedCostController::class, 'getAllPaginated']);
+            Route::apiResource('fixed-costs', FixedCostController::class);
+
+            // Infrastructure Tools routes
+            Route::get('infrastructure-tools/all/paginated', [InfrastructureToolController::class, 'getAllPaginated']);
+            Route::apiResource('infrastructure-tools', InfrastructureToolController::class);
+
+            // Company Finance routes
+            Route::get('company-finances/all/paginated', [CompanyFinanceController::class, 'getAllPaginated']);
+            Route::apiResource('company-finances', CompanyFinanceController::class);
+
+            // Sdm Resources routes
+            Route::get('sdm-resources/all/paginated', [SdmResourceController::class, 'getAllPaginated']);
+            Route::apiResource('sdm-resources', SdmResourceController::class);  
+            
         });
     });
