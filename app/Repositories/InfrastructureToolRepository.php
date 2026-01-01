@@ -49,7 +49,7 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
     }
 
     public function getById(
-        int $id
+        string $id
     ): InfrastructureTool {
         return InfrastructureTool::findOrFail($id);
     }
@@ -64,7 +64,7 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
     }
 
     public function update(
-        int $id,
+        string $id,
         array $data
     ): InfrastructureTool {
         $tool = $this->getById($id);
@@ -75,7 +75,7 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
     }
 
     public function delete(
-        int $id
+        string $id
     ): InfrastructureTool {
         $tool = $this->getById($id);
         $tool->delete();

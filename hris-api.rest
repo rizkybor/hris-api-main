@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8000/api/v1
-@token = 1|UGnUym2G88KFvuBeyO9i4WMOxWlSvqGa9MX8DsCncc0f2ce1
+@token = 1|nlYMmpzZnysfM6DzI6g7N4BQ1V8TqJ90qwDSfnKzea2b39f8
 
 # Manager Role
 # "email" => "rizkyjcd@jcdigital.co.id"
@@ -422,7 +422,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "saldo_company": 1000000.00
+  "saldo_company": 250000000.00
 }
 
 ### Update Company Finance
@@ -432,7 +432,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "saldo_company": 1500000.00
+  "saldo_company": 300000000.00
 }
 
 ### Delete Company Finance
@@ -460,7 +460,7 @@ Accept: application/json
 Authorization: Bearer {{token}}
 
 ### Create SDM Resource
-POST {{baseUrl}}/sdm-respurces
+POST {{baseUrl}}/sdm-resources
 Accept: application/json
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -469,8 +469,10 @@ Content-Type: application/json
   "sdm_component": "Utilisasi Tim",
   "metrik": "Jam Kerja Proyek vs Internal",
   "capacity_target": "80% Proyek",
+  "budget": 6000000.00,
   "actual": 5000000.00,
-  "rag_status": "Green"
+  "rag_status": "green",
+  "notes": "Tim berhasil mencapai target utilisasi dengan baik."
 }
 
 ### Update SDM Resources
@@ -480,11 +482,13 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "sdm_component": "Laptop Updated",
-  "metrik": "Unit",
-  "capacity_target": 60,
+  "sdm_component": "Utilisasi Tim Updated",
+  "metrik": "Jam Kerja Proyek vs Internal Updated",
+  "capacity_target": "85% Proyek",
+  "budget": 7000000.00,
   "actual": 6000000.00,
-  "rag_status": "Amber"
+  "rag_status": "amber",
+  "notes": "Tim mengalami sedikit penurunan dalam utilisasi."
 }
 
 ### Delete SDM Resource
@@ -523,7 +527,8 @@ Content-Type: application/json
   "monthly_fee": 29000000.99,
   "annual_fee": 299000000.99,
   "expired_date": "2026-09-18",
-  "status": "active"
+  "status": "active",
+  "notes": "Version control and collaboration platform"
 }
 
 ### Update Infrastructure Tool
@@ -538,7 +543,8 @@ Content-Type: application/json
   "monthly_fee": 30000000.00,
   "annual_fee": 310000000.00,
   "expired_date": "2027-09-18",
-  "status": "inactive"
+  "status": "inactive",
+  "notes": "Updated version control platform"
 }
 
 ### Delete Infrastructure Tool
@@ -575,7 +581,8 @@ Content-Type: application/json
   "financial_items": "GitHub Subscription",
   "description": "Monthly subscription for GitHub services",
   "budget": 299000000.99,
-  "actual": 29000000.99
+  "actual": 29000000.99,
+  "notes": "Used for version control and collaboration"
 }
 
 ### Update Fixed Cost
@@ -585,11 +592,11 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "label_password": "GitHub Account Updated",
-  "username_email": "dev@company.com",
-  "password": "NewSecurePassword456!",
-  "website": "https://github.com",
-  "notes": "Updated development account"
+  "financial_items": "GitHub Subscription Updated",
+  "description": "Updated monthly subscription for GitHub services",
+  "budget": 310000000.00,
+  "actual": 30000000.00,
+  "notes": "Updated usage for version control and collaboration"
 }
 
 ### Delete Fixed Cost

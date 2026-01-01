@@ -49,7 +49,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
     }
 
     public function getById(
-        int $id
+        string $id
     ): SdmResource {
         return SdmResource::findOrFail($id);
     }
@@ -64,7 +64,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
     }
 
     public function update(
-        int $id,
+        string $id,
         array $data
     ): SdmResource {
         $resource = $this->getById($id);
@@ -75,7 +75,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
     }
 
     public function delete(
-        int $id
+        string $id
     ): SdmResource {
         $resource = $this->getById($id);
         $resource->delete();

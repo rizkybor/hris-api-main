@@ -49,7 +49,7 @@ class FixedCostRepository implements FixedCostRepositoryInterface
     }
 
     public function getById(
-        int $id
+        string $id
     ): FixedCost {
         return FixedCost::findOrFail($id);
     }
@@ -64,7 +64,7 @@ class FixedCostRepository implements FixedCostRepositoryInterface
     }
 
     public function update(
-        int $id,
+        string $id,
         array $data
     ): FixedCost {
         $cost = $this->getById($id);
@@ -75,7 +75,7 @@ class FixedCostRepository implements FixedCostRepositoryInterface
     }
 
     public function delete(
-        int $id
+        string $id
     ): FixedCost {
         $cost = $this->getById($id);
         $cost->delete();

@@ -49,7 +49,7 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
     }
 
     public function getById(
-        int $id
+        string $id
     ): CompanyFinance {
         return CompanyFinance::findOrFail($id);
     }
@@ -64,7 +64,7 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
     }
 
     public function update(
-        int $id,
+        string $id,
         array $data
     ): CompanyFinance {
         $finance = $this->getById($id);
@@ -75,7 +75,7 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
     }
 
     public function delete(
-        int $id
+        string $id
     ): CompanyFinance {
         $finance = $this->getById($id);
         $finance->delete();

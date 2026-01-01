@@ -18,6 +18,7 @@ class SdmResourceStoreUpdateRequest extends FormRequest
             'sdm_component' => ['sometimes', 'required', 'string', 'max:255'],
             'metrik' => ['sometimes', 'required', 'string', 'max:255'],
             'capacity_target' => ['sometimes', 'required', 'string', 'max:255'],
+            'budget' => ['nullable', 'required', 'numeric', 'min:0'],
             'actual' => ['nullable', 'required', 'numeric', 'min:0'],
             'rag_status' => ['sometimes','required', 'string', 'in:'.implode(',', array_column(SdmResourceStatus::cases(), 'value'))],
             'notes' => ['nullable', 'string'],
@@ -30,6 +31,7 @@ class SdmResourceStoreUpdateRequest extends FormRequest
             'sdm_component' => 'SDM Component',
             'metrik' => 'Metrik',
             'capacity_target' => 'Capacity Target',
+            'budget' => 'Budget',
             'actual' => 'Actual',
             'rag_status' => 'RAG Status',
         ];
