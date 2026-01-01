@@ -16,7 +16,6 @@ class InfrastructureToolResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'no' => $this->no,
             'tech_stack_component' => $this->tech_stack_component,
             'vendor' => $this->vendor,
             'monthly_fee' => floatval($this->monthly_fee),

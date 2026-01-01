@@ -25,6 +25,7 @@ class FixedCostStoreRequest extends FormRequest
             'financial_items' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:255'],
             'budget' => ['nullable', 'numeric', 'min:0'],
+            'actual' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 
@@ -34,6 +35,7 @@ class FixedCostStoreRequest extends FormRequest
             'financial_items' => 'Financial Items',
             'description' => 'Description',
             'budget' => 'Budget',
+            'actual' => 'Actual',
         ];
     }
 }

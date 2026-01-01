@@ -16,7 +16,6 @@ class SdmResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'no' => $this->no,
             'sdm_component' => $this->sdm_component,
             'metrik' => $this->metrik,
             'capacity_target' => floatval($this->capacity_target),

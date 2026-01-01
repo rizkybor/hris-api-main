@@ -16,7 +16,6 @@ class FixedCostResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'no' => $this->no,
             'financial_items' => $this->financial_items,
             'description' => $this->description,
             'budget' => floatval($this->budget),

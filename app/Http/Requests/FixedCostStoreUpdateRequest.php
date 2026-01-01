@@ -17,6 +17,7 @@ class FixedCostStoreUpdateRequest extends FormRequest
             'financial_items' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['sometimes', 'required', 'string', 'max:255'],
             'budget' => ['nullable', 'required', 'numeric', 'min:0'],
+            'actual' => ['nullable', 'required', 'numeric', 'min:0'],
         ];
     }
 
@@ -26,6 +27,7 @@ class FixedCostStoreUpdateRequest extends FormRequest
             'financial_items' => 'Financial Items',
             'description' => 'Description',
             'budget' => 'Budget',
+            'actual' => 'Actual',
         ];
     }
 }
