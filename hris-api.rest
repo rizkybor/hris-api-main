@@ -1,9 +1,13 @@
 @baseUrl = http://localhost:8000/api/v1
-@token = 2|qi52C33ByT1w0iSIy21wePl06vxp71jT6tki6U8Z2b2efc81
+@token = 1|GE13lPw5kG0DCgQr4I93GdZ7wRn3pLguUgVcHSVG9616ba83
 
+# Manager Role
+# "email" => "rizkyjcd@jcdigital.co.id"
+# "password" => atasizinAllah#2511
 
-# 'email' => 'rizkyjcd@jcdigital.co.id'
-# 'password' => atasizinAllah#2511
+# Employee Role
+# "email" => "employee@gmail.com"
+# "password" => password
 
 ####################################
 # AUTH
@@ -15,8 +19,8 @@ Accept: application/json
 Content-Type: application/json
 
 {
-  "email": "employee@gmail.com",
-  "password": "password"
+  "email" : "rizkyjcd@jcdigital.co.id",
+  "password" : "atasizinAllah#2511"
 }
 
 ####################################
@@ -395,11 +399,6 @@ Authorization: Bearer {{token}}
 ####################################
 # COMPANY FINANCE
 ####################################
-
-### Get All Company Finances
-GET {{baseUrl}}/company-finances?search=GitHub&limit=10
-Accept: application/json
-Authorization: Bearer {{token}}
 
 ### Get Company Finances Paginated
 GET {{baseUrl}}/company-finances/all/paginated?row_per_page=10&search=

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FixedCost extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'no', 'financial_items', 'description', 'budget', 'actual'
@@ -17,4 +18,14 @@ class FixedCost extends Model
         'budget' => 'float',
         'actual' => 'float',
     ];
+
+        public function scopeSearch($query, $search)
+    {
+        return $query->where(function ($q) use ($search) {
+            $q->where('financial_items', 'like', '%'.$search.'%')
+                ->orWhere('description', 'like', '%'.$search.'%')
+                ->orWhere('budget', 'like', '%'.$search.'%')
+                ->orWhere('actual', 'like', '%'.$search.'%');
+        });
+    }
 }

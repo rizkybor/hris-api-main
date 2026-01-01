@@ -18,6 +18,7 @@ return new class extends Migration
             $table->date('expired_date');
             $table->string('status');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->decimal('saldo_company', 15, 2);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

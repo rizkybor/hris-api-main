@@ -17,6 +17,11 @@ use App\Interfaces\ProjectRepositoryInterface;
 use App\Interfaces\ProjectTaskRepositoryInterface;
 use App\Interfaces\TeamRepositoryInterface;
 use App\Interfaces\UserRepositoryInterface;
+use App\Interfaces\CompanyFinanceRepositoryInterface;
+use App\Interfaces\FixedCostRepositoryInterface;
+use App\Interfaces\InfrastructureToolRepositoryInterface;
+use App\Interfaces\SdmResourceRepositoryInterface;
+
 use App\Repositories\AttendanceRepository;
 use App\Repositories\AuthRepository;
 use App\Repositories\BankInformationRepository;
@@ -32,6 +37,11 @@ use App\Repositories\ProjectRepository;
 use App\Repositories\ProjectTaskRepository;
 use App\Repositories\TeamRepository;
 use App\Repositories\UserRepository;
+use App\Repositories\CompanyFinanceRepository;
+use App\Repositories\FixedCostRepository;
+use App\Repositories\InfrastructureToolRepository;
+use App\Repositories\SdmResourceRepository;
+
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -56,6 +66,10 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(PayrollRepositoryInterface::class, PayrollRepository::class);
         $this->app->bind(CredentialAccountRepositoryInterface::class, CredentialAccountRepository::class);
         $this->app->bind(FilesCompanyRepositoryInterface::class, FilesCompanyRepository::class);
+        $this->app->bind(CompanyFinanceRepositoryInterface::class, CompanyFinanceRepository::class);
+        $this->app->bind(FixedCostRepositoryInterface::class, FixedCostRepository::class);
+        $this->app->bind(InfrastructureToolRepositoryInterface::class, InfrastructureToolRepository::class);
+        $this->app->bind(SdmResourceRepositoryInterface::class, SdmResourceRepository::class);
     }
 
     /**

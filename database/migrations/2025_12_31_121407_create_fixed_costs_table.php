@@ -16,6 +16,7 @@ return new class extends Migration
             $table->decimal('budget', 15, 2);
             $table->decimal('actual', 15, 2);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

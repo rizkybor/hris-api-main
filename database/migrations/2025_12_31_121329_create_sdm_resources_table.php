@@ -17,6 +17,7 @@ return new class extends Migration
             $table->decimal('actual', 15, 2);
             $table->enum('rag_status', ['Red', 'Amber', 'Green']);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
