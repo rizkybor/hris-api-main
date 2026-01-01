@@ -2,9 +2,9 @@
 
 namespace App\DTOs;
 
-use App\Models\FilesCompany;
+use App\Models\VendorsAttachment;
 
-class FilesCompanyDto
+class VendorsAttachmentDto
 {
     public function __construct(
         public readonly string $document_name,
@@ -13,6 +13,12 @@ class FilesCompanyDto
         public readonly ?string $size_file = null,
         public readonly ?string $description = null,
     ) {}
+
+    public function withPath(string $path): self
+    {
+        $this->document_path = $path;
+        return $this;
+    }
 
     /**
      * Convert DTO ke array (untuk create / update model)
@@ -45,7 +51,7 @@ class FilesCompanyDto
     /**
      * Create DTO untuk UPDATE (merge data lama & baru)
      */
-    public static function fromArrayForUpdate(array $data, FilesCompany $existingFile): self
+    public static function fromArrayForUpdate(array $data, VendorsAttachment $existingFile): self
     {
         return new self(
             document_name: $data['document_name'] ?? $existingFile->document_name,

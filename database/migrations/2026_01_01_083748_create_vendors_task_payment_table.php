@@ -6,28 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('files_companies', function (Blueprint $table) {
+        Schema::create('vendors_task_payment', function (Blueprint $table) {
             $table->id();
             $table->string('document_name');
             $table->string('document_path');
-            $table->string('type_file')->nullable();
-            $table->string('size_file')->nullable();
-            $table->text('description')->nullable();
+            $table->decimal('amount', 15, 2)->nullable();
+            $table->date('payment_date')->nullable(); 
             $table->timestamps();
             $table->softDeletes();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('files_companies');
+        Schema::dropIfExists('vendors_task_payment');
     }
 };
