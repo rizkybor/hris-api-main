@@ -10,8 +10,7 @@ class VendorsTaskPaymentDto
         public readonly string $document_name,
         public readonly string $document_path,
         public readonly ?float $amount = null,
-        public readonly ?string $payment_date = null,
-        public readonly ?int $vendor_task_id = null,
+        public readonly ?string $payment_date = null
     ) {}
 
     /**
@@ -23,8 +22,7 @@ class VendorsTaskPaymentDto
             'document_name'   => $this->document_name,
             'document_path'   => $this->document_path,
             'amount'          => $this->amount,
-            'payment_date'    => $this->payment_date,
-            'vendor_task_id'  => $this->vendor_task_id,
+            'payment_date'    => $this->payment_date
         ];
     }
 
@@ -37,8 +35,7 @@ class VendorsTaskPaymentDto
             document_name: $data['document_name'],
             document_path: $data['document_path'],
             amount: isset($data['amount']) ? (float) $data['amount'] : null,
-            payment_date: $data['payment_date'] ?? null,
-            vendor_task_id: $data['vendor_task_id'] ?? null,
+            payment_date: $data['payment_date'] ?? null
         );
     }
 
@@ -51,8 +48,7 @@ class VendorsTaskPaymentDto
             document_name: $data['document_name'] ?? $payment->document_name,
             document_path: $data['document_path'] ?? $payment->document_path,
             amount: isset($data['amount']) ? (float) $data['amount'] : $payment->amount,
-            payment_date: $data['payment_date'] ?? $payment->payment_date?->format('Y-m-d'),
-            vendor_task_id: $data['vendor_task_id'] ?? $payment->vendor_task_id,
+            payment_date: $data['payment_date'] ?? $payment->payment_date?->format('Y-m-d')
         );
     }
 }

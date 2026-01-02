@@ -858,10 +858,8 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "vendor_task_id": 1,
-  "scope_detail": "Membuat modul API untuk pembayaran",
-  "deliverables": "API endpoint CRUD pembayaran",
-  "notes": "Scope harus disetujui sebelum development"
+  "name": "Inspect Scope Vendor Equipment",
+  "pivot_id": 1
 }
 
 
@@ -872,10 +870,8 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "vendor_task_id": 1,
-  "scope_detail": "Membuat modul API untuk pembayaran",
-  "deliverables": "API endpoint CRUD pembayaran",
-  "notes": "Update scope sesuai diskusi tim"
+  "name": "Updated Scope Name",
+  "pivot_id": 1
 }
 
 
@@ -913,11 +909,11 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "vendor_task_id": 1,
-  "amount": 5000000,
-  "payment_date": "2026-01-10",
-  "status": "paid",
-  "notes": "Pembayaran milestone pertama"
+  "document_name": "Payment Termin 1",
+  "document_path":  "vendors-payment/vendors-payment-test.pdf",
+  "amount" : 2000000.00,
+  "payment_date": "2006-04-20",
+  "pivot_id": 1
 }
 
 
@@ -928,13 +924,12 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "vendor_task_id": 1,
-  "amount": 5000000,
-  "payment_date": "2026-01-12",
-  "status": "paid",
-  "notes": "Update tanggal pembayaran"
+  "document_name": "Payment Termin 1",
+  "document_path":  "vendors-payment/vendors-payment-test.pdf",
+  "amount" : 2000000.00,
+  "payment_date": "2006-04-20",
+  "pivot_id": 1
 }
-
 
 ### Delete Vendors Task Payment by Id
 DELETE {{baseUrl}}/vendors-task-payment/1
@@ -973,7 +968,7 @@ Content-Type: application/json
 {
   "vendor_task_id": 1,
   "file_name": "specification.pdf",
-  "file_url": "https://example.com/specification.pdf",
+  "file_url": "vendors-attachment/vendors-test.pdf",
   "notes": "Dokumen spesifikasi API"
 }
 

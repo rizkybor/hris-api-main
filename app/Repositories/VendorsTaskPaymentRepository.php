@@ -12,11 +12,10 @@ use Illuminate\Support\Facades\DB;
 
 class VendorsTaskPaymentRepository implements VendorsTaskPaymentRepositoryInterface
 {
-    public function getAll(?string $search, ?int $vendorTaskId, ?int $limit, bool $execute): Builder|Collection
+    public function getAll(?string $search, ?int $limit, bool $execute): Builder|Collection
     {
         $query = VendorsTaskPayment::query()
             ->when($search, fn($q) => $q->search($search))
-            ->when($vendorTaskId, fn($q) => $q->where('vendor_task_id', $vendorTaskId))
             ->orderByDesc('created_at');
 
         if ($limit) {
@@ -26,9 +25,9 @@ class VendorsTaskPaymentRepository implements VendorsTaskPaymentRepositoryInterf
         return $execute ? $query->get() : $query;
     }
 
-    public function getAllPaginated(?string $search, ?int $vendorTaskId, int $rowPerPage): LengthAwarePaginator
+    public function getAllPaginated(?string $search, int $rowPerPage): LengthAwarePaginator
     {
-        $query = $this->getAll($search, $vendorTaskId, null, false);
+        $query = $this->getAll($search, null, false);
 
         return $query->paginate($rowPerPage);
     }

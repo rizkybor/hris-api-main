@@ -21,7 +21,7 @@ class VendorsAttachmentStoreUpdateRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'vendor_id'       => 'Vendor',
+            'vendor_id'      => 'Vendor',
             'document_name' => 'Document Name',
             'document_path' => 'Document Path',
             'type_file'     => 'File Type',

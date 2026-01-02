@@ -6,14 +6,12 @@ interface VendorsTaskPaymentRepositoryInterface
 {
     public function getAll(
         ?string $search,
-        ?int $vendorTaskId,
         ?int $limit,
         bool $execute
     );
 
     public function getAllPaginated(
         ?string $search,
-        ?int $vendorTaskId,
         int $rowPerPage
     );
 
