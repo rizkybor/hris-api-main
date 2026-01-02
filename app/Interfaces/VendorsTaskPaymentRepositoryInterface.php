@@ -31,8 +31,4 @@ interface VendorsTaskPaymentRepositoryInterface
     public function delete(
         string $id
     );
-
-    public function getByVendorTaskId(
-        int $vendorTaskId
-    );
 }

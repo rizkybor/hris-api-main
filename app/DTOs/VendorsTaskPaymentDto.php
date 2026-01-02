@@ -8,7 +8,7 @@ class VendorsTaskPaymentDto
 {
     public function __construct(
         public readonly string $document_name,
-        public readonly string $document_path,
+        public readonly ?string $document_path = null,
         public readonly ?float $amount = null,
         public readonly ?string $payment_date = null
     ) {}

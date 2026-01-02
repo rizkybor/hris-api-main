@@ -85,7 +85,10 @@ class VendorsTaskPaymentController extends Controller implements HasMiddleware
 
         try {
             $task = VendorsTaskPayment::create([
-                'name' => $validated['name'],
+                'document_name' => $validated['document_name'],
+                'document_path' => $validated['document_path'] ?? null,
+                'amount'        => $validated['amount'] ?? null,
+                'payment_date'  => $validated['payment_date'] ?? null,
             ]);
 
             $pivot = VendorsTaskPivot::findOrFail($validated['pivot_id']);
@@ -106,6 +109,7 @@ class VendorsTaskPaymentController extends Controller implements HasMiddleware
         }
     }
 
+
     /**
      * Display the specified resource.
      */
@@ -121,6 +125,7 @@ class VendorsTaskPaymentController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
+
 
     /**
      * Update the specified resource in storage.

@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8000/api/v1
-@token = 1|2fQVIoFNwPnWSRZIP5UQnksopNjAGfFTdaDEJzw59bd716fa
+@token = 1|EhbH5CkTyy9xecs40fJc8fBgJlDjtIVfx71YPhNU71df2496
 
 # Manager Role
 # "email" => "rizkyjcd@jcdigital.co.id"

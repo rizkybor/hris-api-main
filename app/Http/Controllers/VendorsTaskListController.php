@@ -122,6 +122,7 @@ class VendorsTaskListController extends Controller implements HasMiddleware
         }
     }
 
+
     /**
      * Update the specified resource in storage.
      */
