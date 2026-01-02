@@ -23,9 +23,4 @@ class VendorsTaskList extends Model
             $q->where('name', 'like', '%' . $search . '%');
         });
     }
-
-    public function taskVendor()
-    {
-        return $this->hasMany(VendorsTaskPivot::class, 'task_vendor_id');
-    }
 }

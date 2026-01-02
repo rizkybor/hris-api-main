@@ -27,9 +27,14 @@ class VendorsResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 
-            // Opsional: jika mau menampilkan relasi task pivot
-            'tasks_pivot' => $this->whenLoaded('taskPivot', function () {
-                return VendorsTaskPivotResource::collection($this->taskPivot);
+            // Relasi task pivots
+            'task_pivots' => $this->whenLoaded('taskPivots', function () {
+                return VendorsTaskPivotResource::collection($this->taskPivots);
+            }),
+
+            // Relasi attachments
+            'attachments' => $this->whenLoaded('attachments', function () {
+                return VendorsAttachmentResource::collection($this->attachments);
             }),
         ];
     }

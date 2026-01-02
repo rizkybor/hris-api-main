@@ -39,15 +39,28 @@ class VendorsController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
-            $accounts = $this->vendorsRepository->getAll(
+            $vendors = $this->vendorsRepository->getAll(
                 $request->search,
                 $request->limit,
                 true
             );
 
-            return ResponseHelper::jsonResponse(true, 'Vendors Retrieved Successfully', VendorsResource::collection($accounts), 200);
+            // Eager load relasi agar taskPivots & attachments muncul
+            $vendors->load([
+                'taskPivots.taskVendor',
+                'taskPivots.paymentVendor',
+                'taskPivots.scopeVendor',
+                'attachments'
+            ]);
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'Vendors Retrieved Successfully',
+                VendorsResource::collection($vendors),
+                200
+            );
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
@@ -66,7 +79,7 @@ class VendorsController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Vendors Retrieved Successfully', PaginateResource::make($vendors, VendorsResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
@@ -92,15 +105,29 @@ class VendorsController extends Controller implements HasMiddleware
     public function show(string $id)
     {
         try {
-            $vendors = $this->vendorsRepository->getById($id);
+            $vendor = $this->vendorsRepository->getById($id);
 
-            return ResponseHelper::jsonResponse(true, 'Vendors Account Retrieved Successfully', new VendorsResource($vendors), 200);
+            // Eager load relasi
+            $vendor->load([
+                'taskPivots.taskVendor',
+                'taskPivots.paymentVendor',
+                'taskPivots.scopeVendor',
+                'attachments'
+            ]);
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'Vendors Account Retrieved Successfully',
+                new VendorsResource($vendor),
+                200
+            );
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Vendors Account Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
+
 
     /**
      * Update the specified resource in storage.
@@ -132,8 +159,7 @@ class VendorsController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Vendors Account Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 }
-

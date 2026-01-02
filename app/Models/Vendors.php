@@ -21,13 +21,22 @@ class Vendors extends Model
         'notes'
     ];
 
-    /**
-     * Relasi ke vendors_task_pivots
+     /**
+     * Relasi ke task pivots
      */
-    public function taskVendor()
+    public function taskPivots()
     {
         return $this->hasMany(VendorsTaskPivot::class, 'vendor_id');
     }
+
+    /**
+     * Relasi ke attachments
+     */
+    public function attachments()
+{
+    return $this->hasMany(VendorsAttachment::class, 'vendor_id');
+}
+
 
     public function scopeSearch($query, $search)
     {

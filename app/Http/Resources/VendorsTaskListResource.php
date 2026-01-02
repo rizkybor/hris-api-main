@@ -19,11 +19,6 @@ class VendorsTaskListResource extends JsonResource
             'name' => $this->name,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-
-            // Opsional: jika ingin menampilkan pivot tasks
-            // 'vendor_tasks' => $this->whenLoaded('taskVendor', function () {
-            //     return VendorsTaskPivotResource::collection($this->taskVendor);
-            // }),
         ];
     }
 }

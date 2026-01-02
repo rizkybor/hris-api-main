@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8000/api/v1
-@token = 1|EhbH5CkTyy9xecs40fJc8fBgJlDjtIVfx71YPhNU71df2496
+@token = 1|tb7tpKtsRQQgNuQW5Cyp0uk0tOjfEaBT1o1uGGdJ01514396
 
 # Manager Role
 # "email" => "rizkyjcd@jcdigital.co.id"
@@ -724,6 +724,65 @@ Authorization: Bearer {{token}}
 
 
 ####################################
+# Vendors Attachment
+####################################
+
+### Get Vendors Attachment by Search
+GET {{baseUrl}}/vendors-attachment?search=Jendela&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Attachment by Pagination
+GET {{baseUrl}}/vendors-attachment/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Attachment by Id
+GET {{baseUrl}}/vendors-attachment/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Create Vendors Attachment
+POST {{baseUrl}}/vendors-attachment
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_id": 1,
+  "document_name": "Surat Perjanjian Vendor",
+  "document_path": "vendors-attachments/surat-perjanjian.pdf",
+  "type_file": "pdf",
+  "size_file": "1.2MB",
+  "description": "Kontrak awal dengan vendor"
+}
+
+
+### Update Vendors Attachment
+PUT {{baseUrl}}/vendors-attachment/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_id": 1,
+  "document_name": "Surat Perjanjian Vendor",
+  "document_path": "vendors-attachments/surat-perjanjian.pdf",
+  "type_file": "pdf",
+  "size_file": "1.2MB",
+  "description": "Kontrak awal dengan vendor"
+}
+
+### Delete Vendors Attachment by Id
+DELETE {{baseUrl}}/vendors-attachment/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+####################################
 # Vendors Task Pivot
 ####################################
 
@@ -933,61 +992,6 @@ Content-Type: application/json
 
 ### Delete Vendors Task Payment by Id
 DELETE {{baseUrl}}/vendors-task-payment/2
-Accept: application/json
-Authorization: Bearer {{token}}
-
-
-####################################
-# Vendors Attachment
-####################################
-
-### Get Vendors Attachment by Search
-GET {{baseUrl}}/vendors-task-attachment?search=Jendela&limit=10
-Accept: application/json
-Authorization: Bearer {{token}}
-
-
-### Get Vendors Attachment by Pagination
-GET {{baseUrl}}/vendors-task-attachment/all/paginated?row_per_page=10&search=
-Accept: application/json
-Authorization: Bearer {{token}}
-
-
-### Get Vendors Attachment by Id
-GET {{baseUrl}}/vendors-task-attachment/1
-Accept: application/json
-Authorization: Bearer {{token}}
-
-
-### Create Vendors Attachment
-POST {{baseUrl}}/vendors-task-attachment
-Accept: application/json
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "vendor_task_id": 1,
-  "file_name": "specification.pdf",
-  "file_url": "vendors-attachment/vendors-test.pdf",
-  "notes": "Dokumen spesifikasi API"
-}
-
-
-### Update Vendors Attachment
-PUT {{baseUrl}}/vendors-task-attachment/1
-Accept: application/json
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "vendor_task_id": 1,
-  "file_name": "specification_updated.pdf",
-  "file_url": "https://example.com/specification_updated.pdf",
-  "notes": "Update dokumen spesifikasi API"
-}
-
-### Delete Vendors Attachment by Id
-DELETE {{baseUrl}}/vendors-task-attachment/1
 Accept: application/json
 Authorization: Bearer {{token}}
 
