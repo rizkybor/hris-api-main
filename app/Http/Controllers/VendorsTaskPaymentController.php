@@ -32,10 +32,10 @@ class VendorsTaskPaymentController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['credential-account-list|credential-account-create|credential-account-edit|credential-account-delete']), only: ['index', 'getAllPaginated', 'show']),
-            new Middleware(PermissionMiddleware::using(['credential-account-create']), only: ['store']),
-            new Middleware(PermissionMiddleware::using(['credential-account-edit']), only: ['update']),
-            new Middleware(PermissionMiddleware::using(['credential-account-delete']), only: ['destroy']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-payment-list|vendors-task-payment-create|vendors-task-payment-edit|vendors-task-payment-delete']), only: ['index', 'getAllPaginated', 'show']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-payment-create']), only: ['store']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-payment-edit']), only: ['update']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-payment-delete']), only: ['destroy']),
         ];
     }
 

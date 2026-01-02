@@ -32,10 +32,10 @@ class VendorsTaskListController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['credential-account-list|credential-account-create|credential-account-edit|credential-account-delete']), only: ['index', 'getAllPaginated', 'show']),
-            new Middleware(PermissionMiddleware::using(['credential-account-create']), only: ['store']),
-            new Middleware(PermissionMiddleware::using(['credential-account-edit']), only: ['update']),
-            new Middleware(PermissionMiddleware::using(['credential-account-delete']), only: ['destroy']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-list|vendors-task-list-create|vendors-task-list-edit|vendors-task-list-delete']), only: ['index', 'getAllPaginated', 'show']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-list-create']), only: ['store']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-list-edit']), only: ['update']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-list-delete']), only: ['destroy']),
         ];
     }
 

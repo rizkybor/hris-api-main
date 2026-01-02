@@ -26,10 +26,10 @@ class VendorsController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['credential-account-list|credential-account-create|credential-account-edit|credential-account-delete']), only: ['index', 'getAllPaginated', 'show']),
-            new Middleware(PermissionMiddleware::using(['credential-account-create']), only: ['store']),
-            new Middleware(PermissionMiddleware::using(['credential-account-edit']), only: ['update']),
-            new Middleware(PermissionMiddleware::using(['credential-account-delete']), only: ['destroy']),
+            new Middleware(PermissionMiddleware::using(['vendors-list|vendors-create|vendors-edit|vendors-delete']), only: ['index', 'getAllPaginated', 'show']),
+            new Middleware(PermissionMiddleware::using(['vendors-create']), only: ['store']),
+            new Middleware(PermissionMiddleware::using(['vendors-edit']), only: ['update']),
+            new Middleware(PermissionMiddleware::using(['vendors-delete']), only: ['destroy']),
         ];
     }
 

@@ -32,10 +32,10 @@ class VendorsTaskScopeController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['credential-account-list|credential-account-create|credential-account-edit|credential-account-delete']), only: ['index', 'getAllPaginated', 'show']),
-            new Middleware(PermissionMiddleware::using(['credential-account-create']), only: ['store']),
-            new Middleware(PermissionMiddleware::using(['credential-account-edit']), only: ['update']),
-            new Middleware(PermissionMiddleware::using(['credential-account-delete']), only: ['destroy']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-scope-list|vendors-task-scope-create|vendors-task-scope-edit|vendors-task-scope-delete']), only: ['index', 'getAllPaginated', 'show']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-scope-create']), only: ['store']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-scope-edit']), only: ['update']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-scope-delete']), only: ['destroy']),
         ];
     }
 

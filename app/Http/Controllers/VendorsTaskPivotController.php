@@ -26,10 +26,10 @@ class VendorsTaskPivotController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['credential-account-list|credential-account-create|credential-account-edit|credential-account-delete']), only: ['index', 'getAllPaginated', 'show']),
-            new Middleware(PermissionMiddleware::using(['credential-account-create']), only: ['store']),
-            new Middleware(PermissionMiddleware::using(['credential-account-edit']), only: ['update']),
-            new Middleware(PermissionMiddleware::using(['credential-account-delete']), only: ['destroy']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-pivot-list|vendors-task-pivot-create|vendors-task-pivot-edit|vendors-task-pivot-delete']), only: ['index', 'getAllPaginated', 'show']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-pivot-create']), only: ['store']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-pivot-edit']), only: ['update']),
+            new Middleware(PermissionMiddleware::using(['vendors-task-pivot-delete']), only: ['destroy']),
         ];
     }
 
