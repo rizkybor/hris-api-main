@@ -12,13 +12,14 @@ class CompanyAboutStoreUpdateRequest extends FormRequest
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'vision' => ['nullable', 'string'],
-            'mission' => ['nullable', 'string'],
+            'mission' => ['nullable', 'array'],
+            'mission.*' => ['string'],
             'branches' => ['nullable', 'array'],
-            'branches.*' => ['string'],
+            'branches.*' => ['nullable', 'string'],
             'address' => ['nullable', 'string'],
             'email' => ['nullable', 'email'],
             'phone' => ['nullable', 'string'],
-            'established_date' => ['sometimes', 'required', 'date'],
+            'established_date' => ['nullable', 'date'],
         ];
     }
 

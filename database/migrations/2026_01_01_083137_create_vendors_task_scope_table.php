@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('vendors_task_scope', function (Blueprint $table) {
+        Schema::create('vendors_task_scopes', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->timestamps();
@@ -18,7 +18,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('vendors_task_scope');
+        Schema::dropIfExists('vendors_task_scopes');
     }
 };
 

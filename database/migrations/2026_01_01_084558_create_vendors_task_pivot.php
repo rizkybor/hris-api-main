@@ -8,13 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('vendors_task_pivot', function (Blueprint $table) {
+        Schema::create('vendors_task_pivots', function (Blueprint $table) {
             $table->id();
 
             $table->foreignId('vendor_id')->constrained('vendors')->onDelete('cascade');
-            $table->foreignId('scope_vendor_id')->constrained('vendors_task_scope')->onDelete('cascade');
-            $table->foreignId('task_vendor_id')->constrained('vendors_task_list')->onDelete('cascade');
-            $table->foreignId('task_payment_id')->constrained('vendors_task_payment')->onDelete('cascade');
+            $table->foreignId('scope_vendor_id')->constrained('vendors_task_scopes')->onDelete('cascade');
+            $table->foreignId('task_vendor_id')->constrained('vendors_task_lists')->onDelete('cascade');
+            $table->foreignId('task_payment_id')->constrained('vendors_task_payments')->onDelete('cascade');
             
             $table->boolean('maintenance')->default(false);
             $table->decimal('contract_value', 15, 2)->nullable();
@@ -28,6 +28,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('vendors_task_pivot');
+        Schema::dropIfExists('vendors_task_pivots');
     }
 };

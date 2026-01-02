@@ -13,7 +13,7 @@ class VendorsTaskPivot extends Model
     /**
      * Nama tabel (custom, bukan konvensi Laravel)
      */
-    protected $table = 'vendors_task_pivot';
+    protected $table = 'vendors_task_pivots';
 
     /**
      * Kolom yang boleh diisi (mass assignment)

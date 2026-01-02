@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8000/api/v1
-@token = 1|nlYMmpzZnysfM6DzI6g7N4BQ1V8TqJ90qwDSfnKzea2b39f8
+@token = 1|bI4yY4yL9en50dd9JemZfP7jEUsDed3o1grWHdthd0f257f2
 
 # Manager Role
 # "email" => "rizkyjcd@jcdigital.co.id"
@@ -601,5 +601,117 @@ Content-Type: application/json
 
 ### Delete Fixed Cost
 DELETE {{baseUrl}}/fixed-costs/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+####################################
+# COMPANY ABOUT
+####################################
+
+### Get Company About
+GET {{baseUrl}}/company-about
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Company About By ID
+GET {{baseUrl}}/company-about/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Company About
+POST {{baseUrl}}/company-about
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "PT. Jendela Cakra Digital",
+  "description": "Employee Handbook 2024",
+  "vision": "Menjadi perusahaan teknologi terdepan di Indonesia yang menghadirkan solusi digital, integrasi kecerdasan buatan, dan layanan konsultasi IT yang mampu mempercepat transformasi bisnis secara berkelanjutan.",
+   "mission": ["Menghadirkan sistem dan aplikasi yang aman, scalable, dan sesuai kebutuhan pengguna."],
+  "established_date": "",
+  "branches": [],
+  "address": "",
+  "email": "contact@jcdigital.co.id",
+  "phone": ""
+}
+
+### Update Company About
+PUT {{baseUrl}}/company-about/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "PT. Jendela Cakra Digital",
+  "description": "Employee Handbook 2024",
+  "vision": "Menjadi perusahaan teknologi terdepan di Indonesia yang menghadirkan solusi digital, integrasi kecerdasan buatan, dan layanan konsultasi IT yang mampu mempercepat transformasi bisnis secara berkelanjutan.",
+   "mission": ["Menghadirkan sistem dan aplikasi yang aman, scalable, dan sesuai kebutuhan pengguna."],
+  "established_date": "",
+  "branches": [],
+  "address": "",
+  "email": "contact@jcdigital.co.id",
+  "phone": ""
+}
+
+### Delete Company About
+DELETE {{baseUrl}}/company-about/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+####################################
+# Vendors
+####################################
+
+### Get Vendors
+GET {{baseUrl}}/vendors
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Vendors By ID
+GET {{baseUrl}}/vendors/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Vendors
+POST {{baseUrl}}/vendors
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "PT. Jendela Cakra Digital",
+  "pic_name": "Rizky Ajie",
+  "pic_phone": "+628123456789",
+  "email": "contact@jcdigital.co.id",
+  "address": "Jl. Merdeka No. 123, Jakarta, Indonesia",
+  "type": "Technology",
+  "field": "Software Development",
+  "notes": "Vendor untuk pengembangan aplikasi internal dan konsultasi IT"
+}
+
+
+### Update Vendors
+PUT {{baseUrl}}/vendors/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "PT. Jendela Cakra Digital",
+  "pic_name": "Rizky Ajie Kurniawan",
+  "pic_phone": "+628123456789",
+  "email": "contact@jcdigital.co.id",
+  "address": "Jl. Merdeka No. 123, Jakarta, Indonesia",
+  "type": "Technology",
+  "field": "Software Development",
+  "notes": "Vendor untuk pengembangan aplikasi internal dan konsultasi IT"
+}
+
+
+### Delete Vendors
+DELETE {{baseUrl}}/vendors/1
 Accept: application/json
 Authorization: Bearer {{token}}

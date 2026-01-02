@@ -12,85 +12,75 @@ use Illuminate\Support\Facades\DB;
 
 class VendorsRepository implements VendorsRepositoryInterface
 {
-    /**
-     * Ambil semua vendor dengan filter search dan limit
-     */
-    public function getAll(?string $search, ?string $type, ?int $limit, bool $execute): Builder|Collection
-    {
-        $query = Vendors::with(['vendorTasks.scopeVendor', 'vendorTasks.taskVendor', 'vendorTasks.taskPayment'])
-            ->when($search, fn($q) => $q->search($search))
-            ->when($type, fn($q) => $q->where('type', $type))
+    public function getAll(
+        ?string $search,
+        ?int $limit,
+        bool $execute
+    ): Builder|Collection {
+        $query = Vendors::query()
+            ->where(function ($query) use ($search) {
+                if ($search) {
+                    $query->search($search);
+                }
+            })
             ->orderByDesc('created_at');
 
         if ($limit) {
             $query->take($limit);
         }
 
-        return $execute ? $query->get() : $query;
+        if ($execute) {
+            return $query->get();
+        }
+
+        return $query;
     }
 
+    public function getAllPaginated(
+        ?string $search,
+        int $rowPerPage
+    ): LengthAwarePaginator {
+        $query = $this->getAll(
+            $search,
+            null,
+            false
+        );
 
-    /**
-     * Ambil semua vendor dengan pagination
-     */
-    public function getAllPaginated(?string $search, ?string $type, int $rowPerPage): LengthAwarePaginator
-{
-    $query = $this->getAll($search, $type, null, false);
-
-    return $query->paginate($rowPerPage);
-}
-
-
-    /**
-     * Ambil vendor berdasarkan ID
-     */
-    public function getById(string $id): Vendors
-    {
-        return Vendors::with([
-            'vendorTasks.scopeVendor',
-            'vendorTasks.taskVendor',
-            'vendorTasks.taskPayment',
-        ])->findOrFail($id);
+        return $query->paginate($rowPerPage);
     }
 
-    /**
-     * Buat vendor baru
-     */
-    public function create(array $data): Vendors
-    {
-        return DB::transaction(function () use ($data) {
-            $vendorDto = VendorsDto::fromArray($data);
-            $vendor = Vendors::create($vendorDto->toArray());
-
-            return $vendor;
-        });
+    public function getById(
+        string $id
+    ): Vendors {
+        return Vendors::findOrFail($id);
     }
 
-    /**
-     * Update vendor
-     */
-    public function update(string $id, array $data): Vendors
-    {
-        return DB::transaction(function () use ($id, $data) {
-            $vendor = $this->getById($id);
+    public function create(
+        array $data
+    ): Vendors {
+        $accountDto = VendorsDto::fromArray($data);
+        $accountArray = $accountDto->toArray();
 
-            $vendorDto = VendorsDto::fromArrayForUpdate($data, $vendor);
-            $vendor->update($vendorDto->toArray());
-
-            return $vendor;
-        });
+        return Vendors::create($accountArray);
     }
 
-    /**
-     * Hapus vendor
-     */
-    public function delete(string $id): Vendors
-    {
-        return DB::transaction(function () use ($id) {
-            $vendor = $this->getById($id);
-            $vendor->delete();
+    public function update(
+        string $id,
+        array $data
+    ): Vendors {
+        $account = $this->getById($id);
+        $accountDto = VendorsDto::fromArrayForUpdate($data, $account);
+        $account->update($accountDto->toArray());
 
-            return $vendor;
-        });
+        return $account;
+    }
+
+    public function delete(
+        string $id
+    ): Vendors {
+        $account = $this->getById($id);
+        $account->delete();
+
+        return $account;
     }
 }

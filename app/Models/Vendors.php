@@ -22,7 +22,7 @@ class Vendors extends Model
     ];
 
     /**
-     * Relasi ke vendors_task_pivot
+     * Relasi ke vendors_task_pivots
      */
     public function vendorTasks()
     {

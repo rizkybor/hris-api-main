@@ -10,9 +10,9 @@ class VendorsTaskPivotStoreUpdateRequest extends FormRequest
     {
         return [
             'vendor_id'       => ['sometimes', 'required', 'exists:vendors,id'],
-            'scope_vendor_id' => ['sometimes', 'required', 'exists:vendors_task_scope,id'],
-            'task_vendor_id'  => ['sometimes', 'required', 'exists:vendors_task_list,id'],
-            'task_payment_id' => ['nullable', 'exists:vendors_task_payments,id'],
+            'scope_vendor_id' => ['sometimes', 'required', 'exists:vendors_task_scopes,id'],
+            'task_vendor_id'  => ['sometimes', 'required', 'exists:vendors_task_lists,id'],
+            'task_payment_id' => ['nullable', 'exists:vendors_task_paymentss,id'],
             'maintenance'     => ['nullable', 'boolean'],
             'contract_value'  => ['nullable', 'numeric', 'min:0'],
             'contract_status' => ['nullable', 'string', 'max:100'],
