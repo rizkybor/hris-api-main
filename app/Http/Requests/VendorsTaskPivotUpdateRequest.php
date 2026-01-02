@@ -4,15 +4,15 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class VendorsTaskPivotStoreUpdateRequest extends FormRequest
+class VendorsTaskPivotUpdateRequest extends FormRequest
 {
     public function rules(): array
     {
         return [
             'vendor_id'       => ['sometimes', 'required', 'exists:vendors,id'],
-            'scope_vendor_id' => ['sometimes', 'required', 'exists:vendors_task_scopes,id'],
-            'task_vendor_id'  => ['sometimes', 'required', 'exists:vendors_task_lists,id'],
-            'task_payment_id' => ['nullable', 'exists:vendors_task_paymentss,id'],
+            'scope_vendor_id' => ['nullable',, 'exists:vendors_task_scopes,id'],
+            'task_vendor_id'  => ['nullable', 'exists:vendors_task_lists,id'],
+            'payment_vendor_id' => ['nullable', 'exists:vendors_task_paymentss,id'],
             'maintenance'     => ['nullable', 'boolean'],
             'contract_value'  => ['nullable', 'numeric', 'min:0'],
             'contract_status' => ['nullable', 'string', 'max:100'],
@@ -27,7 +27,7 @@ class VendorsTaskPivotStoreUpdateRequest extends FormRequest
             'vendor_id'       => 'Vendor',
             'scope_vendor_id' => 'Scope Vendor',
             'task_vendor_id'  => 'Task Vendor',
-            'task_payment_id' => 'Task Payment',
+            'payment_vendor_id' => 'Task Payment',
             'maintenance'     => 'Maintenance',
             'contract_value'  => 'Contract Value',
             'contract_status' => 'Contract Status',

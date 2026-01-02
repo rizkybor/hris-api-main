@@ -20,9 +20,6 @@ class VendorsTaskPivot extends Model
      */
     protected $fillable = [
         'vendor_id',
-        'scope_vendor_id',
-        'task_vendor_id',
-        'task_payment_id',
         'maintenance',
         'contract_value',
         'contract_status',
@@ -51,18 +48,18 @@ class VendorsTaskPivot extends Model
         return $this->belongsTo(Vendors::class);
     }
 
-    public function scopeVendor()
-    {
-        return $this->belongsTo(VendorsTaskScope::class, 'scope_vendor_id');
-    }
-
     public function taskVendor()
     {
         return $this->belongsTo(VendorsTaskList::class, 'task_vendor_id');
     }
 
-    public function taskPayment()
+    public function scopeVendor()
     {
-        return $this->belongsTo(VendorsTaskPayment::class, 'task_payment_id');
+        return $this->belongsTo(VendorsTaskScope::class, 'scope_vendor_id');
+    }
+
+    public function paymentVendor()
+    {
+        return $this->belongsTo(VendorsTaskPayment::class, 'payment_vendor_id');
     }
 }

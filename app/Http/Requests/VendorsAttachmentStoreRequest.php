@@ -9,6 +9,7 @@ class VendorsAttachmentStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'vendor_id'       => ['sometimes', 'required', 'exists:vendors,id'],
             'document_name' => ['required', 'string', 'max:255'],
             'document_path' => ['required', 'string', 'max:500'],
             'type_file'     => ['nullable', 'string', 'max:100'],
@@ -20,6 +21,7 @@ class VendorsAttachmentStoreRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'vendor_id'       => 'Vendor',
             'document_name' => 'Document Name',
             'document_path' => 'Document Path',
             'type_file'     => 'File Type',

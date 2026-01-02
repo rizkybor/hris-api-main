@@ -10,6 +10,7 @@ class VendorsTaskScopeStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'pivot_id' => ['required', 'exists:vendors_task_pivots,id'],
         ];
     }
 
@@ -17,6 +18,7 @@ class VendorsTaskScopeStoreRequest extends FormRequest
     {
         return [
             'name' => 'Scope Name',
+            'pivot_id' => 'Pivot',
         ];
     }
 }

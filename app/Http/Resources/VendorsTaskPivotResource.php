@@ -34,8 +34,8 @@ class VendorsTaskPivotResource extends JsonResource
             'task_vendor' => $this->whenLoaded('taskVendor', function () {
                 return new VendorsTaskListResource($this->taskVendor);
             }),
-            'task_payment' => $this->whenLoaded('taskPayment', function () {
-                return new VendorsTaskPaymentResource($this->taskPayment);
+            'payment_vendor' => $this->whenLoaded('paymentVendor', function () {
+                return new VendorsTaskPaymentResource($this->paymentVendor);
             }),
         ];
     }

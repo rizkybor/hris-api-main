@@ -23,10 +23,10 @@ class VendorsTaskPaymentResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 
-            // Opsional: jika ingin menampilkan pivot tasks terkait
-            'vendor_task' => $this->whenLoaded('vendorTask', function () {
-                return new VendorsTaskPivotResource($this->vendorTask);
-            }),
+            // // Opsional: jika ingin menampilkan pivot tasks terkait
+            // 'vendor_task' => $this->whenLoaded('vendorTask', function () {
+            //     return new VendorsTaskPivotResource($this->vendorTask);
+            // }),
         ];
     }
 }

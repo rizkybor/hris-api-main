@@ -11,11 +11,12 @@ return new class extends Migration
         Schema::create('vendors_task_pivots', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('vendor_id')->constrained('vendors')->onDelete('cascade');
-            $table->foreignId('scope_vendor_id')->constrained('vendors_task_scopes')->onDelete('cascade');
-            $table->foreignId('task_vendor_id')->constrained('vendors_task_lists')->onDelete('cascade');
-            $table->foreignId('task_payment_id')->constrained('vendors_task_payments')->onDelete('cascade');
-            
+            $table->foreignId('vendor_id')->constrained('vendors')->onDelete('cascade');            
+
+            $table->foreignId('task_vendor_id')->nullable()->constrained('vendors_task_lists')->onDelete('set null');
+$table->foreignId('scope_vendor_id')->nullable()->constrained('vendors_task_scopes')->onDelete('set null');
+$table->foreignId('payment_vendor_id')->nullable()->constrained('vendors_task_payments')->onDelete('set null');
+
             $table->boolean('maintenance')->default(false);
             $table->decimal('contract_value', 15, 2)->nullable();
             $table->string('contract_status')->nullable();

@@ -24,12 +24,8 @@ class VendorsTaskList extends Model
         });
     }
 
-    /**
-     * Jika nanti ingin relasi ke vendor_tasks (opsional)
-     * Contoh:
-     */
-    public function vendorTasks()
+    public function taskVendor()
     {
-        return $this->hasMany(VendorsTaskList::class, 'task_vendor_id');
+        return $this->hasMany(VendorsTaskPivot::class, 'task_vendor_id');
     }
 }

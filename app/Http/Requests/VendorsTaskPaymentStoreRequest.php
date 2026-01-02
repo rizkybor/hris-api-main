@@ -13,6 +13,7 @@ class VendorsTaskPaymentStoreRequest extends FormRequest
             'document_path' => ['required', 'string', 'max:500'],
             'amount'        => ['nullable', 'numeric', 'min:0'],
             'payment_date'  => ['nullable', 'date'],
+            'pivot_id' => ['required', 'exists:vendors_task_pivots,id'],
         ];
     }
 
@@ -23,6 +24,7 @@ class VendorsTaskPaymentStoreRequest extends FormRequest
             'document_path' => 'Document Path',
             'amount'        => 'Amount',
             'payment_date'  => 'Payment Date',
+            'pivot_id' => 'Pivot',
         ];
     }
 }

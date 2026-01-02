@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\CompanyAboutStoreRequest;
-use App\Http\Requests\CompanyAboutStoreUpdateRequest;
+use App\Http\Requests\CompanyAboutUpdateRequest;
 use App\Http\Resources\CompanyAboutResource;
 use App\Interfaces\CompanyAboutRepositoryInterface;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -82,7 +82,7 @@ class CompanyAboutController extends Controller implements HasMiddleware
     /**
      * Update the specified resource in storage.
      */
-    public function update(CompanyAboutStoreUpdateRequest $request, int $id)
+    public function update(CompanyAboutUpdateRequest $request, int $id)
     {
         $validated = $request->validated();
 

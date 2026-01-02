@@ -6,14 +6,12 @@ interface VendorsTaskPivotRepositoryInterface
 {
     public function getAll(
         ?string $search,
-        ?int $vendorId,
         ?int $limit,
         bool $execute
     );
 
     public function getAllPaginated(
         ?string $search,
-        ?int $vendorId,
         int $rowPerPage
     );
 

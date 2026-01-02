@@ -24,7 +24,7 @@ class Vendors extends Model
     /**
      * Relasi ke vendors_task_pivots
      */
-    public function vendorTasks()
+    public function taskVendor()
     {
         return $this->hasMany(VendorsTaskPivot::class, 'vendor_id');
     }

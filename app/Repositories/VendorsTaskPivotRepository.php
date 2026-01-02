@@ -15,11 +15,10 @@ class VendorsTaskPivotRepository implements VendorsTaskPivotRepositoryInterface
     /**
      * Ambil semua vendor task pivot dengan filter search, vendorId, dan limit
      */
-    public function getAll(?string $search, ?int $vendorId, ?int $limit, bool $execute): Builder|Collection
+    public function getAll(?string $search, ?int $limit, bool $execute): Builder|Collection
     {
-        $query = VendorsTaskPivot::with(['vendor', 'scopeVendor', 'taskVendor', 'taskPayment'])
+        $query = VendorsTaskPivot::with(['vendor', 'scopeVendor', 'taskVendor', 'paymentVendor'])
             ->when($search, fn($q) => $q->whereHas('vendor', fn($q2) => $q2->search($search)))
-            ->when($vendorId, fn($q) => $q->where('vendor_id', $vendorId))
             ->orderByDesc('created_at');
 
         if ($limit) {
@@ -32,9 +31,9 @@ class VendorsTaskPivotRepository implements VendorsTaskPivotRepositoryInterface
     /**
      * Ambil semua vendor task pivot dengan pagination
      */
-    public function getAllPaginated(?string $search, ?int $vendorId, int $rowPerPage): LengthAwarePaginator
+    public function getAllPaginated(?string $search, int $rowPerPage): LengthAwarePaginator
     {
-        $query = $this->getAll($search, $vendorId, null, false);
+        $query = $this->getAll($search, null, false);
 
         return $query->paginate($rowPerPage);
     }
@@ -44,7 +43,7 @@ class VendorsTaskPivotRepository implements VendorsTaskPivotRepositoryInterface
      */
     public function getById(string $id): VendorsTaskPivot
     {
-        return VendorsTaskPivot::with(['vendor', 'scopeVendor', 'taskVendor', 'taskPayment'])
+        return VendorsTaskPivot::with(['vendor', 'scopeVendor', 'taskVendor', 'paymentVendor'])
             ->findOrFail($id);
     }
 
@@ -92,7 +91,7 @@ class VendorsTaskPivotRepository implements VendorsTaskPivotRepositoryInterface
      */
     public function getByVendorId(int $vendorId): Collection
     {
-        return VendorsTaskPivot::with(['vendor', 'scopeVendor', 'taskVendor', 'taskPayment'])
+        return VendorsTaskPivot::with(['vendor', 'scopeVendor', 'taskVendor', 'paymentVendor'])
             ->where('vendor_id', $vendorId)
             ->get();
     }

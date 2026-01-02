@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class VendorsTaskPaymentStoreUpdateRequest extends FormRequest
+class VendorsTaskPaymentUpdateRequest extends FormRequest
 {
     public function rules(): array
     {
@@ -13,6 +13,7 @@ class VendorsTaskPaymentStoreUpdateRequest extends FormRequest
             'document_path' => ['sometimes', 'required', 'string', 'max:500'],
             'amount'        => ['nullable', 'numeric', 'min:0'],
             'payment_date'  => ['nullable', 'date'],
+            'pivot_id' => ['sometimes', 'exists:vendors_task_pivots,id'],
         ];
     }
 
@@ -23,6 +24,7 @@ class VendorsTaskPaymentStoreUpdateRequest extends FormRequest
             'document_path' => 'Document Path',
             'amount'        => 'Amount',
             'payment_date'  => 'Payment Date',
+            'pivot_id' => 'Pivot',
         ];
     }
 }

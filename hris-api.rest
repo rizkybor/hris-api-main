@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8000/api/v1
-@token = 1|bI4yY4yL9en50dd9JemZfP7jEUsDed3o1grWHdthd0f257f2
+@token = 1|2fQVIoFNwPnWSRZIP5UQnksopNjAGfFTdaDEJzw59bd716fa
 
 # Manager Role
 # "email" => "rizkyjcd@jcdigital.co.id"
@@ -665,8 +665,14 @@ Authorization: Bearer {{token}}
 # Vendors
 ####################################
 
-### Get Vendors
-GET {{baseUrl}}/vendors
+### Get Vendors by Search
+GET {{baseUrl}}/vendors?search=Jendela&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Pagination
+GET {{baseUrl}}/vendors/all/paginated?row_per_page=10&search=
 Accept: application/json
 Authorization: Bearer {{token}}
 
@@ -715,3 +721,279 @@ Content-Type: application/json
 DELETE {{baseUrl}}/vendors/1
 Accept: application/json
 Authorization: Bearer {{token}}
+
+
+####################################
+# Vendors Task Pivot
+####################################
+
+### Get Vendors Task Pivot by Search
+GET {{baseUrl}}/vendors-task-pivot?search=Jendela&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Task Pivot by Pagination
+GET {{baseUrl}}/vendors-task-pivot/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Task Pivot by Id
+GET {{baseUrl}}/vendors-task-pivot/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Create Vendors Task Pivot
+POST {{baseUrl}}/vendors-task-pivot
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_id": 1,
+  "maintenance": false,
+  "contract_value": 5000000,
+  "contract_status": "Active",
+  "contract_start": "2026-01-02",
+  "contract_end" : "2026-02-02"
+}
+
+
+### Update Vendors Task Pivot
+PUT {{baseUrl}}/vendors-task-pivot/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_id": 1,
+  "vendor_task_id": 1,
+  "role": "lead developer",
+  "assigned_date": "2026-01-03",
+  "notes": "Update role tim"
+}
+
+
+### Delete Vendors Task Pivot by Id
+DELETE {{baseUrl}}/vendors-task-pivot/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+####################################
+# Vendors Task List
+####################################
+
+### Get Vendors Task List by Search
+GET {{baseUrl}}/vendors-task-list?search=Jendela&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Vendors Task List Pagination
+GET {{baseUrl}}/vendors-task-list/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Vendors by Id
+GET {{baseUrl}}/vendors-task-list/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create Vendors Task List
+POST {{baseUrl}}/vendors-task-list
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Inspect Vendor Equipment",
+  "pivot_id": 1
+}
+
+### Update Vendors Task List
+PUT {{baseUrl}}/vendors-task-list/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Task Name",
+  "pivot_id": 1
+}
+
+### Delete Vendors Task List
+DELETE {{baseUrl}}/vendors-task-list/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+####################################
+# Vendors Task Scope
+####################################
+
+### Get Vendors Task Scope by Search
+GET {{baseUrl}}/vendors-task-scope?search=Jendela&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Task Scope by Pagination
+GET {{baseUrl}}/vendors-task-scope/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Task Scope by id
+GET {{baseUrl}}/vendors-task-scope/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Create Vendors Task Scope
+POST {{baseUrl}}/vendors-task-scope
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_task_id": 1,
+  "scope_detail": "Membuat modul API untuk pembayaran",
+  "deliverables": "API endpoint CRUD pembayaran",
+  "notes": "Scope harus disetujui sebelum development"
+}
+
+
+### Update Vendors Task Scope by Id
+PUT {{baseUrl}}/vendors-task-scope/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_task_id": 1,
+  "scope_detail": "Membuat modul API untuk pembayaran",
+  "deliverables": "API endpoint CRUD pembayaran",
+  "notes": "Update scope sesuai diskusi tim"
+}
+
+
+### Delete Vendors Task Scope by Id
+DELETE {{baseUrl}}/vendors-task-scope/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+####################################
+# Vendors Task Payment
+####################################
+
+### Get Vendors Task Payment by Search
+GET {{baseUrl}}/vendors-task-payment?search=Jendela&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Get Vendors Task Payment by Pagination
+GET {{baseUrl}}/vendors-task-payment/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Task Payment by Id
+GET {{baseUrl}}/vendors-task-payment/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Create Vendors Task Payment
+POST {{baseUrl}}/vendors-task-payment
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_task_id": 1,
+  "amount": 5000000,
+  "payment_date": "2026-01-10",
+  "status": "paid",
+  "notes": "Pembayaran milestone pertama"
+}
+
+
+### Update Vendors Task Payment
+PUT {{baseUrl}}/vendors-task-payment/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_task_id": 1,
+  "amount": 5000000,
+  "payment_date": "2026-01-12",
+  "status": "paid",
+  "notes": "Update tanggal pembayaran"
+}
+
+
+### Delete Vendors Task Payment by Id
+DELETE {{baseUrl}}/vendors-task-payment/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+####################################
+# Vendors Attachment
+####################################
+
+### Get Vendors Attachment by Search
+GET {{baseUrl}}/vendors-task-attachment?search=Jendela&limit=10
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Attachment by Pagination
+GET {{baseUrl}}/vendors-task-attachment/all/paginated?row_per_page=10&search=
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Get Vendors Attachment by Id
+GET {{baseUrl}}/vendors-task-attachment/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+
+### Create Vendors Attachment
+POST {{baseUrl}}/vendors-task-attachment
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_task_id": 1,
+  "file_name": "specification.pdf",
+  "file_url": "https://example.com/specification.pdf",
+  "notes": "Dokumen spesifikasi API"
+}
+
+
+### Update Vendors Attachment
+PUT {{baseUrl}}/vendors-task-attachment/1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor_task_id": 1,
+  "file_name": "specification_updated.pdf",
+  "file_url": "https://example.com/specification_updated.pdf",
+  "notes": "Update dokumen spesifikasi API"
+}
+
+### Delete Vendors Attachment by Id
+DELETE {{baseUrl}}/vendors-task-attachment/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+

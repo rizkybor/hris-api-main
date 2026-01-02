@@ -17,12 +17,8 @@ class VendorsTaskScope extends Model
         'name',
     ];
 
-    /**
-     * Contoh relasi (opsional)
-     * Jika nanti dipakai di vendor_tasks
-     */
-    public function vendorTasks()
+    public function scopeVendor()
     {
-        return $this->hasMany(VendorsTaskList::class, 'scope_vendor_id');
+        return $this->hasMany(VendorsTaskPivot::class, 'scope_vendor_id');
     }
 }

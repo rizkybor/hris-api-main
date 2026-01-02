@@ -36,11 +36,8 @@ class VendorsTaskPayment extends Model
         });
     }
 
-    /**
-     * Contoh relasi (opsional, jika nanti dihubungkan ke vendor_tasks)
-     */
-    public function vendorTask()
+    public function paymentVendor()
     {
-        return $this->belongsTo(VendorsTaskList::class);
+        return $this->hasMany(VendorsTaskPivot::class, 'payment_vendor_id');
     }
 }

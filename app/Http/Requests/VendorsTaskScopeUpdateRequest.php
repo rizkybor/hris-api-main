@@ -4,19 +4,20 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class VendorsTaskListStoreUpdateRequest extends FormRequest
+class VendorsTaskScopeUpdateRequest extends FormRequest
 {
     public function rules(): array
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'pivot_id' => ['sometimes', 'exists:vendors_task_pivots,id'],
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'name' => 'Task Name',
+            'name' => 'Scope Name',
         ];
     }
 }

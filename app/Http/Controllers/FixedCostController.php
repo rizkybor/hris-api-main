@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\FixedCostStoreRequest;
-use App\Http\Requests\FixedCostStoreUpdateRequest;
+use App\Http\Requests\FixedCostUpdateRequest;
 use App\Http\Resources\FixedCostResource;
 use App\Http\Resources\PaginateResource;
 use App\Interfaces\FixedCostRepositoryInterface;
@@ -105,7 +105,7 @@ class FixedCostController extends Controller implements HasMiddleware
     /**
      * Update the specified resource in storage.
      */
-    public function update(FixedCostStoreUpdateRequest $request, int $id)
+    public function update(FixedCostUpdateRequest $request, int $id)
     {
         $validated = $request->validated();
 

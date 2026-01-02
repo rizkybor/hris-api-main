@@ -21,9 +21,9 @@ class VendorsTaskScopeResource extends JsonResource
             'updated_at' => $this->updated_at,
 
             // Opsional: jika ingin menampilkan tasks terkait
-            'vendor_tasks' => $this->whenLoaded('vendorTasks', function () {
-                return VendorsTaskPivotResource::collection($this->vendorTasks);
-            }),
+            // 'vendor_tasks' => $this->whenLoaded('taskVendor', function () {
+            //     return VendorsTaskPivotResource::collection($this->taskVendor);
+            // }),
         ];
     }
 }

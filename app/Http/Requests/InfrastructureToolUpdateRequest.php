@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use App\Enums\InfrastructureToolStatus;
 
-class InfrastructureToolStoreUpdateRequest extends FormRequest
+class InfrastructureToolUpdateRequest extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
