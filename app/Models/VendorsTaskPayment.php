@@ -16,6 +16,8 @@ class VendorsTaskPayment extends Model
     protected $fillable = [
         'document_name',
         'document_path',
+        'amount',
+        'payment_date'
     ];
 
     /**

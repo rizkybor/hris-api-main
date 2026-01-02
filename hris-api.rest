@@ -932,7 +932,7 @@ Content-Type: application/json
 }
 
 ### Delete Vendors Task Payment by Id
-DELETE {{baseUrl}}/vendors-task-payment/1
+DELETE {{baseUrl}}/vendors-task-payment/2
 Accept: application/json
 Authorization: Bearer {{token}}
 
