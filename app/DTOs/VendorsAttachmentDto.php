@@ -2,9 +2,9 @@
 
 namespace App\DTOs;
 
-use App\Models\FilesCompany;
+use App\Models\VendorsAttachment;
 
-class FilesCompanyDto
+class VendorsAttachmentDto
 {
     public function __construct(
         public readonly string $document_name,
@@ -12,11 +12,21 @@ class FilesCompanyDto
         public readonly ?string $type_file = null,
         public readonly ?string $size_file = null,
         public readonly ?string $description = null,
+        public readonly ?int $vendor_id = null,
     ) {}
 
-    /**
-     * Convert DTO ke array (untuk create / update model)
-     */
+    public function withPath(string $path): self
+    {
+        return new self(
+            document_name: $this->document_name,
+            document_path: $path,
+            type_file: $this->type_file,
+            size_file: $this->size_file,
+            description: $this->description,
+            vendor_id: $this->vendor_id
+        );
+    }
+
     public function toArray(): array
     {
         return [
@@ -25,12 +35,10 @@ class FilesCompanyDto
             'type_file'     => $this->type_file,
             'size_file'     => $this->size_file,
             'description'   => $this->description,
+            'vendor_id'     => $this->vendor_id,
         ];
     }
 
-    /**
-     * Create DTO dari array (CREATE)
-     */
     public static function fromArray(array $data): self
     {
         return new self(
@@ -39,13 +47,11 @@ class FilesCompanyDto
             type_file: $data['type_file'] ?? null,
             size_file: $data['size_file'] ?? null,
             description: $data['description'] ?? null,
+            vendor_id: $data['vendor_id'] ?? null,
         );
     }
 
-    /**
-     * Create DTO untuk UPDATE (merge data lama & baru)
-     */
-    public static function fromArrayForUpdate(array $data, FilesCompany $existingFile): self
+    public static function fromArrayForUpdate(array $data, VendorsAttachment $existingFile): self
     {
         return new self(
             document_name: $data['document_name'] ?? $existingFile->document_name,
@@ -53,6 +59,7 @@ class FilesCompanyDto
             type_file: $data['type_file'] ?? $existingFile->type_file,
             size_file: $data['size_file'] ?? $existingFile->size_file,
             description: $data['description'] ?? $existingFile->description,
+            vendor_id: $existingFile->vendor_id
         );
     }
 }

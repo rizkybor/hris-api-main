@@ -11,15 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('files_companies', function (Blueprint $table) {
+        Schema::create('vendors_attachments', function (Blueprint $table) {
             $table->id();
+
+            // Kolom relasi ke vendor
+            $table->unsignedBigInteger('vendor_id');
+
             $table->string('document_name');
             $table->string('document_path');
             $table->string('type_file')->nullable();
             $table->string('size_file')->nullable();
             $table->text('description')->nullable();
+
             $table->timestamps();
             $table->softDeletes();
+
+            // Foreign key ke tabel vendors
+            $table->foreign('vendor_id')
+                  ->references('id')
+                  ->on('vendors')
+                  ->onDelete('cascade'); // kalau vendor dihapus, attachment ikut terhapus
         });
     }
 
@@ -28,6 +39,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('files_companies');
+        Schema::dropIfExists('vendors_attachments');
     }
 };

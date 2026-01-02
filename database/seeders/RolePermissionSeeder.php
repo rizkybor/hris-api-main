@@ -45,6 +45,12 @@ class RolePermissionSeeder extends Seeder
                 'files-company-',
                 'company-about-',
                 'sdm-resource-',
+                'vendors-',
+                'vendors-attachment',
+                'vendors-task-list',
+                'vendors-task-scope',
+                'vendors-task-payment',
+                'vendors-task-pivot',
             ], $employeeSpecific));
 
             $employee->syncPermissions(
@@ -122,6 +128,30 @@ class RolePermissionSeeder extends Seeder
                     'sdm-resource-create',
                     'sdm-resource-edit',
                     'sdm-resource-delete',
+                    'vendors-list',
+                    'vendors-create',
+                    'vendors-edit',
+                    'vendors-delete',
+                    'vendors-attachment-list',
+                    'vendors-attachment-create',
+                    'vendors-attachment-edit',
+                    'vendors-attachment-delete',
+                    'vendors-task-list',
+                    'vendors-task-list-create',
+                    'vendors-task-list-edit',
+                    'vendors-task-list-delete',
+                    'vendors-task-scope-list',
+                    'vendors-task-scope-create',
+                    'vendors-task-scope-edit',
+                    'vendors-task-scope-delete',
+                    'vendors-task-payment-list',
+                    'vendors-task-payment-create',
+                    'vendors-task-payment-edit',
+                    'vendors-task-payment-delete',
+                    'vendors-task-pivot-list',
+                    'vendors-task-pivot-create',
+                    'vendors-task-pivot-edit',
+                    'vendors-task-pivot-delete',
                 ])->get()
             );
         });
