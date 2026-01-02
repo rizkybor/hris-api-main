@@ -88,17 +88,35 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
-        'account-password' => [
-            'menu',
+        'credential-account' => [
             'list',
             'create',
             'edit',
             'delete',
-            'process',
-            'statistics',
         ],
 
-        'credential-account' => [
+        'company-finance' => [
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'fixed-cost' => [
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'infrastructure-tool' => [
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'sdm-resource' => [
             'list',
             'create',
             'edit',
