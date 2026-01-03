@@ -56,6 +56,7 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
 
     public function getStatistic(?string $search = null): array
     {
+        // Query semua Infrastructure
         $query = InfrastructureTool::query();
 
         if ($search) {
@@ -64,17 +65,26 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
 
         $items = $query->get();
 
-        $totalMonthly = $items->sum('monthly_fee');
-        $totalAnnual = $items->sum('annual_fee');
+        // Filter hanya yang aktif
+        $activeItems = $items->where('status', 'active');
+
+        // Hitung total bulanan dan tahunan hanya dari aktif
+        $totalMonthly = $activeItems->sum('monthly_fee');
+        $totalAnnual = $activeItems->sum('annual_fee');
+
+        // Total infrastructure aktif (jumlah record aktif)
+        $totalInfraActive = $activeItems->count();
 
         return [
-            'items' => $items,
+            'items' => $items, // semua atau bisa diganti $activeItems jika mau
             'summary' => [
                 'total_monthly_fee' => $totalMonthly,
                 'total_annual_fee' => $totalAnnual,
-            ]
+                'total_infra_active' => $totalInfraActive,
+            ],
         ];
     }
+
 
 
     public function create(
