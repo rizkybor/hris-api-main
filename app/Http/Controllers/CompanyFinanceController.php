@@ -45,14 +45,10 @@ class CompanyFinanceController extends Controller implements HasMiddleware
     public function getStatistic(Request $request)
     {
         try {
-            // Ambil statistik dari service
-            $data = $this->statisticService->getStatistic($request->search ?? null);
+            $search = $request->search ?? null;
 
-            // Ambil total saldo company langsung dari repository
-            $companyBalanceData = $this->companyFinanceRepository->getStatistic($request->search ?? null);
-
-            // Tambahkan saldo company ke response statistik
-            $data['company_balance'] = number_format($companyBalanceData['summary']['total_saldo_company'], 2, '.', '');
+            // Ambil data statistik via service
+            $data = $this->statisticService->getStatistic($search);
 
             return ResponseHelper::jsonResponse(
                 true,
