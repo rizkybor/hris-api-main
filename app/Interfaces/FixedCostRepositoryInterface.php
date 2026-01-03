@@ -15,6 +15,8 @@ interface FixedCostRepositoryInterface
         int $rowPerPage
     );
 
+    public function getStatistic(?string $search = null): array;
+
     public function getById(
         string $id
     );

@@ -54,6 +54,31 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
         return SdmResource::findOrFail($id);
     }
 
+    public function getStatistic(?string $search = null): array
+    {
+        $query = SdmResource::query();
+
+        if ($search) {
+            $query->search($search);
+        }
+
+        $items = $query->get();
+
+        $totalBudget = $items->sum('budget');
+        $totalActual = $items->sum('actual');
+        $variance = $totalBudget - $totalActual;
+
+        return [
+            'items' => $items,
+            'summary' => [
+                'total_budget' => $totalBudget,
+                'total_actual' => $totalActual,
+                'variance' => $variance,
+            ]
+        ];
+    }
+
+
     public function create(
         array $data
     ): SdmResource {

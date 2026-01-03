@@ -110,6 +110,7 @@ Route::prefix('v1')
 
             // Fixed Cost routes
             Route::get('fixed-costs/all/paginated', [FixedCostController::class, 'getAllPaginated']);
+            Route::get('fixed-costs/statistic', [FixedCostController::class, 'getStatistic']);
             Route::apiResource('fixed-costs', FixedCostController::class);
 
             // Infrastructure Tools routes
@@ -118,6 +119,8 @@ Route::prefix('v1')
 
             // Company Finance routes
             Route::get('company-finances/all/paginated', [CompanyFinanceController::class, 'getAllPaginated']);
+            // Endpoint statistic
+            Route::get('company-finances/statistic', [CompanyFinanceController::class, 'getStatistic']);
             Route::apiResource('company-finances', CompanyFinanceController::class);
 
             // Sdm Resources routes
@@ -129,6 +132,7 @@ Route::prefix('v1')
 
             // Vendors
             Route::get('vendors/all/paginated', [VendorsController::class, 'getAllPaginated']);
+            Route::get('vendors/statistic', [VendorsController::class, 'getStatistic']);
             Route::apiResource('vendors', VendorsController::class);
 
             // Vendors Attachment

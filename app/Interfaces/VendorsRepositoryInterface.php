@@ -31,4 +31,7 @@ interface VendorsRepositoryInterface
     public function delete(
         string $id
     );
+
+    public function getStatistic(): array;
+
 }
