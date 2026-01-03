@@ -8,6 +8,7 @@ use App\Models\FixedCost;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class FixedCostRepository implements FixedCostRepositoryInterface
 {
@@ -76,9 +77,25 @@ class FixedCostRepository implements FixedCostRepositoryInterface
                 'total_budget' => $totalBudget,
                 'total_actual' => $totalActual,
                 'variance' => $variance,
-                'total_items' => $totalItems, // tambahkan total data
+                'total_items' => $totalItems,
             ]
         ];
+    }
+
+    public function getMonthlyStatistic(): array
+    {
+        // Menggunakan FixedCost::query() untuk query Eloquent
+        $result = FixedCost::query()
+            ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month')
+            ->selectRaw('SUM(budget) as total_budget')
+            ->selectRaw('SUM(actual) as total_actual')
+            ->selectRaw('SUM(budget - actual) as variance')
+            ->selectRaw('COUNT(*) as total_items')
+            ->groupBy(groups: DB::raw('DATE_FORMAT(created_at, "%Y-%m")'))
+            ->orderByDesc('month')
+            ->get();
+
+        return $result->toArray(); // Mengembalikan hasil sebagai array
     }
 
 

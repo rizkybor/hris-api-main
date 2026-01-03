@@ -8,6 +8,7 @@ use App\Models\InfrastructureTool;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class InfrastructureToolRepository implements InfrastructureToolRepositoryInterface
 {
@@ -84,6 +85,19 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
             ],
         ];
     }
+    public function getMonthlyStatistic(): array
+    {
+        $result = InfrastructureTool::query()
+            ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month')
+            ->selectRaw('SUM(monthly_fee) as total_monthly_fee')
+            ->selectRaw('SUM(annual_fee) as total_annual_fee')
+            ->selectRaw('SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as total_infra_active')
+            ->groupBy(DB::raw('DATE_FORMAT(created_at, "%Y-%m")'))
+            ->orderByDesc('month')
+            ->get();
+        return $result->toArray();
+    }
+
 
 
 

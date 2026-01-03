@@ -24,9 +24,13 @@ class OperationalCostStatisticService
     public function getStatistic(): array
     {
         // Ambil semua data tanpa filter search
-        $fixedCostData = $this->fixedCostRepo->getStatistic(null); // null = ambil semua
+        $fixedCostData = $this->fixedCostRepo->getStatistic(null);
         $sdmData = $this->sdmRepo->getStatistic(null);
         $infraData = $this->infraRepo->getStatistic(null);
+
+        $fixedCostDataByMonth = $this->fixedCostRepo->getMonthlyStatistic();
+        $sdmDataByMonth = $this->sdmRepo->getMonthlyStatistic();
+        $infraDataByMonth = $this->infraRepo->getMonthlyStatistic();
 
         // Ambil saldo company terbaru
         $companyBalance = (float) ($this->financeRepo->first()?->saldo_company ?? 0);
@@ -36,6 +40,9 @@ class OperationalCostStatisticService
             'sdm_resource' => $sdmData,
             'infrastructure' => $infraData,
             'company_balance' => number_format($companyBalance, 2, '.', ''),
+            'fixed_cost_byMonth' => $fixedCostDataByMonth,
+            'sdm_resource_byMonth' => $sdmDataByMonth,
+            'infrastructure_byMonth' => $infraDataByMonth
         ];
     }
 }
