@@ -20,33 +20,45 @@ class OperationalCostStatisticService
     ) {}
 
     /**
-     * Get aggregated operational cost statistics with optional search filter
+     * Get aggregated operational cost statistics (no search)
      *
-     * @param string|null $search
      * @return array
      */
-    public function getStatistic(?string $search = null): array
+    public function getStatistic(): array
     {
-        $cacheKey = CacheConstants::CACHE_KEY_DASHBOARD_STATISTICS . ($search ?? 'all');
+        $cacheKey = CacheConstants::CACHE_KEY_DASHBOARD_STATISTICS . '_all';
 
-        return Cache::remember($cacheKey, CacheConstants::ONE_HOUR, function () use ($search) {
+        return Cache::remember($cacheKey, CacheConstants::ONE_HOUR, function () {
+
+            // Ambil semua data tanpa filter search
+            $fixedCostData = $this->fixedCostRepo->getStatistic(null); // pastikan repository menangani null = ambil semua
+            $sdmData = $this->sdmRepo->getStatistic(null);
+            $infraData = $this->infraRepo->getStatistic(null);
 
             // Ambil saldo company terbaru
             $companyBalance = (float) ($this->financeRepo->first()?->saldo_company ?? 0);
 
- // Logging untuk debug
-        Log::info('OperationalCostStatisticService::getStatistic called', [
-            'search' => $search,
-            'company_balance' => $companyBalance,
-            'fixed_cost_count' => $this->fixedCostRepo->getStatistic($search)['items']->count(),
-            'sdm_resource_count' => $this->sdmRepo->getStatistic($search)['items']->count(),
-            'infrastructure_count' => $this->infraRepo->getStatistic($search)['items']->count(),
-        ]);
+            // Logging lengkap untuk debug
+            Log::info('OperationalCostStatisticService::getStatistic called', [
+                'fixed_cost' => [
+                    'count' => count($fixedCostData['items']),
+                    'summary' => $fixedCostData['summary'],
+                ],
+                'sdm_resource' => [
+                    'count' => count($sdmData['items']),
+                    'summary' => $sdmData['summary'],
+                ],
+                'infrastructure' => [
+                    'count' => count($infraData['items']),
+                    'summary' => $infraData['summary'],
+                ],
+                'company_balance' => $companyBalance,
+            ]);
 
             return [
-                'fixed_cost' => $this->fixedCostRepo->getStatistic($search),
-                'sdm_resource' => $this->sdmRepo->getStatistic($search),
-                'infrastructure' => $this->infraRepo->getStatistic($search),
+                'fixed_cost' => $fixedCostData,
+                'sdm_resource' => $sdmData,
+                'infrastructure' => $infraData,
                 'company_balance' => number_format($companyBalance, 2, '.', ''),
             ];
         });
