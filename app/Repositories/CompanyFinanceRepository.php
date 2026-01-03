@@ -63,6 +63,30 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
         return CompanyFinance::create($array);
     }
 
+    public function getStatistic(?string $search = null): array
+    {
+        $query = CompanyFinance::query();
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('saldo_company', 'like', '%' . $search . '%');
+                // tambahkan kolom lain jika perlu
+            });
+        }
+
+        $items = $query->get();
+
+        $totalSaldo = $items->sum('saldo_company');
+
+        return [
+            'items' => $items,
+            'summary' => [
+                'total_saldo_company' => $totalSaldo,
+            ],
+        ];
+    }
+
+
     public function update(
         string $id,
         array $data
@@ -86,5 +110,12 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
     public function first(): ?CompanyFinance
     {
         return CompanyFinance::first();
+    }
+
+    public function getLatestBalance(): float
+    {
+        $finance = CompanyFinance::latest()->first();
+
+        return $finance ? (float) $finance->saldo_company : 0;
     }
 }

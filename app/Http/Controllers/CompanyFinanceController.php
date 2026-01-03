@@ -14,16 +14,22 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
+use App\Services\OperationalCostStatistic\OperationalCostStatisticService;
+
 class CompanyFinanceController extends Controller implements HasMiddleware
 {
     private CompanyFinanceRepositoryInterface $companyFinanceRepository;
+    protected OperationalCostStatisticService $statisticService;
 
-    public function __construct(CompanyFinanceRepositoryInterface $companyFinanceRepository)
-    {
+    public function __construct(
+        CompanyFinanceRepositoryInterface $companyFinanceRepository,
+        OperationalCostStatisticService $statisticService
+    ) {
         $this->companyFinanceRepository = $companyFinanceRepository;
+        $this->statisticService = $statisticService;
     }
 
-   public static function middleware()
+    public static function middleware()
     {
         return [
             new Middleware(PermissionMiddleware::using(['company-finance-list|company-finance-create|company-finance-edit|company-finance-delete']), only: ['index', 'getAllPaginated', 'show']),
@@ -33,6 +39,37 @@ class CompanyFinanceController extends Controller implements HasMiddleware
         ];
     }
 
+
+    /**
+     * Get aggregated operational cost statistics
+     */
+    public function getStatistic(Request $request)
+    {
+        try {
+            // Ambil statistik dari service
+            $data = $this->statisticService->getStatistic($request->search ?? null);
+
+            // Ambil total saldo company langsung dari repository
+            $companyBalanceData = $this->companyFinanceRepository->getStatistic($request->search ?? null);
+
+            // Tambahkan saldo company ke response statistik
+            $data['company_balance'] = number_format($companyBalanceData['summary']['total_saldo_company'], 2, '.', '');
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'Operational cost statistic loaded successfully',
+                $data,
+                200
+            );
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(
+                false,
+                'Internal Server Error: ' . $e->getMessage(),
+                null,
+                500
+            );
+        }
+    }
 
 
     /**

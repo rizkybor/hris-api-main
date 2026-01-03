@@ -51,6 +51,27 @@ class FixedCostController extends Controller implements HasMiddleware
         }
     }
 
+    public function getStatistic(Request $request)
+    {
+        try {
+            $data = $this->fixedCostRepository->getStatistic($request->search ?? null);
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'Fixed cost statistic loaded successfully',
+                $data,
+                200
+            );
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(
+                false,
+                'Internal Server Error: ' . $e->getMessage(),
+                null,
+                500
+            );
+        }
+    }
+
     public function getAllPaginated(Request $request)
     {
         $request->validate([

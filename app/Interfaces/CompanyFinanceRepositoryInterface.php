@@ -31,4 +31,6 @@ interface CompanyFinanceRepositoryInterface
     public function delete(
         string $id
     );
+
+    public function getStatistic(?string $search = null): array;
 }

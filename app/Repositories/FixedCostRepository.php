@@ -54,6 +54,34 @@ class FixedCostRepository implements FixedCostRepositoryInterface
         return FixedCost::findOrFail($id);
     }
 
+    public function getStatistic(?string $search = "GitHub"): array
+    {
+        $query = FixedCost::query();
+
+        // Ganti scope search jika tidak ada
+        if ($search) {
+            $query->where('financial_items', 'like', "%{$search}%");
+        }
+
+        $items = $query->get();
+
+        $totalBudget = $items->sum('budget');
+        $totalActual = $items->sum('actual');
+        $variance = $totalBudget - $totalActual;
+
+        return [
+            'items' => $items,
+            'summary' => [
+                'total_budget' => $totalBudget,
+                'total_actual' => $totalActual,
+                'variance' => $variance,
+            ]
+        ];
+    }
+
+
+
+
     public function create(
         array $data
     ): FixedCost {
