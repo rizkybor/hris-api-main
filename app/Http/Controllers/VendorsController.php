@@ -26,7 +26,7 @@ class VendorsController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['vendors-list|vendors-create|vendors-edit|vendors-delete']), only: ['index', 'getAllPaginated', 'show']),
+            new Middleware(PermissionMiddleware::using(['vendors-menu|vendors-list|vendors-create|vendors-edit|vendors-delete']), only: ['index', 'getAllPaginated', 'show', 'getStatistic']),
             new Middleware(PermissionMiddleware::using(['vendors-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['vendors-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['vendors-delete']), only: ['destroy']),
@@ -98,6 +98,28 @@ class VendorsController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
         }
     }
+
+    public function getStatistic()
+    {
+        try {
+            $data = $this->vendorsRepository->getStatistic();
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'Vendor statistic loaded successfully',
+                $data,
+                200
+            );
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(
+                false,
+                'Internal Server Error: ' . $e->getMessage(),
+                null,
+                500
+            );
+        }
+    }
+
 
     /**
      * Display the specified resource.

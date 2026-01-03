@@ -80,8 +80,6 @@ class FixedCostRepository implements FixedCostRepositoryInterface
     }
 
 
-
-
     public function create(
         array $data
     ): FixedCost {

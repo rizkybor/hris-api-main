@@ -10,11 +10,6 @@ interface CompanyFinanceRepositoryInterface
         bool $execute
     );
 
-    public function getAllPaginated(
-        ?string $search,
-        int $rowPerPage
-    );
-
     public function getById(
         string $id
     );

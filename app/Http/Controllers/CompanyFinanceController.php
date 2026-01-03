@@ -6,7 +6,6 @@ use App\Helpers\ResponseHelper;
 use App\Http\Requests\CompanyFinanceStoreRequest;
 use App\Http\Requests\CompanyFinanceStoreUpdateRequest;
 use App\Http\Resources\CompanyFinanceResource;
-use App\Http\Resources\PaginateResource;
 use App\Interfaces\CompanyFinanceRepositoryInterface;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -32,7 +31,7 @@ class CompanyFinanceController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['company-finance-list|company-finance-create|company-finance-edit|company-finance-delete']), only: ['index', 'getAllPaginated', 'show']),
+            new Middleware(PermissionMiddleware::using(['company-finance-menu|company-finance-create|company-finance-edit|company-finance-delete|company-finance-statistic']), only: ['index', 'show', 'getStatistic']),
             new Middleware(PermissionMiddleware::using(['company-finance-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['company-finance-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['company-finance-delete']), only: ['destroy']),
@@ -85,25 +84,6 @@ class CompanyFinanceController extends Controller implements HasMiddleware
             );
 
             return ResponseHelper::jsonResponse(true, 'Company Finances Retrieved Successfully', CompanyFinanceResource::collection($finances), 200);
-        } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
-        }
-    }
-
-    public function getAllPaginated(Request $request)
-    {
-        $request->validate([
-            'search' => 'nullable|string',
-            'row_per_page' => 'required|integer',
-        ]);
-
-        try {
-            $finances = $this->companyFinanceRepository->getAllPaginated(
-                $request->search ?? null,
-                $request->row_per_page
-            );
-
-            return ResponseHelper::jsonResponse(true, 'Company Finances Retrieved Successfully', PaginateResource::make($finances, CompanyFinanceResource::class), 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }

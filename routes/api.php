@@ -132,6 +132,7 @@ Route::prefix('v1')
 
             // Vendors
             Route::get('vendors/all/paginated', [VendorsController::class, 'getAllPaginated']);
+            Route::get('vendors/statistic', [VendorsController::class, 'getStatistic']);
             Route::apiResource('vendors', VendorsController::class);
 
             // Vendors Attachment

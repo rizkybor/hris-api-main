@@ -5,7 +5,6 @@ namespace App\Repositories;
 use App\DTOs\CompanyFinanceDTO;
 use App\Interfaces\CompanyFinanceRepositoryInterface;
 use App\Models\CompanyFinance;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -35,18 +34,6 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
         return $query;
     }
 
-    public function getAllPaginated(
-        ?string $search = null,
-        int $rowPerPage = 15
-    ): LengthAwarePaginator {
-        $query = $this->getAll(
-            $search,
-            null,
-            false
-        );
-
-        return $query->paginate($rowPerPage);
-    }
 
     public function getById(
         string $id
