@@ -58,7 +58,7 @@ class FixedCostRepository implements FixedCostRepositoryInterface
     {
         $query = FixedCost::query();
 
-        // Ganti scope search jika tidak ada
+        // Filter berdasarkan search jika ada
         if ($search) {
             $query->where('financial_items', 'like', "%{$search}%");
         }
@@ -68,6 +68,7 @@ class FixedCostRepository implements FixedCostRepositoryInterface
         $totalBudget = $items->sum('budget');
         $totalActual = $items->sum('actual');
         $variance = $totalBudget - $totalActual;
+        $totalItems = $items->count(); // total data
 
         return [
             'items' => $items,
@@ -75,9 +76,11 @@ class FixedCostRepository implements FixedCostRepositoryInterface
                 'total_budget' => $totalBudget,
                 'total_actual' => $totalActual,
                 'variance' => $variance,
+                'total_items' => $totalItems, // tambahkan total data
             ]
         ];
     }
+
 
 
     public function create(

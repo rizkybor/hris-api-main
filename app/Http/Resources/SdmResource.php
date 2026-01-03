@@ -21,7 +21,7 @@ class SdmResource extends JsonResource
             'capacity_target' => $this->capacity_target,
             'budget' => (float) (string) $this->budget,
             'actual' => (float) (string) $this->actual,
-            'rag_status' => $this->status_rag,
+            'rag_status' => $this->rag_status,
             'notes' => $this->notes,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

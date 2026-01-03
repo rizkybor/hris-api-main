@@ -38,7 +38,7 @@ class SdmResourceDTO
             capacity_target: $data['capacity_target'],
             budget: isset($data['budget']) ? (float) $data['budget'] : null,
             actual: isset($data['actual']) ? (float) $data['actual'] : null,
-            rag_status: $data['rag_status'] ?? null,
+            rag_status: $data['rag_status'],
             notes: $data['notes'] ?? null,
         );
     }
