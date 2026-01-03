@@ -68,15 +68,24 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
         $totalActual = $items->sum('actual');
         $variance = $totalBudget - $totalActual;
 
+        // Hitung jumlah berdasarkan rag_status
+        $totalStatusGreen = $items->where('rag_status', 'green')->count();
+        $totalStatusAmber = $items->where('rag_status', 'amber')->count();
+        $totalStatusRed = $items->where('rag_status', 'red')->count();
+
         return [
             'items' => $items,
             'summary' => [
                 'total_budget' => $totalBudget,
                 'total_actual' => $totalActual,
                 'variance' => $variance,
+                'total_status_green' => $totalStatusGreen,
+                'total_status_amber' => $totalStatusAmber,
+                'total_status_red' => $totalStatusRed,
             ]
         ];
     }
+
 
 
     public function create(
