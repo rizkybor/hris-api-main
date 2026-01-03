@@ -436,7 +436,7 @@ Content-Type: application/json
 }
 
 ### Delete Company Finance
-DELETE {{baseUrl}}/company-finances/1
+DELETE {{baseUrl}}/company-finances/2
 Accept: application/json
 Authorization: Bearer {{token}}
 
