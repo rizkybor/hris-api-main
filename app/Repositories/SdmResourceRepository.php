@@ -8,6 +8,7 @@ use App\Models\SdmResource;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class SdmResourceRepository implements SdmResourceRepositoryInterface
 {
@@ -86,7 +87,20 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
         ];
     }
 
+    public function getMonthlyStatistic(): array
+    {
+        $result = SdmResource::query()
+            ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month')
+            ->selectRaw('SUM(budget) as total_budget')
+            ->selectRaw('SUM(actual) as total_actual')
+            ->selectRaw('SUM(budget - actual) as variance')
+            ->selectRaw('COUNT(*) as total_items')
+            ->groupBy(groups: DB::raw('DATE_FORMAT(created_at, "%Y-%m")'))
+            ->orderByDesc('month')
+            ->get();
 
+        return $result->toArray();
+    }
 
     public function create(
         array $data
