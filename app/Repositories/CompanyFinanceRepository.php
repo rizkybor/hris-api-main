@@ -5,7 +5,6 @@ namespace App\Repositories;
 use App\DTOs\CompanyFinanceDTO;
 use App\Interfaces\CompanyFinanceRepositoryInterface;
 use App\Models\CompanyFinance;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -35,18 +34,6 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
         return $query;
     }
 
-    public function getAllPaginated(
-        ?string $search = null,
-        int $rowPerPage = 15
-    ): LengthAwarePaginator {
-        $query = $this->getAll(
-            $search,
-            null,
-            false
-        );
-
-        return $query->paginate($rowPerPage);
-    }
 
     public function getById(
         string $id
@@ -62,6 +49,30 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
 
         return CompanyFinance::create($array);
     }
+
+    public function getStatistic(?string $search = null): array
+    {
+        $query = CompanyFinance::query();
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('saldo_company', 'like', '%' . $search . '%');
+                // tambahkan kolom lain jika perlu
+            });
+        }
+
+        $items = $query->get();
+
+        $totalSaldo = $items->sum('saldo_company');
+
+        return [
+            'items' => $items,
+            'summary' => [
+                'total_saldo_company' => $totalSaldo,
+            ],
+        ];
+    }
+
 
     public function update(
         string $id,
@@ -86,5 +97,12 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
     public function first(): ?CompanyFinance
     {
         return CompanyFinance::first();
+    }
+
+    public function getLatestBalance(): float
+    {
+        $finance = CompanyFinance::latest()->first();
+
+        return $finance ? (float) $finance->saldo_company : 0;
     }
 }

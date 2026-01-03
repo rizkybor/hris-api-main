@@ -55,6 +55,35 @@ class VendorsRepository implements VendorsRepositoryInterface
         return Vendors::findOrFail($id);
     }
 
+    public function getStatistic(): array
+    {
+        // Statistik berdasarkan TYPE
+        $byType = Vendors::query()
+            ->select('type', DB::raw('COUNT(*) as total'))
+            ->groupBy('type')
+            ->orderByDesc('total')
+            ->get();
+
+        // Statistik berdasarkan FIELD
+        $byField = Vendors::query()
+            ->select('field', DB::raw('COUNT(*) as total'))
+            ->groupBy('field')
+            ->orderByDesc('total')
+            ->get();
+
+        // Total vendor keseluruhan
+        $totalVendors = Vendors::count();
+
+        return [
+            'by_type' => $byType,
+            'by_field' => $byField,
+            'summary' => [
+                'total_vendors' => $totalVendors,
+            ],
+        ];
+    }
+
+
     public function create(
         array $data
     ): Vendors {

@@ -89,6 +89,7 @@ class PermissionSeeder extends Seeder
         ],
 
         'credential-account' => [
+            'menu',
             'list',
             'create',
             'edit',
@@ -96,10 +97,12 @@ class PermissionSeeder extends Seeder
         ],
 
         'company-finance' => [
+            'menu',
             'list',
             'create',
             'edit',
             'delete',
+            'statistic'
         ],
 
         'fixed-cost' => [
@@ -129,8 +132,34 @@ class PermissionSeeder extends Seeder
             'create',
             'edit',
             'delete',
-            'process',
-            'statistics',
+        ],
+
+        'vendors' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'attachment-list',
+            'attachment-create',
+            'attachment-edit',
+            'attachment-delete',
+            'task-list',
+            'task-list-create',
+            'task-list-edit',
+            'task-list-delete',
+            'task-scope-list',
+            'task-scope-create',
+            'task-scope-edit',
+            'task-scope-delete',
+            'task-payment-list',
+            'task-payment-create',
+            'task-payment-edit',
+            'task-payment-delete',
+            'task-pivot-list',
+            'task-pivot-create',
+            'task-pivot-edit',
+            'task-pivot-delete',
         ],
     ];
 

@@ -26,7 +26,7 @@ class FilesCompanyController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['files-company-list|files-company-create|files-company-edit|files-company-delete']), only: ['index', 'getAllPaginated', 'show']),
+            new Middleware(PermissionMiddleware::using(['files-company-menu|files-company-list|files-company-create|files-company-edit|files-company-delete']), only: ['index', 'getAllPaginated', 'show']),
             new Middleware(PermissionMiddleware::using(['files-company-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['files-company-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['files-company-delete']), only: ['destroy']),

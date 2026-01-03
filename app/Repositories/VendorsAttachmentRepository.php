@@ -54,6 +54,37 @@ class VendorsAttachmentRepository implements VendorsAttachmentRepositoryInterfac
         return VendorsAttachment::findOrFail($id);
     }
 
+    public function getStatisticByVendor(
+        string $vendorId,
+        ?string $search = null
+    ): array {
+        $query = VendorsAttachment::query()
+            ->where('vendor_id', $vendorId);
+
+        if ($search) {
+            $query->search($search);
+        }
+
+        $items = $query->get();
+
+        $totalFiles = $items->count();
+
+        $totalSize = $items->sum(function ($item) {
+            return (float) $item->size_file;
+        });
+
+        return [
+            'vendor_id' => $vendorId,
+            'items' => $items,
+            'summary' => [
+                'total_files' => $totalFiles,
+                'total_size' => $totalSize,
+            ],
+        ];
+    }
+
+
+
     public function create(
         array $data
     ): VendorsAttachment {
