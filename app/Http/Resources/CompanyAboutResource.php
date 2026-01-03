@@ -20,7 +20,7 @@ class CompanyAboutResource extends JsonResource
             'description' => $this->description,
             'vision' => $this->vision,
             'mission' => $this->mission,
-            'branches' => $this->branches ? json_decode($this->branches, true) : [],
+            'branches' => $this->branches,
             'address' => $this->address,
             'email' => $this->email,
             'phone' => $this->phone,
