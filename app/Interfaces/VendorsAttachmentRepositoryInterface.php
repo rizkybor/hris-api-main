@@ -33,4 +33,6 @@ interface VendorsAttachmentRepositoryInterface
     public function delete(
         string $id
     );
+
+    public function getStatisticByVendor(string $id, ?string $search = null): array;
 }

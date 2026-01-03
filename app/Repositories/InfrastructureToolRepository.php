@@ -54,6 +54,29 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
         return InfrastructureTool::findOrFail($id);
     }
 
+    public function getStatistic(?string $search = null): array
+    {
+        $query = InfrastructureTool::query();
+
+        if ($search) {
+            $query->search($search);
+        }
+
+        $items = $query->get();
+
+        $totalMonthly = $items->sum('monthly_fee');
+        $totalAnnual = $items->sum('annual_fee');
+
+        return [
+            'items' => $items,
+            'summary' => [
+                'total_monthly_fee' => $totalMonthly,
+                'total_annual_fee' => $totalAnnual,
+            ]
+        ];
+    }
+
+
     public function create(
         array $data
     ): InfrastructureTool {
