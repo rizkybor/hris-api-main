@@ -57,48 +57,43 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
 
     public function getStatistic(?string $search = null): array
     {
-        // Query semua Infrastructure
         $query = InfrastructureTool::query();
 
         if ($search) {
             $query->search($search);
         }
 
-        $items = $query->get();
+        // AMBIL SEMUA KECUALI INACTIVE
+        $items = $query->where('status', '!=', 'inactive')->get();
 
-        // Filter hanya yang aktif
-        $activeItems = $items->where('status', 'active');
-
-        // Hitung total bulanan dan tahunan hanya dari aktif
-        $totalMonthly = $activeItems->sum('monthly_fee');
-        $totalAnnual = $activeItems->sum('annual_fee');
-
-        // Total infrastructure aktif (jumlah record aktif)
-        $totalInfraActive = $activeItems->count();
+        $totalMonthly = $items->sum('monthly_fee');
+        $totalAnnual = $items->sum('annual_fee');
+        $totalInfra = $items->count();
 
         return [
-            'items' => $items, // semua atau bisa diganti $activeItems jika mau
+            'items' => $items,
             'summary' => [
                 'total_monthly_fee' => $totalMonthly,
                 'total_annual_fee' => $totalAnnual,
-                'total_infra_active' => $totalInfraActive,
+                'total_infra_active' => $totalInfra,
             ],
         ];
     }
+
     public function getMonthlyStatistic(): array
     {
         $result = InfrastructureTool::query()
+            ->where('status', '!=', 'inactive')
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month')
             ->selectRaw('SUM(monthly_fee) as total_monthly_fee')
             ->selectRaw('SUM(annual_fee) as total_annual_fee')
-            ->selectRaw('SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as total_infra_active')
+            ->selectRaw('COUNT(*) as total_infra')
             ->groupBy(DB::raw('DATE_FORMAT(created_at, "%Y-%m")'))
             ->orderByDesc('month')
             ->get();
+
         return $result->toArray();
     }
-
-
 
 
     public function create(
