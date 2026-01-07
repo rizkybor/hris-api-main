@@ -4,7 +4,7 @@ namespace App\DTOs;
 
 use App\Models\CompanyFinance;
 
-class CompanyFinanceDTO
+class CompanyFinanceDto
 {
 
     public function __construct(

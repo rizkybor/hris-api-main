@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\DTOs\InfrastructureToolDTO;
+use App\DTOs\InfrastructureToolDto;
 use App\Interfaces\InfrastructureToolRepositoryInterface;
 use App\Models\InfrastructureTool;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
