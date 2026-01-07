@@ -13,7 +13,7 @@ class CompanyAbout extends Model
     protected $table = 'company_abouts';
 
     protected $fillable = [
-        'name', 'description', 'vision', 'mission', 'branches', 'address', 'email', 'phone'
+        'name', 'description', 'established_date', 'vision', 'mission', 'branches', 'address', 'email', 'phone'
     ];
 
         protected $casts = [
