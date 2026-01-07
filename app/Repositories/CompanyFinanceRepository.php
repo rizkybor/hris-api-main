@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\DTOs\CompanyFinanceDTO;
+use App\DTOs\CompanyFinanceDto;
 use App\Interfaces\CompanyFinanceRepositoryInterface;
 use App\Models\CompanyFinance;
 use Illuminate\Database\Eloquent\Builder;

@@ -4,7 +4,7 @@ namespace App\DTOs;
 
 use App\Models\FixedCost;
 
-class FixedCostDTO
+class FixedCostDto
 {
     public function __construct(
         public readonly string $financial_items,
