@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\DTOs\FixedCostDTO;
+use App\DTOs\FixedCostDto;
 use App\Interfaces\FixedCostRepositoryInterface;
 use App\Models\FixedCost;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;

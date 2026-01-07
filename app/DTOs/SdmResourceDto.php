@@ -4,7 +4,7 @@ namespace App\DTOs;
 
 use App\Models\SdmResource;
 
-class SdmResourceDTO
+class SdmResourceDto
 {
 
     public function __construct(

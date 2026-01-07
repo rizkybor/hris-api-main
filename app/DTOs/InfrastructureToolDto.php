@@ -4,7 +4,7 @@ namespace App\DTOs;
 
 use App\Models\InfrastructureTool;
 
-class InfrastructureToolDTO
+class InfrastructureToolDto
 {
     public function __construct(
         public readonly string $tech_stack_component,
