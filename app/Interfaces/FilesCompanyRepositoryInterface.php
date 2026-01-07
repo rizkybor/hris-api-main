@@ -31,5 +31,11 @@ interface FilesCompanyRepositoryInterface
     public function delete(
         string $id
     );
-}
 
+    /**
+     * Get statistics of company files
+     *
+     * @return array{total_archives: int, last_uploaded: string|null}
+     */
+    public function statistics(): array;
+}

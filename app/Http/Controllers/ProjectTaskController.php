@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProjectTaskController extends Controller implements HasMiddleware
@@ -48,7 +49,7 @@ class ProjectTaskController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Tasks Retrieved Successfully', ProjectTaskResource::collection($tasks), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
@@ -69,7 +70,7 @@ class ProjectTaskController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Tasks Retrieved Successfully', PaginateResource::make($tasks, ProjectTaskResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
@@ -80,25 +81,77 @@ class ProjectTaskController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Project Tasks Retrieved Successfully', ProjectTaskResource::collection($tasks), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
     /**
      * Store a newly created resource in storage.
      */
+    // public function store(ProjectTaskStoreRequest $request)
+    // {
+    //     $request = $request->validated();
+
+    //     try {
+    //         $task = $this->projectTaskRepository->create($request);
+
+    //         return ResponseHelper::jsonResponse(true, 'Task Created Successfully', new ProjectTaskResource($task), 201);
+    //     } catch (\Throwable $e) {
+    //         return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
+    //     }
+    // }
+
+    /**
+     * Store a newly created task and save file to private disk.
+     */
     public function store(ProjectTaskStoreRequest $request)
     {
-        $request = $request->validated();
+        $validated = $request->validated();
 
         try {
-            $task = $this->projectTaskRepository->create($request);
+            if ($request->hasFile('document') && $request->file('document')->isValid()) {
+                $file = $request->file('document');
+
+                // simpan file di disk company_files
+                $path = $file->store('', 'company_files');
+
+                $validated['document_path'] = $path;
+                $validated['document_name'] = $file->getClientOriginalName();
+                $validated['type_file'] = $file->getClientMimeType();
+                $validated['size_file'] = $file->getSize();
+            }
+
+            $task = $this->projectTaskRepository->create($validated);
+
+            
 
             return ResponseHelper::jsonResponse(true, 'Task Created Successfully', new ProjectTaskResource($task), 201);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
         }
     }
+
+
+    /**
+     * Download task file from private disk.
+     */
+    public function download(string $id)
+    {
+        $task = $this->projectTaskRepository->getById($id);
+
+        $disk = Storage::disk('company_files');
+
+        if (!isset($task->document_path) || !$disk->exists($task->document_path)) {
+            abort(404, 'File not found');
+        }
+
+        $filePath = $disk->path($task->document_path);
+
+        return response()->download($filePath, $task->document_name ?? 'task-file');
+    }
+
+
+
 
     /**
      * Display the specified resource.
@@ -112,7 +165,7 @@ class ProjectTaskController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Task Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
@@ -146,7 +199,7 @@ class ProjectTaskController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Task Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 }

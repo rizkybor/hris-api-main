@@ -31,10 +31,9 @@ class FilesCompanyStoreRequest extends FormRequest
     public function attributes()
     {
         return [
-            'path' => 'Path',
-            'name' => 'Name',
-            'description' => 'Description',
+            'path' => ['required', 'file', 'mimes:pdf,doc,docx,xlsx,png,jpg,jpeg', 'max:10240'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
         ];
     }
 }
-

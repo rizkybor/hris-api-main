@@ -23,7 +23,7 @@ class FilesCompanyUpdateRequest extends FormRequest
     public function attributes()
     {
         return [
-            'path' => 'Path',
+            'path' => ['sometimes', 'required', 'file', 'mimes:pdf,doc,docx,xlsx,png,jpg,jpeg', 'max:10240'],
             'name' => 'Name',
             'description' => 'Description',
         ];
