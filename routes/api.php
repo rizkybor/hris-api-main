@@ -106,6 +106,7 @@ Route::prefix('v1')
 
             // Files Company routes
             Route::get('files-companies/all/paginated', [FilesCompanyController::class, 'getAllPaginated']);
+            Route::get('files-companies/statistics', [FilesCompanyController::class, 'statistics']); // route statistics
             Route::apiResource('files-companies', FilesCompanyController::class);
 
             // Fixed Cost routes

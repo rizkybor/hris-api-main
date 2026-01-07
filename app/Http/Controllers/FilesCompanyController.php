@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class FilesCompanyController extends Controller implements HasMiddleware
@@ -33,9 +34,6 @@ class FilesCompanyController extends Controller implements HasMiddleware
         ];
     }
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         try {
@@ -47,7 +45,7 @@ class FilesCompanyController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Company Files Retrieved Successfully', FilesCompanyResource::collection($files), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
@@ -66,53 +64,84 @@ class FilesCompanyController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Company Files Retrieved Successfully', PaginateResource::make($files, FilesCompanyResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    public function statistics()
+    {
+        try {
+            $stats = $this->filesCompanyRepository->statistics();
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'Company Files Statistics Retrieved Successfully',
+                $stats,
+                200
+            );
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(
+                false,
+                'Internal Server Error: ' . $e->getMessage(),
+                null,
+                500
+            );
+        }
+    }
+
     public function store(FilesCompanyStoreRequest $request)
     {
-        $request = $request->validated();
+        $validated = $request->validated();
 
         try {
-            $file = $this->filesCompanyRepository->create($request);
+            // Jika ada file, simpan dulu di disk private
+            if ($request->hasFile('file') && $request->file('file')->isValid()) {
+                $file = $request->file('file');
+                $validated['document_path'] = $file->store('', 'company_files');
+                $validated['document_name'] = $file->getClientOriginalName();
+                $validated['type_file'] = $file->getClientMimeType();
+                $validated['size_file'] = $file->getSize();
+            }
 
-            return ResponseHelper::jsonResponse(true, 'Company File Created Successfully', new FilesCompanyResource($file), 201);
+            // Kirim array data ke repository, repository yang buat DTO
+            $fileModel = $this->filesCompanyRepository->create($validated);
+
+            return ResponseHelper::jsonResponse(true, 'Company File Created Successfully', new FilesCompanyResource($fileModel), 201);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         try {
             $file = $this->filesCompanyRepository->getById($id);
-
             return ResponseHelper::jsonResponse(true, 'Company File Retrieved Successfully', new FilesCompanyResource($file), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(FilesCompanyUpdateRequest $request, string $id)
     {
-        $request = $request->validated();
+        $validated = $request->validated();
 
         try {
-            $file = $this->filesCompanyRepository->update($id, $request);
+            // Jika ada file baru, simpan di disk
+            if ($request->hasFile('file') && $request->file('file')->isValid()) {
+                $file = $request->file('file');
+                $validated['document_path'] = $file->store('', 'company_files');
+                $validated['document_name'] = $file->getClientOriginalName();
+                $validated['type_file'] = $file->getClientMimeType();
+                $validated['size_file'] = $file->getSize();
+            }
 
-            return ResponseHelper::jsonResponse(true, 'Company File Updated Successfully', new FilesCompanyResource($file), 200);
+            // Kirim array data ke repository
+            $fileModel = $this->filesCompanyRepository->update($id, $validated);
+
+            return ResponseHelper::jsonResponse(true, 'Company File Updated Successfully', new FilesCompanyResource($fileModel), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
         } catch (\Throwable $e) {
@@ -120,20 +149,15 @@ class FilesCompanyController extends Controller implements HasMiddleware
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         try {
             $this->filesCompanyRepository->delete($id);
-
             return ResponseHelper::jsonResponse(true, 'Company File Deleted Successfully', null, 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 }
-
