@@ -2,7 +2,7 @@
 
 namespace App\Repositories;
 
-use App\DTOs\SdmResourceDTO;
+use App\DTOs\SdmResourceDto;
 use App\Interfaces\SdmResourceRepositoryInterface;
 use App\Models\SdmResource;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
