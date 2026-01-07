@@ -11,62 +11,52 @@ use Illuminate\Database\Eloquent\Collection;
 
 class FilesCompanyRepository implements FilesCompanyRepositoryInterface
 {
-    public function getAll(
-        ?string $search,
-        ?int $limit,
-        bool $execute
-    ): Builder|Collection {
+    public function statistics(): array
+    {
+        $total = FilesCompany::count();
+        $lastUploaded = FilesCompany::orderByDesc('created_at')
+            ->value('created_at'); // ambil timestamp terakhir
+
+        return [
+            'total_archives' => $total,
+            'last_uploaded' => $lastUploaded ? $lastUploaded->toDateString() : null,
+        ];
+    }
+
+
+    public function getAll(?string $search, ?int $limit, bool $execute): Builder|Collection
+    {
         $query = FilesCompany::query()
-            ->where(function ($query) use ($search) {
-                if ($search) {
-                    $query->search($search);
-                }
-            })
+            ->when($search, fn($q) => $q->search($search))
             ->orderByDesc('created_at');
 
         if ($limit) {
             $query->take($limit);
         }
 
-        if ($execute) {
-            return $query->get();
-        }
-
-        return $query;
+        return $execute ? $query->get() : $query;
     }
 
-    public function getAllPaginated(
-        ?string $search,
-        int $rowPerPage
-    ): LengthAwarePaginator {
-        $query = $this->getAll(
-            $search,
-            null,
-            false
-        );
-
+    public function getAllPaginated(?string $search, int $rowPerPage): LengthAwarePaginator
+    {
+        $query = $this->getAll($search, null, false);
         return $query->paginate($rowPerPage);
     }
 
-    public function getById(
-        string $id
-    ): FilesCompany {
+    public function getById(string $id): FilesCompany
+    {
         return FilesCompany::findOrFail($id);
     }
 
-    public function create(
-        array $data
-    ): FilesCompany {
+    public function create(array $data): FilesCompany
+    {
+        // DTO dibuat di repository
         $fileDto = FilesCompanyDto::fromArray($data);
-        $fileArray = $fileDto->toArray();
-
-        return FilesCompany::create($fileArray);
+        return FilesCompany::create($fileDto->toArray());
     }
 
-    public function update(
-        string $id,
-        array $data
-    ): FilesCompany {
+    public function update(string $id, array $data): FilesCompany
+    {
         $file = $this->getById($id);
         $fileDto = FilesCompanyDto::fromArrayForUpdate($data, $file);
         $file->update($fileDto->toArray());
@@ -74,13 +64,10 @@ class FilesCompanyRepository implements FilesCompanyRepositoryInterface
         return $file;
     }
 
-    public function delete(
-        string $id
-    ): FilesCompany {
+    public function delete(string $id): FilesCompany
+    {
         $file = $this->getById($id);
         $file->delete();
-
         return $file;
     }
 }
-
