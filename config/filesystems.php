@@ -49,9 +49,11 @@ return [
 
         'company_files' => [
             'driver' => 'local',
-            'root' => storage_path('app/private/company-files'),
-            'visibility' => 'private',
+            'root' => storage_path('app/public/company-files'),
+            'url' => env('APP_URL') . '/storage/company-files',
+            'visibility' => 'public',
         ],
+
 
         's3' => [
             'driver' => 's3',
