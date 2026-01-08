@@ -15,14 +15,13 @@ class FilesCompanyRepository implements FilesCompanyRepositoryInterface
     {
         $total = FilesCompany::count();
         $lastUploaded = FilesCompany::orderByDesc('created_at')
-            ->value('created_at'); // ambil timestamp terakhir
+            ->value('created_at');
 
         return [
             'total_archives' => $total,
             'last_uploaded' => $lastUploaded ? $lastUploaded->toDateString() : null,
         ];
     }
-
 
     public function getAll(?string $search, ?int $limit, bool $execute): Builder|Collection
     {
@@ -50,7 +49,6 @@ class FilesCompanyRepository implements FilesCompanyRepositoryInterface
 
     public function create(array $data): FilesCompany
     {
-        // DTO dibuat di repository
         $fileDto = FilesCompanyDto::fromArray($data);
         return FilesCompany::create($fileDto->toArray());
     }
@@ -60,13 +58,18 @@ class FilesCompanyRepository implements FilesCompanyRepositoryInterface
         $file = $this->getById($id);
         $fileDto = FilesCompanyDto::fromArrayForUpdate($data, $file);
         $file->update($fileDto->toArray());
-
         return $file;
     }
 
     public function delete(string $id): FilesCompany
     {
         $file = $this->getById($id);
+
+        // Hapus file fisik jika perlu
+        // if ($file->document_path && Storage::disk('company_files')->exists($file->document_path)) {
+        //     Storage::disk('company_files')->delete($file->document_path);
+        // }
+
         $file->delete();
         return $file;
     }
