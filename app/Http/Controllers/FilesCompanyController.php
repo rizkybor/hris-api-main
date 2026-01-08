@@ -88,9 +88,6 @@ class FilesCompanyController extends Controller
         $validated = $request->validated();
 
         try {
-            // Log awal validasi
-            Log::info('Validated data before file handling:', $validated);
-
             // Pastikan file ada dan valid
             if ($request->hasFile('document_path') && $request->file('document_path')->isValid()) {
                 $file = $request->file('document_path');
@@ -101,65 +98,54 @@ class FilesCompanyController extends Controller
                 $validated['document_path'] = $storedPath; // relative path: company-files/nama-file.png
                 $validated['type_file'] = $file->getClientMimeType();
                 $validated['size_file'] = $file->getSize();
-
-                Log::info('File uploaded:', [
-                    'original_name' => $file->getClientOriginalName(),
-                    'stored_path'   => $storedPath,
-                    'mime_type'     => $validated['type_file'],
-                    'size'          => $validated['size_file'],
-                ]);
             } else {
-                Log::warning('File not received or invalid');
                 return ResponseHelper::jsonResponse(false, 'File is required', null, 422);
             }
-
-            // Log data final sebelum create
-            Log::info('Data to be saved to DB:', $validated);
-
-            // Simpan ke DB
             $fileModel = $this->filesCompanyRepository->create($validated);
 
             return ResponseHelper::jsonResponse(true, 'Company File Created Successfully', new FilesCompanyResource($fileModel), 201);
         } catch (\Throwable $e) {
-            Log::error('Error storing company file:', [
-                'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString()
-            ]);
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
         }
     }
 
     public function update(FilesCompanyUpdateRequest $request, string $id)
     {
+
         $validated = $request->validated();
 
         try {
             $fileModel = $this->filesCompanyRepository->getById($id);
 
+            // =========================
+            // 1️⃣ Tangani remove_file
+            // =========================
+            if ($request->boolean('remove_file') && $fileModel->document_path) {
+                if (Storage::disk('public')->exists($fileModel->document_path)) {
+                    Storage::disk('public')->delete($fileModel->document_path);
+                }
+                $validated['document_path'] = null;
+                $validated['type_file'] = null;
+                $validated['size_file'] = null;
+            }
+
+            // =========================
+            // 2️⃣ Tangani upload file baru
+            // =========================
             if ($request->hasFile('document_path') && $request->file('document_path')->isValid()) {
                 $file = $request->file('document_path');
 
-                // Simpan file baru
-                $storedPath = $file->store('company-files', 'public');
-
-                // Optional: hapus file lama jika ada
                 if ($fileModel->document_path && Storage::disk('public')->exists($fileModel->document_path)) {
                     Storage::disk('public')->delete($fileModel->document_path);
                 }
 
+                $storedPath = $file->store('company-files', 'public');
+
                 $validated['document_path'] = $storedPath;
                 $validated['type_file'] = $file->getClientMimeType();
                 $validated['size_file'] = $file->getSize();
-
-                Log::info('File updated:', [
-                    'original_name' => $file->getClientOriginalName(),
-                    'stored_path'   => $storedPath,
-                    'mime_type'     => $validated['type_file'],
-                    'size'          => $validated['size_file'],
-                ]);
             }
 
-            // document_name tetap dari input user
             $fileModel = $this->filesCompanyRepository->update($id, $validated);
 
             return ResponseHelper::jsonResponse(
@@ -171,13 +157,10 @@ class FilesCompanyController extends Controller
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
         } catch (\Throwable $e) {
-            Log::error('Error updating company file:', [
-                'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString()
-            ]);
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
         }
     }
+
 
     public function show(string $id)
     {
@@ -193,10 +176,6 @@ class FilesCompanyController extends Controller
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
         } catch (\Throwable $e) {
-            Log::error('Error retrieving company file:', [
-                'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString()
-            ]);
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }

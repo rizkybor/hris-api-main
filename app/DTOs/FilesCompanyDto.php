@@ -49,7 +49,8 @@ class FilesCompanyDto
     {
         return new self(
             document_name: $data['document_name'] ?? $existingFile->document_name,
-            document_path: $data['document_path'] ?? $existingFile->document_path,
+            // kalau data['document_path'] null karena dihapus, set null
+            document_path: array_key_exists('document_path', $data) ? $data['document_path'] : $existingFile->document_path,
             type_file: $data['type_file'] ?? $existingFile->type_file,
             size_file: isset($data['size_file']) ? (int)$data['size_file'] : $existingFile->size_file,
             description: $data['description'] ?? $existingFile->description,
