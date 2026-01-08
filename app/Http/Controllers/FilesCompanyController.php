@@ -10,28 +10,16 @@ use App\Http\Resources\PaginateResource;
 use App\Interfaces\FilesCompanyRepositoryInterface;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Permission\Middleware\PermissionMiddleware;
 
-class FilesCompanyController extends Controller implements HasMiddleware
+class FilesCompanyController extends Controller
 {
     private FilesCompanyRepositoryInterface $filesCompanyRepository;
 
     public function __construct(FilesCompanyRepositoryInterface $filesCompanyRepository)
     {
         $this->filesCompanyRepository = $filesCompanyRepository;
-    }
-
-    public static function middleware()
-    {
-        return [
-            new Middleware(PermissionMiddleware::using(['files-company-menu|files-company-list|files-company-create|files-company-edit|files-company-delete']), only: ['index', 'getAllPaginated', 'show']),
-            new Middleware(PermissionMiddleware::using(['files-company-create']), only: ['store']),
-            new Middleware(PermissionMiddleware::using(['files-company-edit']), only: ['update']),
-            new Middleware(PermissionMiddleware::using(['files-company-delete']), only: ['destroy']),
-        ];
     }
 
     public function index(Request $request)
@@ -43,7 +31,12 @@ class FilesCompanyController extends Controller implements HasMiddleware
                 true
             );
 
-            return ResponseHelper::jsonResponse(true, 'Company Files Retrieved Successfully', FilesCompanyResource::collection($files), 200);
+            return ResponseHelper::jsonResponse(
+                true,
+                'Company Files Retrieved Successfully',
+                FilesCompanyResource::collection($files),
+                200
+            );
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
@@ -51,18 +44,23 @@ class FilesCompanyController extends Controller implements HasMiddleware
 
     public function getAllPaginated(Request $request)
     {
-        $request = $request->validate([
+        $validated = $request->validate([
             'search' => 'nullable|string',
             'row_per_page' => 'required|integer',
         ]);
 
         try {
             $files = $this->filesCompanyRepository->getAllPaginated(
-                $request['search'] ?? null,
-                $request['row_per_page']
+                $validated['search'] ?? null,
+                $validated['row_per_page']
             );
 
-            return ResponseHelper::jsonResponse(true, 'Company Files Retrieved Successfully', PaginateResource::make($files, FilesCompanyResource::class), 200);
+            return ResponseHelper::jsonResponse(
+                true,
+                'Company Files Retrieved Successfully',
+                PaginateResource::make($files, FilesCompanyResource::class),
+                200
+            );
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
@@ -80,47 +78,54 @@ class FilesCompanyController extends Controller implements HasMiddleware
                 200
             );
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(
-                false,
-                'Internal Server Error: ' . $e->getMessage(),
-                null,
-                500
-            );
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
+
 
     public function store(FilesCompanyStoreRequest $request)
     {
         $validated = $request->validated();
 
         try {
-            // Jika ada file, simpan dulu di disk private
-            if ($request->hasFile('file') && $request->file('file')->isValid()) {
-                $file = $request->file('file');
-                $validated['document_path'] = $file->store('', 'company_files');
-                $validated['document_name'] = $file->getClientOriginalName();
+            // Log awal validasi
+            Log::info('Validated data before file handling:', $validated);
+
+            // Pastikan file ada dan valid
+            if ($request->hasFile('document_path') && $request->file('document_path')->isValid()) {
+                $file = $request->file('document_path');
+
+                // Simpan file di storage/app/public/company-files
+                $storedPath = $file->store('company-files', 'public');
+
+                $validated['document_path'] = $storedPath; // relative path: company-files/nama-file.png
                 $validated['type_file'] = $file->getClientMimeType();
                 $validated['size_file'] = $file->getSize();
+
+                Log::info('File uploaded:', [
+                    'original_name' => $file->getClientOriginalName(),
+                    'stored_path'   => $storedPath,
+                    'mime_type'     => $validated['type_file'],
+                    'size'          => $validated['size_file'],
+                ]);
+            } else {
+                Log::warning('File not received or invalid');
+                return ResponseHelper::jsonResponse(false, 'File is required', null, 422);
             }
 
-            // Kirim array data ke repository, repository yang buat DTO
+            // Log data final sebelum create
+            Log::info('Data to be saved to DB:', $validated);
+
+            // Simpan ke DB
             $fileModel = $this->filesCompanyRepository->create($validated);
 
             return ResponseHelper::jsonResponse(true, 'Company File Created Successfully', new FilesCompanyResource($fileModel), 201);
         } catch (\Throwable $e) {
+            Log::error('Error storing company file:', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
+            ]);
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
-        }
-    }
-
-    public function show(string $id)
-    {
-        try {
-            $file = $this->filesCompanyRepository->getById($id);
-            return ResponseHelper::jsonResponse(true, 'Company File Retrieved Successfully', new FilesCompanyResource($file), 200);
-        } catch (ModelNotFoundException $e) {
-            return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
-        } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
     }
 
@@ -129,25 +134,73 @@ class FilesCompanyController extends Controller implements HasMiddleware
         $validated = $request->validated();
 
         try {
-            // Jika ada file baru, simpan di disk
-            if ($request->hasFile('file') && $request->file('file')->isValid()) {
-                $file = $request->file('file');
-                $validated['document_path'] = $file->store('', 'company_files');
-                $validated['document_name'] = $file->getClientOriginalName();
+            $fileModel = $this->filesCompanyRepository->getById($id);
+
+            if ($request->hasFile('document_path') && $request->file('document_path')->isValid()) {
+                $file = $request->file('document_path');
+
+                // Simpan file baru
+                $storedPath = $file->store('company-files', 'public');
+
+                // Optional: hapus file lama jika ada
+                if ($fileModel->document_path && Storage::disk('public')->exists($fileModel->document_path)) {
+                    Storage::disk('public')->delete($fileModel->document_path);
+                }
+
+                $validated['document_path'] = $storedPath;
                 $validated['type_file'] = $file->getClientMimeType();
                 $validated['size_file'] = $file->getSize();
+
+                Log::info('File updated:', [
+                    'original_name' => $file->getClientOriginalName(),
+                    'stored_path'   => $storedPath,
+                    'mime_type'     => $validated['type_file'],
+                    'size'          => $validated['size_file'],
+                ]);
             }
 
-            // Kirim array data ke repository
+            // document_name tetap dari input user
             $fileModel = $this->filesCompanyRepository->update($id, $validated);
 
-            return ResponseHelper::jsonResponse(true, 'Company File Updated Successfully', new FilesCompanyResource($fileModel), 200);
+            return ResponseHelper::jsonResponse(
+                true,
+                'Company File Updated Successfully',
+                new FilesCompanyResource($fileModel),
+                200
+            );
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
         } catch (\Throwable $e) {
+            Log::error('Error updating company file:', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
+            ]);
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
         }
     }
+
+    public function show(string $id)
+    {
+        try {
+            $file = $this->filesCompanyRepository->getById($id);
+
+            // Optional: tambahkan URL lengkap untuk akses file
+            if ($file->document_path) {
+                $file->file_url = asset('storage/' . $file->document_path);
+            }
+
+            return ResponseHelper::jsonResponse(true, 'Company File Retrieved Successfully', new FilesCompanyResource($file), 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
+        } catch (\Throwable $e) {
+            Log::error('Error retrieving company file:', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
+            ]);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+        }
+    }
+
 
     public function destroy(string $id)
     {
