@@ -16,7 +16,7 @@ class FilesCompanyResource extends JsonResource
             'id' => $this->id,
             // Gunakan asset() untuk public disk, aman dan IDE-friendly
             'document_path' => $this->document_path 
-                ? asset('storage/company-files/' . $this->document_path) 
+                ? asset('storage/' . $this->document_path) 
                 : null,
             'document_name' => $this->document_name,
             'description' => $this->description,
