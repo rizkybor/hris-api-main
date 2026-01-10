@@ -5,13 +5,20 @@ namespace App\Services;
 use App\Models\LeaveRequest;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Models\InfrastructureTool;
 use App\Notifications\LeaveRequestApproved;
 use App\Notifications\LeaveRequestCreated;
 use App\Notifications\LeaveRequestRejected;
 use App\Notifications\PayrollPaid;
+use App\Notifications\InfrastructureToolReminderNotification;
+
+use Illuminate\Support\Facades\Notification;
+use Carbon\Carbon;
+
 
 class EmailService
 {
+    
     /**
      * Send leave request created notification
      */
@@ -72,5 +79,27 @@ class EmailService
 
             $user->notify(new PayrollPaid($payrollDetail));
         }
+    }
+
+    // ================= NEW METHOD =================
+    /**
+     * Send reminder email for infrastructure tools expiring in X days.
+     *
+     * @param int $daysBeforeExpired Number of days before expired date, default 5
+     * @param string $recipient Email recipient
+     */
+   public function sendInfrastructureToolReminder(int $daysBeforeExpired = 5, string $recipient = 'contact@jcdigital.co.id'): void
+    {
+        $targetDate = Carbon::now()->addDays($daysBeforeExpired)->toDateString();
+
+        $tools = InfrastructureTool::whereDate('expired_date', $targetDate)->get();
+
+        if ($tools->isEmpty()) {
+            return;
+        }
+
+        // Send notification
+        Notification::route('mail', $recipient)
+            ->notify(new InfrastructureToolReminderNotification($tools->toArray(), $targetDate));
     }
 }
