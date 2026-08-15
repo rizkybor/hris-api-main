@@ -14,8 +14,10 @@ use App\Interfaces\FilesCompanyRepositoryInterface;
 use App\Interfaces\JobInformationRepositoryInterface;
 use App\Interfaces\LeaveRequestRepositoryInterface;
 use App\Interfaces\PayrollRepositoryInterface;
+use App\Interfaces\ProjectDocumentRepositoryInterface;
 use App\Interfaces\ProjectRepositoryInterface;
 use App\Interfaces\ProjectTaskRepositoryInterface;
+use App\Interfaces\ReportRepositoryInterface;
 use App\Interfaces\TeamRepositoryInterface;
 use App\Interfaces\UserRepositoryInterface;
 use App\Interfaces\CompanyFinanceRepositoryInterface;
@@ -42,7 +44,9 @@ use App\Repositories\JobInformationRepository;
 use App\Repositories\LeaveRequestRepository;
 use App\Repositories\PayrollRepository;
 use App\Repositories\ProjectRepository;
+use App\Repositories\ProjectDocumentRepository;
 use App\Repositories\ProjectTaskRepository;
+use App\Repositories\ReportRepository;
 use App\Repositories\TeamRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\CompanyFinanceRepository;
@@ -85,6 +89,8 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(InfrastructureToolRepositoryInterface::class, InfrastructureToolRepository::class);
         $this->app->bind(SdmResourceRepositoryInterface::class, SdmResourceRepository::class);
         $this->app->bind(CompanyAboutRepositoryInterface::class, CompanyAboutRepository::class);
+        $this->app->bind(ReportRepositoryInterface::class, ReportRepository::class);
+        $this->app->bind(ProjectDocumentRepositoryInterface::class, ProjectDocumentRepository::class);
 
         // Vendors
         $this->app->bind(VendorsRepositoryInterface::class, VendorsRepository::class);

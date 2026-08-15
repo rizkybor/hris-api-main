@@ -4,13 +4,25 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialAccountController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DivisionCodeController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\LetterCodeController;
+use App\Http\Controllers\LetterController;
+use App\Http\Controllers\PaymentReceiptController;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\EmployeeProfileController;
 use App\Http\Controllers\FilesCompanyController;
 use App\Http\Controllers\LeaveRequestController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OptionController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\PayslipController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectDocumentController;
 use App\Http\Controllers\ProjectTaskController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\InfrastructureToolController;
@@ -29,6 +41,8 @@ Route::prefix('v1')
     ->group(function () {
 
         Route::post('login', [AuthController::class, 'login']);
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
+        Route::post('reset-password', [AuthController::class, 'resetPassword']);
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
@@ -59,6 +73,10 @@ Route::prefix('v1')
 
             Route::apiResource('project-tasks', ProjectTaskController::class);
             Route::get('project-tasks/all/paginated', [ProjectTaskController::class, 'getAllPaginated']);
+            Route::get('my-tasks', [ProjectTaskController::class, 'getMyTasks']);
+
+            // Project Documents
+            Route::apiResource('project-documents', ProjectDocumentController::class);
 
             Route::get('attendances/all/paginated', [AttendanceController::class, 'getAllPaginated']);
             Route::get('attendances/statistics', [AttendanceController::class, 'getStatistics']);
@@ -81,10 +99,17 @@ Route::prefix('v1')
             Route::post('payrolls/generate', [PayrollController::class, 'generate']);
             Route::get('payrolls/{id}/statistics', [PayrollController::class, 'getPayrollStatistics']);
             Route::get('payrolls/{id}/details', [PayrollController::class, 'getDetails']); // Paginated details
+            Route::get('payrolls/{id}/positions', [PayrollController::class, 'getPositions']);
             Route::get('payrolls/{id}/export-excel', [PayrollController::class, 'exportExcel']);
             Route::post('payrolls/{id}/mark-as-paid', [PayrollController::class, 'markAsPaid']);
+            Route::delete('payrolls/{id}', [PayrollController::class, 'destroy']);
             Route::put('payroll-details/{id}', [PayrollController::class, 'updateDetail']);
             Route::apiResource('payrolls', PayrollController::class)->only(['index', 'show']);
+
+            // My Payslips routes
+            Route::get('my-payslips', [PayslipController::class, 'index']);
+            Route::get('my-payslips/{id}', [PayslipController::class, 'show']);
+            Route::get('payslips/{id}/download', [PayslipController::class, 'download']);
 
             // Options routes
             Route::get('options/departments', [OptionController::class, 'getDepartments']);
@@ -155,5 +180,50 @@ Route::prefix('v1')
             // Vendors Task Pivot
             Route::get('vendors-task-pivot/all/paginated', [VendorsTaskPivotController::class, 'getAllPaginated']);
             Route::apiResource('vendors-task-pivot', VendorsTaskPivotController::class);
+
+            // Reports
+            Route::get('reports/attendance', [ReportController::class, 'attendance']);
+            Route::get('reports/payroll', [ReportController::class, 'payroll']);
+            Route::get('reports/employee', [ReportController::class, 'employee']);
+            Route::get('reports/finance', [ReportController::class, 'finance']);
+            Route::get('reports/export', [ReportController::class, 'export']);
+
+            // Settings: Roles & Permissions
+            Route::get('permissions', [RoleController::class, 'permissions']);
+            Route::apiResource('roles', RoleController::class);
+
+            // Notifications
+            Route::get('notifications', [NotificationController::class, 'index']);
+            Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+            Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+            Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+
+            // Global search
+            Route::get('search', [SearchController::class, 'search']);
+
+            // Business Documents: Purchase Orders
+            Route::get('purchase-orders/{id}/export-pdf', [PurchaseOrderController::class, 'exportPdf']);
+            Route::post('purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel']);
+            Route::apiResource('purchase-orders', PurchaseOrderController::class);
+
+            // Business Documents: Invoices
+            Route::get('invoices/{id}/export-pdf', [InvoiceController::class, 'exportPdf']);
+            Route::post('invoices/{id}/mark-as-paid', [InvoiceController::class, 'markAsPaid']);
+            Route::post('invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
+            Route::apiResource('invoices', InvoiceController::class);
+
+            // Business Documents: Payment Receipts
+            Route::get('payment-receipts/{id}/export-pdf', [PaymentReceiptController::class, 'exportPdf']);
+            Route::post('payment-receipts/{id}/cancel', [PaymentReceiptController::class, 'cancel']);
+            Route::apiResource('payment-receipts', PaymentReceiptController::class);
+
+            // Business Documents: Letters (Surat)
+            Route::get('letters/{id}/export-pdf', [LetterController::class, 'exportPdf']);
+            Route::post('letters/{id}/cancel', [LetterController::class, 'cancel']);
+            Route::apiResource('letters', LetterController::class);
+
+            // Business Documents: reference tables
+            Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::apiResource('division-codes', DivisionCodeController::class)->only(['index', 'store', 'update', 'destroy']);
         });
     });

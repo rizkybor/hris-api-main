@@ -70,7 +70,26 @@ class PayrollRepository implements PayrollRepositoryInterface
             ->findOrFail($id);
     }
 
-    public function getPayrollDetailsPaginated(string $payrollId, int $perPage = 50): LengthAwarePaginator
+    /**
+     * Distinct job titles among employees included in this payroll, for the
+     * "filter by position" dropdown.
+     */
+    public function getPayrollPositions(string $payrollId): array
+    {
+        Payroll::findOrFail($payrollId);
+
+        return PayrollDetail::where('payroll_id', $payrollId)
+            ->join('employee_profiles', 'employee_profiles.id', '=', 'payroll_details.employee_id')
+            ->join('job_information', 'job_information.employee_id', '=', 'employee_profiles.id')
+            ->whereNotNull('job_information.job_title')
+            ->distinct()
+            ->orderBy('job_information.job_title')
+            ->pluck('job_information.job_title')
+            ->values()
+            ->toArray();
+    }
+
+    public function getPayrollDetailsPaginated(string $payrollId, int $perPage = 50, ?string $search = null, ?string $position = null): LengthAwarePaginator
     {
         // Verify payroll exists
         $payroll = Payroll::findOrFail($payrollId);
@@ -82,6 +101,19 @@ class PayrollRepository implements PayrollRepositoryInterface
             'employee.bankInformation',
         ])
             ->where('payroll_id', $payrollId)
+            ->when($search, function ($query) use ($search) {
+                $query->whereHas('employee', function ($q) use ($search) {
+                    $q->where('code', 'like', '%'.$search.'%')
+                        ->orWhereHas('user', function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', '%'.$search.'%');
+                        });
+                });
+            })
+            ->when($position, function ($query) use ($position) {
+                $query->whereHas('employee.jobInformation', function ($q) use ($position) {
+                    $q->where('job_title', $position);
+                });
+            })
             ->orderBy('final_salary', 'desc') // Highest salary first
             ->paginate($perPage);
     }
@@ -246,6 +278,20 @@ class PayrollRepository implements PayrollRepositoryInterface
         });
     }
 
+    public function deletePayroll(string $id): void
+    {
+        DB::transaction(function () use ($id) {
+            $payroll = Payroll::findOrFail($id);
+
+            if ($payroll->status === 'paid') {
+                throw new \Exception('Tidak dapat menghapus payroll yang sudah dibayar');
+            }
+
+            $payroll->payrollDetails()->delete();
+            $payroll->delete();
+        });
+    }
+
     public function getStatistics()
     {
         $currentMonth = now()->startOfMonth();
@@ -311,6 +357,8 @@ class PayrollRepository implements PayrollRepositoryInterface
         // Cache for 1 hour
         return cache()->remember($cacheKey, CacheConstants::ONE_HOUR, function () use ($payrollId) {
             $payroll = Payroll::findOrFail($payrollId);
+            $monthStart = Carbon::parse($payroll->salary_month)->startOfMonth();
+            $workingDays = $this->calculateWorkingDays($monthStart, $monthStart->copy()->endOfMonth());
 
             // Get all statistics in optimized queries
             $detailStats = PayrollDetail::where('payroll_id', $payrollId)
@@ -344,6 +392,7 @@ class PayrollRepository implements PayrollRepositoryInterface
                 'total_attended_days' => $detailStats->total_attended_days ?? 0,
                 'total_sick_days' => $detailStats->total_sick_days ?? 0,
                 'total_absent_days' => $detailStats->total_absent_days ?? 0,
+                'working_days' => $workingDays,
             ];
         });
     }

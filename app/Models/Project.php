@@ -61,4 +61,9 @@ class Project extends Model
     {
         return $this->hasMany(ProjectTask::class);
     }
+
+    public function documents()
+    {
+        return $this->hasMany(ProjectDocument::class);
+    }
 }

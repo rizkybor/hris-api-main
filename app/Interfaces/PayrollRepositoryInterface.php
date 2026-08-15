@@ -17,7 +17,11 @@ interface PayrollRepositoryInterface
 
     public function getById(string $id);
 
-    public function getPayrollDetailsPaginated(string $payrollId, int $perPage);
+    public function getPayrollPositions(string $payrollId);
+
+    public function getPayrollDetailsPaginated(string $payrollId, int $perPage, ?string $search = null, ?string $position = null);
+
+    public function deletePayroll(string $id);
 
     public function generatePayroll(string $salaryMonth);
 

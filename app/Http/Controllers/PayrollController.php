@@ -30,11 +30,12 @@ class PayrollController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['payroll-list']), only: ['index', 'getAllPaginated', 'show', 'getDetails', 'exportExcel']),
+            new Middleware(PermissionMiddleware::using(['payroll-list']), only: ['index', 'getAllPaginated', 'show', 'getDetails', 'getPositions', 'exportExcel']),
             new Middleware(PermissionMiddleware::using(['payroll-create']), only: ['generate']),
             new Middleware(PermissionMiddleware::using(['payroll-edit']), only: ['updateDetail']),
             new Middleware(PermissionMiddleware::using(['payroll-process']), only: ['markAsPaid']),
             new Middleware(PermissionMiddleware::using(['payroll-statistics']), only: ['getStatistics', 'getPayrollStatistics']),
+            new Middleware(PermissionMiddleware::using(['payroll-delete']), only: ['destroy']),
         ];
     }
 
@@ -103,11 +104,18 @@ class PayrollController extends Controller implements HasMiddleware
         $validated = $request->validate([
             'per_page' => 'nullable|integer|min:10|max:100',
             'page' => 'nullable|integer',
+            'search' => 'nullable|string',
+            'position' => 'nullable|string',
         ]);
 
         try {
             $perPage = $validated['per_page'] ?? 50;
-            $details = $this->payrollRepository->getPayrollDetailsPaginated($id, $perPage);
+            $details = $this->payrollRepository->getPayrollDetailsPaginated(
+                $id,
+                $perPage,
+                $validated['search'] ?? null,
+                $validated['position'] ?? null
+            );
 
             return ResponseHelper::jsonResponse(
                 true,
@@ -115,6 +123,22 @@ class PayrollController extends Controller implements HasMiddleware
                 PaginateResource::make($details, PayrollDetailResource::class),
                 200
             );
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Payroll Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Distinct job positions among employees in this payroll (for the filter dropdown).
+     */
+    public function getPositions(string $id)
+    {
+        try {
+            $positions = $this->payrollRepository->getPayrollPositions($id);
+
+            return ResponseHelper::jsonResponse(true, 'Payroll Positions Retrieved Successfully', $positions, 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Payroll Not Found', null, 404);
         } catch (\Throwable $e) {
@@ -236,6 +260,24 @@ class PayrollController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(true, 'Payroll Statistics Retrieved Successfully', $statistics, 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Payroll Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Delete a payroll run (only allowed while it hasn't been paid yet).
+     */
+    public function destroy(string $id)
+    {
+        try {
+            $this->payrollRepository->deletePayroll($id);
+
+            return ResponseHelper::jsonResponse(true, 'Payroll Deleted Successfully', null, 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Payroll Not Found', null, 404);
+        } catch (\Exception $e) {
+            return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 400);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }

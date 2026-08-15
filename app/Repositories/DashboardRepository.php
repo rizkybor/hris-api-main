@@ -90,9 +90,10 @@ class DashboardRepository implements DashboardRepositoryInterface
             // Single query for task stats
             $taskStats = DB::table('project_tasks')
                 ->selectRaw("
-                    COUNT(CASE WHEN status = 'completed' THEN 1 END) as total_completed,
+                    COUNT(*) as total_tasks,
+                    COUNT(CASE WHEN status = 'done' THEN 1 END) as total_completed,
                     COUNT(CASE
-                        WHEN status = 'completed'
+                        WHEN status = 'done'
                         AND DATE(updated_at) = ?
                         THEN 1
                     END) as completed_yesterday
@@ -102,11 +103,15 @@ class DashboardRepository implements DashboardRepositoryInterface
             $tasksCompleted = (int) $taskStats->total_completed;
             $tasksCompletedYesterday = (int) $taskStats->completed_yesterday;
             $tasksChange = $tasksCompleted - $tasksCompletedYesterday;
+            $totalTasks = (int) $taskStats->total_tasks;
+            $taskCompletionRate = $totalTasks > 0 ? round(($tasksCompleted / $totalTasks) * 100, 1) : 0;
 
             // Single query for project stats
             $projectStats = DB::table('projects')
                 ->selectRaw("
                     COUNT(CASE WHEN status = 'active' THEN 1 END) as active_projects,
+                    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_projects,
+                    COUNT(*) as total_projects,
                     COUNT(CASE
                         WHEN status = 'active'
                         AND MONTH(created_at) = ?
@@ -135,10 +140,15 @@ class DashboardRepository implements DashboardRepositoryInterface
                 'tasks' => [
                     'completed' => $tasksCompleted,
                     'change' => $tasksChange,
+                    'total' => $totalTasks,
+                    'completion_rate' => $taskCompletionRate,
                 ],
                 'projects' => [
                     'active' => (int) $projectStats->active_projects,
+                    'completed' => (int) $projectStats->completed_projects,
+                    'total' => (int) $projectStats->total_projects,
                     'new_projects' => (int) $projectStats->new_projects_this_month,
+                    'completion_rate' => $taskCompletionRate,
                 ],
             ];
         });

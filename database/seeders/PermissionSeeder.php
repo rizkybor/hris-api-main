@@ -134,6 +134,52 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
+        'report' => [
+            'menu',
+            'view',
+            'export',
+        ],
+
+        'role' => [
+            'menu',
+            'view',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'purchase-order' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'invoice' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'payment-receipt' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'letter' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
         'vendors' => [
             'menu',
             'list',

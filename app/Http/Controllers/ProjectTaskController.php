@@ -34,6 +34,26 @@ class ProjectTaskController extends Controller implements HasMiddleware
     }
 
     /**
+     * Get tasks assigned to the currently authenticated employee.
+     */
+    public function getMyTasks(Request $request)
+    {
+        try {
+            $employeeId = $request->user()->employeeProfile?->id;
+
+            if (! $employeeId) {
+                return ResponseHelper::jsonResponse(true, 'No Employee Profile Found', [], 200);
+            }
+
+            $tasks = $this->projectTaskRepository->getMyTasks($employeeId, $request->limit ?? 5);
+
+            return ResponseHelper::jsonResponse(true, 'My Tasks Retrieved Successfully', ProjectTaskResource::collection($tasks), 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)

@@ -29,7 +29,7 @@ class PayrollPaid extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['mail', 'database'];
     }
 
     /**
@@ -69,7 +69,12 @@ class PayrollPaid extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
+        $salaryMonth = \Carbon\Carbon::parse($this->payrollDetail->payroll->salary_month)->format('F Y');
+
         return [
+            'title' => 'Slip Gaji Telah Dibayar',
+            'message' => 'Gaji untuk periode '.$salaryMonth.' telah dibayarkan.',
+            'url' => '/admin/my-payslips',
             'payroll_detail_id' => $this->payrollDetail->id,
             'payroll_id' => $this->payrollDetail->payroll_id,
             'salary_month' => $this->payrollDetail->payroll->salary_month,

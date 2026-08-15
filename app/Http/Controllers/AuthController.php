@@ -6,7 +6,11 @@ use App\Helpers\ResponseHelper;
 use App\Http\Requests\LoginStoreRequest;
 use App\Http\Resources\UserResource;
 use App\Interfaces\AuthRepositoryInterface;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -50,6 +54,53 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
         }
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $status = Password::sendResetLink(
+            $request->only('email'),
+            function ($user, string $token) {
+                $url = rtrim(config('app.frontend_url'), '/')."/auth/reset-password?token={$token}&email=".urlencode($user->email);
+                $user->notify(new \App\Notifications\ResetPasswordLink($url));
+            }
+        );
+
+        if ($status !== Password::RESET_LINK_SENT) {
+            return ResponseHelper::jsonResponse(true, 'If that email exists, a reset link has been sent.', null, 200);
+        }
+
+        return ResponseHelper::jsonResponse(true, 'Password reset link sent to your email.', null, 200);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, string $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
+            return ResponseHelper::jsonResponse(false, __($status), null, 422);
+        }
+
+        return ResponseHelper::jsonResponse(true, 'Password reset successfully. You can now log in.', null, 200);
     }
 
     public function updateProfile(Request $request)

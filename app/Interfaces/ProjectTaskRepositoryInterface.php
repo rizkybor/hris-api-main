@@ -37,4 +37,9 @@ interface ProjectTaskRepositoryInterface
     public function getByProjectId(
         int $projectId
     );
+
+    public function getMyTasks(
+        int $employeeId,
+        ?int $limit
+    );
 }

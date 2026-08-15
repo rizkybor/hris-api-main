@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -25,10 +26,33 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
 
     protected $rowNumber = 0;
 
+    protected $totalWorkingDays;
+
     public function __construct($payrollId)
     {
         $this->payrollId = $payrollId;
         $this->payroll = Payroll::findOrFail($payrollId);
+
+        $monthStart = Carbon::parse($this->payroll->salary_month)->startOfMonth();
+        $this->totalWorkingDays = $this->calculateWorkingDays($monthStart, $monthStart->copy()->endOfMonth());
+    }
+
+    /**
+     * Count weekdays (Mon-Fri) between two dates, inclusive.
+     */
+    private function calculateWorkingDays(Carbon $startDate, Carbon $endDate): int
+    {
+        $workingDays = 0;
+        $currentDate = $startDate->copy();
+
+        while ($currentDate->lte($endDate)) {
+            if (! $currentDate->isWeekend()) {
+                $workingDays++;
+            }
+            $currentDate->addDay();
+        }
+
+        return $workingDays;
     }
 
     /**
@@ -88,7 +112,7 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
             $detail->employee->bankInformation->bank_name ?? 'N/A',
             $detail->employee->bankInformation->account_number ?? 'N/A',
             $detail->employee->bankInformation->account_holder_name ?? 'N/A',
-            22, // Total working days
+            $this->totalWorkingDays,
             $detail->attended_days ?? 0,
             $detail->sick_days ?? 0,
             $detail->absent_days ?? 0,

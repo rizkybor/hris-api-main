@@ -51,6 +51,11 @@ class RolePermissionSeeder extends Seeder
                 'vendors-task-scope',
                 'vendors-task-payment',
                 'vendors-task-pivot',
+                'report-',
+                'purchase-order-',
+                'invoice-',
+                'payment-receipt-',
+                'letter-',
             ], $employeeSpecific));
 
             $employee->syncPermissions(
@@ -153,6 +158,29 @@ class RolePermissionSeeder extends Seeder
                     'vendors-task-pivot-create',
                     'vendors-task-pivot-edit',
                     'vendors-task-pivot-delete',
+                    'report-menu',
+                    'report-view',
+                    'report-export',
+                    'purchase-order-menu',
+                    'purchase-order-list',
+                    'purchase-order-create',
+                    'purchase-order-edit',
+                    'purchase-order-delete',
+                    'invoice-menu',
+                    'invoice-list',
+                    'invoice-create',
+                    'invoice-edit',
+                    'invoice-delete',
+                    'payment-receipt-menu',
+                    'payment-receipt-list',
+                    'payment-receipt-create',
+                    'payment-receipt-edit',
+                    'payment-receipt-delete',
+                    'letter-menu',
+                    'letter-list',
+                    'letter-create',
+                    'letter-edit',
+                    'letter-delete',
                 ])->get()
             );
         });

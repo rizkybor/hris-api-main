@@ -67,6 +67,20 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
             ->get();
     }
 
+    public function getMyTasks(int $employeeId, ?int $limit): Collection
+    {
+        $query = ProjectTask::with(['project'])
+            ->where('assignee_id', $employeeId)
+            ->whereIn('status', ['todo', 'in_progress', 'review'])
+            ->orderByRaw("CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC");
+
+        if ($limit) {
+            $query->take($limit);
+        }
+
+        return $query->get();
+    }
+
     public function create(array $data): ProjectTask
     {
         $taskDto = ProjectTaskDto::fromArray($data);
