@@ -215,6 +215,11 @@ class PermissionSeeder extends Seeder
         'backup' => [
             'create',
         ],
+
+        'history' => [
+            'menu',
+            'view',
+        ],
     ];
 
     /**

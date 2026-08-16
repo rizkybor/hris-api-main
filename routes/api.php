@@ -23,6 +23,7 @@ use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\FixedCostController;
@@ -195,6 +196,11 @@ Route::prefix('v1')
 
             // Settings: Database Backup
             Route::get('backup/download', [BackupController::class, 'download']);
+
+            // History / Activity Log
+            Route::get('history', [ActivityLogController::class, 'index']);
+            Route::get('history/categories', [ActivityLogController::class, 'categories']);
+            Route::get('history/statistics', [ActivityLogController::class, 'statistics']);
 
             // Notifications
             Route::get('notifications', [NotificationController::class, 'index']);

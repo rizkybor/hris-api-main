@@ -28,8 +28,18 @@ class AuthController extends Controller
         try {
             $user = $this->authRepository->login($request);
 
+            activity('Security')
+                ->causedBy($user)
+                ->event('login')
+                ->log('logged in');
+
             return ResponseHelper::jsonResponse(true, 'Login Successful', new UserResource($user), 200);
         } catch (\Exception $e) {
+            activity('Security')
+                ->withProperties(['email' => $request['email'] ?? null])
+                ->event('login_failed')
+                ->log('failed login attempt');
+
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, $e->getCode());
         }
     }
@@ -49,6 +59,11 @@ class AuthController extends Controller
     {
         try {
             $user = $this->authRepository->logout();
+
+            activity('Security')
+                ->causedBy($user)
+                ->event('logout')
+                ->log('logged out');
 
             return ResponseHelper::jsonResponse(true, 'Logout Successful', new UserResource($user), 200);
         } catch (\Exception $e) {

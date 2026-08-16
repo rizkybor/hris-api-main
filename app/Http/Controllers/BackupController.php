@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\DatabaseBackupService;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -27,9 +28,15 @@ class BackupController extends Controller implements HasMiddleware
     /**
      * Stream a full SQL backup of every table in the database.
      */
-    public function download(): StreamedResponse
+    public function download(Request $request): StreamedResponse
     {
         $filename = 'hris-backup-'.now()->format('Y-m-d_His').'.sql';
+
+        activity('Security')
+            ->causedBy($request->user())
+            ->withProperties(['filename' => $filename])
+            ->event('backup_downloaded')
+            ->log('downloaded a full database backup');
 
         $response = new StreamedResponse(function () {
             $handle = fopen('php://output', 'w');
