@@ -80,6 +80,10 @@ class PermissionSeeder extends Seeder
             'statistics',
         ],
 
+        'payslip' => [
+            'view',
+        ],
+
         'company-about' => [
             'menu',
             'list',
