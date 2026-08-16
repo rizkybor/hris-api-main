@@ -38,6 +38,7 @@ class PermissionModules
         'backup' => 'Database Backup',
         'history' => 'History',
         'announcement' => 'Announcements',
+        'asset' => 'Company Assets',
     ];
 
     /**

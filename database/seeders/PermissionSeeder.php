@@ -228,6 +228,16 @@ class PermissionSeeder extends Seeder
             'edit',
             'delete',
         ],
+
+        'asset' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'assign',
+            'my-assets',
+        ],
     ];
 
     /**

@@ -34,6 +34,8 @@ class JobInformation extends Model
         'skill_level',
         'ptkp_status',
         'annual_leave_quota',
+        'probation_end_date',
+        'contract_end_date',
     ];
 
     protected function casts(): array
@@ -41,6 +43,8 @@ class JobInformation extends Model
         return [
             'start_date' => 'date',
             'monthly_salary' => 'decimal:2',
+            'probation_end_date' => 'date',
+            'contract_end_date' => 'date',
         ];
     }
 

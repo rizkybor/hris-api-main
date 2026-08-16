@@ -62,6 +62,8 @@ class EmployeeProfileUpdateRequest extends FormRequest
             'skill_level' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(SkillLevel::cases(), 'value'))],
             'ptkp_status' => ['nullable', 'string', 'in:'.implode(',', array_column(PtkpStatus::cases(), 'value'))],
             'annual_leave_quota' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'probation_end_date' => ['nullable', 'date'],
+            'contract_end_date' => ['nullable', 'date'],
 
             // Bank Information fields
             'bank_name' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(BankName::cases(), 'value'))],

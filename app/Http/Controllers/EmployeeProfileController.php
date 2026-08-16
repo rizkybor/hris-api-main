@@ -31,7 +31,7 @@ class EmployeeProfileController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['employee-list|employee-create|employee-edit|employee-delete']), only: ['index', 'getAllPaginated', 'show', 'getStatistics']),
+            new Middleware(PermissionMiddleware::using(['employee-list|employee-create|employee-edit|employee-delete']), only: ['index', 'getAllPaginated', 'show', 'getStatistics', 'getContractAlerts']),
             new Middleware(PermissionMiddleware::using(['employee-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['employee-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['employee-delete']), only: ['destroy']),
@@ -164,6 +164,21 @@ class EmployeeProfileController extends Controller implements HasMiddleware
             $statistics = $this->employeeProfileRepository->getStatistics();
 
             return ResponseHelper::jsonResponse(true, 'Employee statistics fetched successfully', $statistics, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Employees whose probation or contract ends soon.
+     */
+    public function getContractAlerts(Request $request): JsonResponse
+    {
+        try {
+            $daysAhead = (int) ($request->query('days_ahead', 30));
+            $alerts = $this->employeeProfileRepository->getContractAlerts($daysAhead);
+
+            return ResponseHelper::jsonResponse(true, 'Contract Alerts Retrieved Successfully', $alerts, 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

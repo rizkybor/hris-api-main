@@ -29,6 +29,7 @@ class RolePermissionSeeder extends Seeder
                 'leave-request-my-requests',
                 'profile-menu',
                 'team-view',
+                'asset-my-assets',
             ];
 
             $manager->syncPermissions($this->permissionsAllExcept($employeeSpecific));
@@ -59,6 +60,7 @@ class RolePermissionSeeder extends Seeder
                 'payslip-',
                 'backup-',
                 'announcement-',
+                'asset-',
             ], $employeeSpecific));
 
             $employee->syncPermissions(
@@ -86,6 +88,7 @@ class RolePermissionSeeder extends Seeder
                     'company-about-menu',
                     'announcement-menu',
                     'announcement-list',
+                    'asset-my-assets',
                 ])->get()
             );
 
@@ -190,6 +193,8 @@ class RolePermissionSeeder extends Seeder
                     'letter-delete',
                     'announcement-menu',
                     'announcement-list',
+                    'asset-menu',
+                    'asset-list',
                 ])->get()
             );
         });

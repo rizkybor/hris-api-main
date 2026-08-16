@@ -27,6 +27,8 @@ class JobInformationResource extends JsonResource
             'skill_level' => $this->skill_level,
             'ptkp_status' => $this->ptkp_status,
             'annual_leave_quota' => $this->annual_leave_quota,
+            'probation_end_date' => $this->probation_end_date,
+            'contract_end_date' => $this->contract_end_date,
         ];
     }
 }

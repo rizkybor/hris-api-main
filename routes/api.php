@@ -25,6 +25,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\CompanyAssetController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\FixedCostController;
@@ -66,6 +67,7 @@ Route::prefix('v1')
             Route::get('my-team/members', [EmployeeProfileController::class, 'getMyTeamMembers']);
             Route::get('my-team/projects', [EmployeeProfileController::class, 'getMyTeamProjects']);
             Route::get('employees/statistics', [EmployeeProfileController::class, 'getStatistics']);
+            Route::get('employees/contract-alerts', [EmployeeProfileController::class, 'getContractAlerts']);
             Route::get('employees/{id}/performance-statistics', [EmployeeProfileController::class, 'getPerformanceStatistics']);
             Route::get('employees/all/paginated', [EmployeeProfileController::class, 'getAllPaginated']);
             Route::apiResource('employees', EmployeeProfileController::class);
@@ -208,6 +210,14 @@ Route::prefix('v1')
             // Announcements
             Route::apiResource('announcements', AnnouncementController::class)->except(['show']);
             Route::get('announcements/{id}', [AnnouncementController::class, 'show']);
+
+            // Company Assets
+            Route::get('my-assets', [CompanyAssetController::class, 'myAssets']);
+            Route::get('company-assets/statistics', [CompanyAssetController::class, 'statistics']);
+            Route::post('company-assets/{id}/assign', [CompanyAssetController::class, 'assign']);
+            Route::post('company-assets/{id}/return', [CompanyAssetController::class, 'returnAsset']);
+            Route::apiResource('company-assets', CompanyAssetController::class)->except(['show']);
+            Route::get('company-assets/{id}', [CompanyAssetController::class, 'show']);
 
             // Notifications
             Route::get('notifications', [NotificationController::class, 'index']);
