@@ -26,6 +26,8 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\CompanyAssetController;
+use App\Http\Controllers\EmployeeResignationController;
+use App\Http\Controllers\PerformanceReviewController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\FixedCostController;
@@ -55,6 +57,7 @@ Route::prefix('v1')
             Route::post('logout', [AuthController::class, 'logout']);
 
             Route::get('teams/statistics', [TeamController::class, 'getStatistics']);
+            Route::get('teams/org-chart', [TeamController::class, 'getOrgChart']);
             Route::get('teams/all/paginated', [TeamController::class, 'getAllPaginated']);
             Route::get('teams/{team}/statistics', [TeamController::class, 'getTeamStatistics']);
             Route::get('teams/{team}/chart-data', [TeamController::class, 'getTeamChartData']);
@@ -218,6 +221,17 @@ Route::prefix('v1')
             Route::post('company-assets/{id}/return', [CompanyAssetController::class, 'returnAsset']);
             Route::apiResource('company-assets', CompanyAssetController::class)->except(['show']);
             Route::get('company-assets/{id}', [CompanyAssetController::class, 'show']);
+
+            // Resignation / Offboarding
+            Route::get('resignations', [EmployeeResignationController::class, 'index']);
+            Route::get('employees/{employeeId}/resignation', [EmployeeResignationController::class, 'show']);
+            Route::post('employees/{employeeId}/resignation', [EmployeeResignationController::class, 'store']);
+            Route::post('resignations/{id}/complete', [EmployeeResignationController::class, 'complete']);
+
+            // Performance Reviews
+            Route::get('my-performance-reviews', [PerformanceReviewController::class, 'myReviews']);
+            Route::post('performance-reviews/{id}/acknowledge', [PerformanceReviewController::class, 'acknowledge']);
+            Route::apiResource('performance-reviews', PerformanceReviewController::class);
 
             // Notifications
             Route::get('notifications', [NotificationController::class, 'index']);

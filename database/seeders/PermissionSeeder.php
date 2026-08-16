@@ -238,6 +238,16 @@ class PermissionSeeder extends Seeder
             'assign',
             'my-assets',
         ],
+
+        'performance-review' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'my-reviews',
+            'acknowledge',
+        ],
     ];
 
     /**
