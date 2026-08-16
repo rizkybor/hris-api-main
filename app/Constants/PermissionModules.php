@@ -34,6 +34,9 @@ class PermissionModules
         'payment-receipt' => 'Payment Receipts',
         'letter' => 'Document Letters',
         'vendors' => 'Vendors',
+        'payslip' => 'Payslips',
+        'backup' => 'Database Backup',
+        'history' => 'History',
     ];
 
     /**

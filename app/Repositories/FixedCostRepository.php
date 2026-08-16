@@ -55,7 +55,7 @@ class FixedCostRepository implements FixedCostRepositoryInterface
         return FixedCost::findOrFail($id);
     }
 
-    public function getStatistic(?string $search = "GitHub"): array
+    public function getStatistic(?string $search = null): array
     {
         $query = FixedCost::query();
 
