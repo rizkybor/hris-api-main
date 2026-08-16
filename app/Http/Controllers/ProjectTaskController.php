@@ -45,7 +45,11 @@ class ProjectTaskController extends Controller implements HasMiddleware
                 return ResponseHelper::jsonResponse(true, 'No Employee Profile Found', [], 200);
             }
 
-            $tasks = $this->projectTaskRepository->getMyTasks($employeeId, $request->limit ?? 5);
+            $tasks = $this->projectTaskRepository->getMyTasks(
+                $employeeId,
+                $request->limit ?? 5,
+                $request->boolean('include_completed')
+            );
 
             return ResponseHelper::jsonResponse(true, 'My Tasks Retrieved Successfully', ProjectTaskResource::collection($tasks), 200);
         } catch (\Throwable $e) {

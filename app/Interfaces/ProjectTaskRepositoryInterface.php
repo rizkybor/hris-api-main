@@ -40,6 +40,7 @@ interface ProjectTaskRepositoryInterface
 
     public function getMyTasks(
         int $employeeId,
-        ?int $limit
+        ?int $limit,
+        bool $includeCompleted = false
     );
 }
