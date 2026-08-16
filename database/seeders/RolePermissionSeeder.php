@@ -30,6 +30,8 @@ class RolePermissionSeeder extends Seeder
                 'profile-menu',
                 'team-view',
                 'asset-my-assets',
+                'performance-review-my-reviews',
+                'performance-review-acknowledge',
             ];
 
             $manager->syncPermissions($this->permissionsAllExcept($employeeSpecific));
@@ -61,6 +63,7 @@ class RolePermissionSeeder extends Seeder
                 'backup-',
                 'announcement-',
                 'asset-',
+                'performance-review-',
             ], $employeeSpecific));
 
             $employee->syncPermissions(
@@ -89,6 +92,8 @@ class RolePermissionSeeder extends Seeder
                     'announcement-menu',
                     'announcement-list',
                     'asset-my-assets',
+                    'performance-review-my-reviews',
+                    'performance-review-acknowledge',
                 ])->get()
             );
 

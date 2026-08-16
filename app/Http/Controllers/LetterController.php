@@ -35,10 +35,14 @@ class LetterController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
-            $query = Letter::query()->with(['letterCode', 'divisionCode', 'creator:id,name'])->orderByDesc('created_at');
+            $query = Letter::query()->with(['letterCode', 'divisionCode', 'creator:id,name', 'employee.user'])->orderByDesc('created_at');
 
             if ($request->search) {
                 $query->search($request->search);
+            }
+
+            if ($request->employee_id) {
+                $query->where('employee_id', $request->employee_id);
             }
 
             $rowPerPage = (int) ($request->row_per_page ?? 10);
