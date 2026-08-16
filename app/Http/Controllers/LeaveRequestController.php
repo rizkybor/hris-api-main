@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class LeaveRequestController extends Controller implements HasMiddleware
@@ -28,7 +29,8 @@ class LeaveRequestController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['leave-request-list']), only: ['index', 'getAllPaginated', 'show']),
             new Middleware(PermissionMiddleware::using(['leave-request-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['leave-request-approve']), only: ['approve', 'reject']),
-            new Middleware(PermissionMiddleware::using(['leave-request-my-requests']), only: ['getMyLeaveRequests']),
+            new Middleware(PermissionMiddleware::using(['leave-request-my-requests']), only: ['getMyLeaveRequests', 'getMyLeaveBalance']),
+            new Middleware(PermissionMiddleware::using(['leave-request-list']), only: ['getLeaveBalance']),
         ];
     }
 
@@ -75,6 +77,37 @@ class LeaveRequestController extends Controller implements HasMiddleware
             $leaveRequests = $this->leaveRequestRepository->getMyLeaveRequests();
 
             return ResponseHelper::jsonResponse(true, 'My Leave Requests Retrieved Successfully', LeaveRequestResource::collection($leaveRequests), 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Get the authenticated employee's own annual leave balance.
+     */
+    public function getMyLeaveBalance()
+    {
+        try {
+            $employeeId = Auth::user()->employeeProfile->id;
+            $balance = $this->leaveRequestRepository->getLeaveBalance($employeeId);
+
+            return ResponseHelper::jsonResponse(true, 'Leave Balance Retrieved Successfully', $balance, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Get a specific employee's annual leave balance (HR/manager use).
+     */
+    public function getLeaveBalance(string $employeeId)
+    {
+        try {
+            $balance = $this->leaveRequestRepository->getLeaveBalance($employeeId);
+
+            return ResponseHelper::jsonResponse(true, 'Leave Balance Retrieved Successfully', $balance, 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Employee Not Found', null, 404);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

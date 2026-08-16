@@ -263,6 +263,10 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             'start_date' => $data['start_date'] ?? null,
             'monthly_salary' => $data['monthly_salary'] ?? null,
             'skill_level' => $data['skill_level'] ?? null,
+            'ptkp_status' => $data['ptkp_status'] ?? 'TK/0',
+            'annual_leave_quota' => $data['annual_leave_quota'] ?? 12,
+            'probation_end_date' => $data['probation_end_date'] ?? null,
+            'contract_end_date' => $data['contract_end_date'] ?? null,
         ];
 
         $this->jobInformationRepository->create($jobData);
@@ -333,6 +337,10 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             'start_date',
             'monthly_salary',
             'skill_level',
+            'ptkp_status',
+            'annual_leave_quota',
+            'probation_end_date',
+            'contract_end_date',
         ];
 
         $jobData = array_intersect_key($data, array_flip($fields));
@@ -504,6 +512,43 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
                 'new_employees' => (int) $employeeStats->added_this_month,
             ];
         });
+    }
+
+    /**
+     * Employees whose probation or contract ends within the given window,
+     * soonest first, for HR/manager follow-up.
+     */
+    public function getContractAlerts(int $daysAhead = 30): array
+    {
+        $today = now()->startOfDay();
+        $deadline = now()->addDays($daysAhead)->endOfDay();
+
+        $jobInfos = JobInformation::with(['employee.user'])
+            ->where('status', 'active')
+            ->where(function ($query) use ($today, $deadline) {
+                $query->whereBetween('probation_end_date', [$today, $deadline])
+                    ->orWhereBetween('contract_end_date', [$today, $deadline]);
+            })
+            ->get();
+
+        return $jobInfos->map(function ($jobInfo) use ($today) {
+            return [
+                'employee_id' => $jobInfo->employee_id,
+                'employee_name' => $jobInfo->employee?->user?->name,
+                'job_title' => $jobInfo->job_title,
+                'probation_end_date' => $jobInfo->probation_end_date,
+                'probation_days_left' => $jobInfo->probation_end_date
+                    ? $today->diffInDays($jobInfo->probation_end_date, false)
+                    : null,
+                'contract_end_date' => $jobInfo->contract_end_date,
+                'contract_days_left' => $jobInfo->contract_end_date
+                    ? $today->diffInDays($jobInfo->contract_end_date, false)
+                    : null,
+            ];
+        })
+            ->sortBy(fn ($row) => min($row['probation_days_left'] ?? PHP_INT_MAX, $row['contract_days_left'] ?? PHP_INT_MAX))
+            ->values()
+            ->toArray();
     }
 
     /**

@@ -24,6 +24,10 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\CompanyAssetController;
+use App\Http\Controllers\EmployeeResignationController;
+use App\Http\Controllers\PerformanceReviewController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\FixedCostController;
@@ -53,6 +57,7 @@ Route::prefix('v1')
             Route::post('logout', [AuthController::class, 'logout']);
 
             Route::get('teams/statistics', [TeamController::class, 'getStatistics']);
+            Route::get('teams/org-chart', [TeamController::class, 'getOrgChart']);
             Route::get('teams/all/paginated', [TeamController::class, 'getAllPaginated']);
             Route::get('teams/{team}/statistics', [TeamController::class, 'getTeamStatistics']);
             Route::get('teams/{team}/chart-data', [TeamController::class, 'getTeamChartData']);
@@ -65,6 +70,7 @@ Route::prefix('v1')
             Route::get('my-team/members', [EmployeeProfileController::class, 'getMyTeamMembers']);
             Route::get('my-team/projects', [EmployeeProfileController::class, 'getMyTeamProjects']);
             Route::get('employees/statistics', [EmployeeProfileController::class, 'getStatistics']);
+            Route::get('employees/contract-alerts', [EmployeeProfileController::class, 'getContractAlerts']);
             Route::get('employees/{id}/performance-statistics', [EmployeeProfileController::class, 'getPerformanceStatistics']);
             Route::get('employees/all/paginated', [EmployeeProfileController::class, 'getAllPaginated']);
             Route::apiResource('employees', EmployeeProfileController::class);
@@ -94,6 +100,8 @@ Route::prefix('v1')
             Route::get('my-leave-requests', [LeaveRequestController::class, 'getMyLeaveRequests']);
             Route::post('leave-requests/approve/{id}', [LeaveRequestController::class, 'approve']);
             Route::post('leave-requests/reject/{id}', [LeaveRequestController::class, 'reject']);
+            Route::get('leave-requests/balance/my', [LeaveRequestController::class, 'getMyLeaveBalance']);
+            Route::get('leave-requests/balance/{employeeId}', [LeaveRequestController::class, 'getLeaveBalance']);
 
             // Payroll routes
             Route::get('payrolls/statistics', [PayrollController::class, 'getStatistics']);
@@ -201,6 +209,29 @@ Route::prefix('v1')
             Route::get('history', [ActivityLogController::class, 'index']);
             Route::get('history/categories', [ActivityLogController::class, 'categories']);
             Route::get('history/statistics', [ActivityLogController::class, 'statistics']);
+
+            // Announcements
+            Route::apiResource('announcements', AnnouncementController::class)->except(['show']);
+            Route::get('announcements/{id}', [AnnouncementController::class, 'show']);
+
+            // Company Assets
+            Route::get('my-assets', [CompanyAssetController::class, 'myAssets']);
+            Route::get('company-assets/statistics', [CompanyAssetController::class, 'statistics']);
+            Route::post('company-assets/{id}/assign', [CompanyAssetController::class, 'assign']);
+            Route::post('company-assets/{id}/return', [CompanyAssetController::class, 'returnAsset']);
+            Route::apiResource('company-assets', CompanyAssetController::class)->except(['show']);
+            Route::get('company-assets/{id}', [CompanyAssetController::class, 'show']);
+
+            // Resignation / Offboarding
+            Route::get('resignations', [EmployeeResignationController::class, 'index']);
+            Route::get('employees/{employeeId}/resignation', [EmployeeResignationController::class, 'show']);
+            Route::post('employees/{employeeId}/resignation', [EmployeeResignationController::class, 'store']);
+            Route::post('resignations/{id}/complete', [EmployeeResignationController::class, 'complete']);
+
+            // Performance Reviews
+            Route::get('my-performance-reviews', [PerformanceReviewController::class, 'myReviews']);
+            Route::post('performance-reviews/{id}/acknowledge', [PerformanceReviewController::class, 'acknowledge']);
+            Route::apiResource('performance-reviews', PerformanceReviewController::class);
 
             // Notifications
             Route::get('notifications', [NotificationController::class, 'index']);

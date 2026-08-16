@@ -363,6 +363,46 @@ class TeamRepository implements TeamRepositoryInterface
         });
     }
 
+    /**
+     * Company-wide org chart: departments, each with its teams (lead + active
+     * members), for a read-only hierarchy visualization.
+     */
+    public function getOrgChart(): array
+    {
+        $teams = Team::with([
+            'leader:id,name',
+            'members' => function ($query) {
+                $query->whereNull('left_at')->with(['employee.user:id,name', 'employee.jobInformation:id,employee_id,job_title']);
+            },
+        ])
+            ->where('status', 'active')
+            ->orderBy('department')
+            ->orderBy('name')
+            ->get();
+
+        $byDepartment = $teams->groupBy('department')->map(function ($departmentTeams, $department) {
+            return [
+                'department' => $department,
+                'teams' => $departmentTeams->map(function ($team) {
+                    return [
+                        'id' => $team->id,
+                        'name' => $team->name,
+                        'lead' => $team->leader?->name,
+                        'members' => $team->members->map(function ($member) {
+                            return [
+                                'employee_id' => $member->employee_id,
+                                'name' => $member->employee?->user?->name,
+                                'job_title' => $member->employee?->jobInformation?->job_title,
+                            ];
+                        })->values(),
+                    ];
+                })->values(),
+            ];
+        })->values();
+
+        return $byDepartment->toArray();
+    }
+
     public function addMember(string $teamId, int $employeeId): TeamMember
     {
         return DB::transaction(function () use ($teamId, $employeeId) {

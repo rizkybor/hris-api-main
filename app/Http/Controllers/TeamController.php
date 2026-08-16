@@ -29,7 +29,7 @@ class TeamController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['team-list|team-create|team-edit|team-delete']), only: ['index', 'getAllPaginated', 'show', 'getStatistics', 'getTeamStatistics', 'getTeamChartData']),
+            new Middleware(PermissionMiddleware::using(['team-list|team-create|team-edit|team-delete']), only: ['index', 'getAllPaginated', 'show', 'getStatistics', 'getTeamStatistics', 'getTeamChartData', 'getOrgChart']),
             new Middleware(PermissionMiddleware::using(['team-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['team-edit']), only: ['update', 'addMember', 'removeMember']),
             new Middleware(PermissionMiddleware::using(['team-delete']), only: ['destroy']),
@@ -179,6 +179,20 @@ class TeamController extends Controller implements HasMiddleware
             $chartData = $this->teamRepository->getTeamChartData($team->id);
 
             return ResponseHelper::jsonResponse(true, 'Team Chart Data Retrieved Successfully', $chartData, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Company-wide org chart (departments -> teams -> lead + members).
+     */
+    public function getOrgChart(): JsonResponse
+    {
+        try {
+            $orgChart = $this->teamRepository->getOrgChart();
+
+            return ResponseHelper::jsonResponse(true, 'Org Chart Retrieved Successfully', $orgChart, 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

@@ -7,6 +7,7 @@ enum JobStatus: string
     case ACTIVE = 'active';
     case ON_LEAVE = 'on_leave';
     case RESIGNED = 'resigned';
+    case TERMINATED = 'terminated';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum JobStatus: string
             self::ACTIVE => 'Active',
             self::ON_LEAVE => 'On Leave',
             self::RESIGNED => 'Resigned',
+            self::TERMINATED => 'Terminated',
         };
     }
 

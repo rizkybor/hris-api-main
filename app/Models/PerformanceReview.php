@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-class JobInformation extends Model
+class PerformanceReview extends Model
 {
     use HasFactory, SoftDeletes, LogsActivity;
 
@@ -23,28 +23,27 @@ class JobInformation extends Model
 
     protected $fillable = [
         'employee_id',
-        'job_title',
-        'team_id',
-        'years_experience',
+        'reviewer_id',
+        'period',
+        'period_start',
+        'period_end',
+        'overall_rating',
+        'category_scores',
+        'strengths',
+        'areas_for_improvement',
+        'goals_next_period',
         'status',
-        'employment_type',
-        'work_location',
-        'start_date',
-        'monthly_salary',
-        'skill_level',
-        'ptkp_status',
-        'annual_leave_quota',
-        'probation_end_date',
-        'contract_end_date',
+        'employee_acknowledged_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'monthly_salary' => 'decimal:2',
-            'probation_end_date' => 'date',
-            'contract_end_date' => 'date',
+            'period_start' => 'date',
+            'period_end' => 'date',
+            'overall_rating' => 'decimal:2',
+            'category_scores' => 'array',
+            'employee_acknowledged_at' => 'datetime',
         ];
     }
 
@@ -53,8 +52,8 @@ class JobInformation extends Model
         return $this->belongsTo(EmployeeProfile::class, 'employee_id');
     }
 
-    public function team()
+    public function reviewer()
     {
-        return $this->belongsTo(Team::class);
+        return $this->belongsTo(User::class, 'reviewer_id');
     }
 }

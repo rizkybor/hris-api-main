@@ -9,6 +9,7 @@ use App\Models\EmployeeProfile;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Services\EmailService;
+use App\Services\PayrollCalculationService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,9 +20,12 @@ class PayrollRepository implements PayrollRepositoryInterface
 {
     protected EmailService $emailService;
 
-    public function __construct(EmailService $emailService)
+    protected PayrollCalculationService $payrollCalculationService;
+
+    public function __construct(EmailService $emailService, PayrollCalculationService $payrollCalculationService)
     {
         $this->emailService = $emailService;
+        $this->payrollCalculationService = $payrollCalculationService;
     }
 
     public function getAll(
@@ -186,6 +190,7 @@ class PayrollRepository implements PayrollRepositoryInterface
             foreach ($activeEmployees as $employee) {
                 $jobInfo = $employee->jobInformation;
                 $originalSalary = $jobInfo->monthly_salary ?? 0;
+                $ptkpStatus = $jobInfo->ptkp_status ?? 'TK/0';
 
                 $stats = $attendanceStats->get($employee->id);
                 $attendedDays = $stats->attended_days ?? 0;
@@ -196,18 +201,33 @@ class PayrollRepository implements PayrollRepositoryInterface
 
                 $dailySalary = $workingDays > 0 ? $originalSalary / $workingDays : 0;
 
-                $deduction = $absentDays * $dailySalary;
-                $finalSalary = $originalSalary - $deduction;
+                $attendanceDeduction = $absentDays * $dailySalary;
+                $grossSalary = max(0, $originalSalary - $attendanceDeduction);
+
+                $calc = $this->payrollCalculationService->calculate((float) $grossSalary, $ptkpStatus);
+                $totalDeduction = $attendanceDeduction + $calc['total_employee_deduction'];
+                $finalSalary = $calc['take_home_pay'];
 
                 $payrollDetails[] = [
                     'payroll_id' => $payroll->id,
                     'employee_id' => $employee->id,
                     'original_salary' => $originalSalary,
+                    'gross_salary' => $grossSalary,
                     'final_salary' => max(0, $finalSalary),
                     'attended_days' => $attendedDays + $lateDays,
                     'sick_days' => $sickDays,
                     'absent_days' => $absentDays,
-                    'notes' => "Hari kerja: {$workingDays} | Hadir: {$attendedDays} | Terlambat: {$lateDays} | Sakit: {$sickDays} | Izin: {$permissionDays} | Alpha: {$absentDays} | Potongan: Rp " . number_format($deduction, 0, ',', '.'),
+                    'bpjs_kesehatan_employee' => $calc['bpjs_kesehatan_employee'],
+                    'bpjs_jht_employee' => $calc['bpjs_jht_employee'],
+                    'bpjs_jp_employee' => $calc['bpjs_jp_employee'],
+                    'bpjs_kesehatan_company' => $calc['bpjs_kesehatan_company'],
+                    'bpjs_jht_company' => $calc['bpjs_jht_company'],
+                    'bpjs_jp_company' => $calc['bpjs_jp_company'],
+                    'bpjs_jkk_company' => $calc['bpjs_jkk_company'],
+                    'bpjs_jkm_company' => $calc['bpjs_jkm_company'],
+                    'pph21' => $calc['pph21'],
+                    'total_deduction' => round($totalDeduction, 2),
+                    'notes' => "Hari kerja: {$workingDays} | Hadir: {$attendedDays} | Terlambat: {$lateDays} | Sakit: {$sickDays} | Izin: {$permissionDays} | Alpha: {$absentDays} | Potongan Absensi: Rp " . number_format($attendanceDeduction, 0, ',', '.') . ' | BPJS: Rp ' . number_format($calc['bpjs_kesehatan_employee'] + $calc['bpjs_jht_employee'] + $calc['bpjs_jp_employee'], 0, ',', '.') . ' | PPh21: Rp ' . number_format($calc['pph21'], 0, ',', '.'),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -372,7 +392,10 @@ class PayrollRepository implements PayrollRepositoryInterface
                     MIN(final_salary) as lowest_salary,
                     SUM(attended_days) as total_attended_days,
                     SUM(sick_days) as total_sick_days,
-                    SUM(absent_days) as total_absent_days
+                    SUM(absent_days) as total_absent_days,
+                    SUM(pph21) as total_pph21,
+                    SUM(bpjs_kesehatan_employee + bpjs_jht_employee + bpjs_jp_employee) as total_bpjs_employee,
+                    SUM(bpjs_kesehatan_company + bpjs_jht_company + bpjs_jp_company + bpjs_jkk_company + bpjs_jkm_company) as total_bpjs_company
                 ')
                 ->first();
 
@@ -392,6 +415,9 @@ class PayrollRepository implements PayrollRepositoryInterface
                 'total_attended_days' => $detailStats->total_attended_days ?? 0,
                 'total_sick_days' => $detailStats->total_sick_days ?? 0,
                 'total_absent_days' => $detailStats->total_absent_days ?? 0,
+                'total_pph21' => round($detailStats->total_pph21 ?? 0, 2),
+                'total_bpjs_employee' => round($detailStats->total_bpjs_employee ?? 0, 2),
+                'total_bpjs_company' => round($detailStats->total_bpjs_company ?? 0, 2),
                 'working_days' => $workingDays,
             ];
         });

@@ -15,8 +15,9 @@ class PayslipResource extends JsonResource
     public function toArray(Request $request): array
     {
         $basicSalary = (float) $this->original_salary;
+        $grossSalary = (float) $this->gross_salary;
         $netSalary = (float) $this->final_salary;
-        $totalDeductions = $basicSalary - $netSalary;
+        $attendanceDeduction = $basicSalary - $grossSalary;
 
         return [
             'id' => $this->id,
@@ -26,8 +27,13 @@ class PayslipResource extends JsonResource
             'employee_name' => $this->employee?->user?->name,
             'department' => $this->employee?->jobInformation?->team?->name,
             'basic_salary' => $basicSalary,
-            'gross_salary' => $basicSalary,
-            'total_deductions' => $totalDeductions,
+            'gross_salary' => $grossSalary,
+            'attendance_deduction' => $attendanceDeduction,
+            'bpjs_kesehatan_employee' => (float) $this->bpjs_kesehatan_employee,
+            'bpjs_jht_employee' => (float) $this->bpjs_jht_employee,
+            'bpjs_jp_employee' => (float) $this->bpjs_jp_employee,
+            'pph21' => (float) $this->pph21,
+            'total_deductions' => (float) $this->total_deduction,
             'net_salary' => $netSalary,
             'notes' => $this->notes,
         ];

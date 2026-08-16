@@ -75,6 +75,7 @@ class PayslipController extends Controller
         $detail = $this->findOwnedPayslip($request, $id);
 
         $basicSalary = (float) $detail->original_salary;
+        $grossSalary = (float) $detail->gross_salary;
         $netSalary = (float) $detail->final_salary;
 
         $pdf = Pdf::loadView('pdf.payslip', [
@@ -83,8 +84,13 @@ class PayslipController extends Controller
             'employeeName' => $detail->employee?->user?->name,
             'department' => $detail->employee?->jobInformation?->team?->name,
             'basicSalary' => $basicSalary,
-            'grossSalary' => $basicSalary,
-            'totalDeductions' => $basicSalary - $netSalary,
+            'grossSalary' => $grossSalary,
+            'attendanceDeduction' => $basicSalary - $grossSalary,
+            'bpjsKesehatan' => (float) $detail->bpjs_kesehatan_employee,
+            'bpjsJht' => (float) $detail->bpjs_jht_employee,
+            'bpjsJp' => (float) $detail->bpjs_jp_employee,
+            'pph21' => (float) $detail->pph21,
+            'totalDeductions' => (float) $detail->total_deduction,
             'netSalary' => $netSalary,
             'notes' => $detail->notes,
         ])->setPaper('a4');

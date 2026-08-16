@@ -30,6 +30,7 @@ class Letter extends Model
         'date',
         'subject',
         'recipient',
+        'employee_id',
         'body',
         'items',
         'signatory_name',
@@ -62,6 +63,11 @@ class Letter extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function employee()
+    {
+        return $this->belongsTo(EmployeeProfile::class, 'employee_id');
     }
 
     public function scopeSearch($query, $search)

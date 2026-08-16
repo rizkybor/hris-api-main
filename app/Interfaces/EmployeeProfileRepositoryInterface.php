@@ -44,6 +44,8 @@ interface EmployeeProfileRepositoryInterface
 
     public function getStatistics();
 
+    public function getContractAlerts(int $daysAhead = 30): array;
+
     public function getPerformanceStatistics(string $employeeId);
 
     public function getMyTeam();
