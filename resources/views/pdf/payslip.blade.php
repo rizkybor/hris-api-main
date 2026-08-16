@@ -52,12 +52,19 @@
                     <p class="section-title">EARNINGS</p>
                     <table class="breakdown-table">
                         <tr><td>Basic Salary</td><td class="amount">Rp {{ number_format($basicSalary, 0, ',', '.') }}</td></tr>
+                        @if($attendanceDeduction > 0)
+                        <tr><td>Attendance Deduction</td><td class="amount">- Rp {{ number_format($attendanceDeduction, 0, ',', '.') }}</td></tr>
+                        @endif
                         <tr class="total-row"><td>Gross Salary</td><td class="amount">Rp {{ number_format($grossSalary, 0, ',', '.') }}</td></tr>
                     </table>
                 </td>
                 <td style="width: 50%; vertical-align: top; padding-left: 6mm;">
                     <p class="section-title">DEDUCTIONS</p>
                     <table class="breakdown-table">
+                        <tr><td>BPJS Kesehatan</td><td class="amount">Rp {{ number_format($bpjsKesehatan, 0, ',', '.') }}</td></tr>
+                        <tr><td>BPJS JHT</td><td class="amount">Rp {{ number_format($bpjsJht, 0, ',', '.') }}</td></tr>
+                        <tr><td>BPJS JP</td><td class="amount">Rp {{ number_format($bpjsJp, 0, ',', '.') }}</td></tr>
+                        <tr><td>PPh 21</td><td class="amount">Rp {{ number_format($pph21, 0, ',', '.') }}</td></tr>
                         <tr class="total-row"><td>Total Deductions</td><td class="amount">Rp {{ number_format($totalDeductions, 0, ',', '.') }}</td></tr>
                     </table>
                 </td>

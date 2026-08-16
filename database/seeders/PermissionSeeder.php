@@ -220,6 +220,34 @@ class PermissionSeeder extends Seeder
             'menu',
             'view',
         ],
+
+        'announcement' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'asset' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'assign',
+            'my-assets',
+        ],
+
+        'performance-review' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'my-reviews',
+            'acknowledge',
+        ],
     ];
 
     /**

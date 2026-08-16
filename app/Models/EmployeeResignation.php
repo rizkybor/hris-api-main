@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-class JobInformation extends Model
+class EmployeeResignation extends Model
 {
     use HasFactory, SoftDeletes, LogsActivity;
 
@@ -23,28 +23,20 @@ class JobInformation extends Model
 
     protected $fillable = [
         'employee_id',
-        'job_title',
-        'team_id',
-        'years_experience',
+        'type',
+        'reason',
+        'resignation_date',
+        'last_working_date',
+        'exit_interview_notes',
         'status',
-        'employment_type',
-        'work_location',
-        'start_date',
-        'monthly_salary',
-        'skill_level',
-        'ptkp_status',
-        'annual_leave_quota',
-        'probation_end_date',
-        'contract_end_date',
+        'processed_by',
     ];
 
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'monthly_salary' => 'decimal:2',
-            'probation_end_date' => 'date',
-            'contract_end_date' => 'date',
+            'resignation_date' => 'date',
+            'last_working_date' => 'date',
         ];
     }
 
@@ -53,8 +45,8 @@ class JobInformation extends Model
         return $this->belongsTo(EmployeeProfile::class, 'employee_id');
     }
 
-    public function team()
+    public function processedBy()
     {
-        return $this->belongsTo(Team::class);
+        return $this->belongsTo(User::class, 'processed_by');
     }
 }

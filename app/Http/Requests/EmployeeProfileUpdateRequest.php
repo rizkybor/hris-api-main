@@ -7,6 +7,7 @@ use App\Enums\BankName;
 use App\Enums\EmploymentType;
 use App\Enums\Gender;
 use App\Enums\JobStatus;
+use App\Enums\PtkpStatus;
 use App\Enums\SkillLevel;
 use App\Enums\WorkLocation;
 use App\Models\EmployeeProfile;
@@ -59,6 +60,10 @@ class EmployeeProfileUpdateRequest extends FormRequest
             'start_date' => ['sometimes', 'required', 'date'],
             'monthly_salary' => ['sometimes', 'required', 'numeric', 'min:0'],
             'skill_level' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(SkillLevel::cases(), 'value'))],
+            'ptkp_status' => ['nullable', 'string', 'in:'.implode(',', array_column(PtkpStatus::cases(), 'value'))],
+            'annual_leave_quota' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'probation_end_date' => ['nullable', 'date'],
+            'contract_end_date' => ['nullable', 'date'],
 
             // Bank Information fields
             'bank_name' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(BankName::cases(), 'value'))],

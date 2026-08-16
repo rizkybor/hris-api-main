@@ -44,6 +44,8 @@ interface TeamRepositoryInterface
 
     public function getTeamChartData(string $teamId);
 
+    public function getOrgChart(): array;
+
     public function addMember(string $teamId, int $employeeId);
 
     public function removeMember(string $teamId, int $employeeId);

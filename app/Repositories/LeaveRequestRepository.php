@@ -3,7 +3,9 @@
 namespace App\Repositories;
 
 use App\DTOs\LeaveRequestDto;
+use App\Enums\LeaveType;
 use App\Interfaces\LeaveRequestRepositoryInterface;
+use App\Models\EmployeeProfile;
 use App\Models\LeaveRequest;
 use App\Services\EmailService;
 use Carbon\Carbon;
@@ -70,6 +72,28 @@ class LeaveRequestRepository implements LeaveRequestRepositoryInterface
             ->get();
     }
 
+    public function getLeaveBalance(string $employeeId, ?int $year = null): array
+    {
+        $year = $year ?? now()->year;
+
+        $employee = EmployeeProfile::with('jobInformation')->findOrFail($employeeId);
+        $quota = $employee->jobInformation->annual_leave_quota ?? 12;
+
+        $used = (int) LeaveRequest::where('employee_id', $employeeId)
+            ->where('leave_type', LeaveType::ANNUAL_LEAVE->value)
+            ->where('status', 'approved')
+            ->whereYear('start_date', $year)
+            ->sum('total_days');
+
+        return [
+            'employee_id' => (int) $employeeId,
+            'year' => $year,
+            'quota' => $quota,
+            'used' => $used,
+            'remaining' => max(0, $quota - $used),
+        ];
+    }
+
     public function store(array $data)
     {
         return DB::transaction(function () use ($data) {
@@ -77,6 +101,14 @@ class LeaveRequestRepository implements LeaveRequestRepositoryInterface
             $endDate = Carbon::parse($data['end_date']);
 
             $data['total_days'] = $startDate->diffInDays($endDate) + 1;
+
+            if ($data['leave_type'] === LeaveType::ANNUAL_LEAVE->value) {
+                $balance = $this->getLeaveBalance($data['employee_id'], $startDate->year);
+
+                if ($data['total_days'] > $balance['remaining']) {
+                    throw new \Exception("Sisa cuti tahunan tidak mencukupi. Sisa: {$balance['remaining']} hari, diajukan: {$data['total_days']} hari.");
+                }
+            }
 
             $leaveRequestDto = LeaveRequestDto::fromArray($data);
             $leaveRequest = LeaveRequest::create($leaveRequestDto->toArray());

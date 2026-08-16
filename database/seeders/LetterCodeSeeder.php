@@ -19,6 +19,9 @@ class LetterCodeSeeder extends Seeder
             ['code' => 'BAST', 'name' => 'Berita Acara Serah Terima'],
             ['code' => 'NDA', 'name' => 'Non-Disclosure Agreement'],
             ['code' => 'PEN', 'name' => 'Surat Penawaran'],
+            ['code' => 'SP1', 'name' => 'Surat Peringatan Pertama'],
+            ['code' => 'SP2', 'name' => 'Surat Peringatan Kedua'],
+            ['code' => 'SP3', 'name' => 'Surat Peringatan Ketiga (Terakhir)'],
         ];
 
         foreach ($codes as $code) {

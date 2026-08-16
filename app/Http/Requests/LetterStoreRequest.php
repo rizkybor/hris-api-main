@@ -20,6 +20,7 @@ class LetterStoreRequest extends FormRequest
             'date' => ['required', 'date'],
             'subject' => ['required', 'string', 'max:255'],
             'recipient' => ['nullable', 'string', 'max:255'],
+            'employee_id' => ['nullable', 'integer', 'exists:employee_profiles,id'],
             'body' => ['required', 'string'],
             'signatory_name' => ['nullable', 'string', 'max:255'],
             'signatory_title' => ['nullable', 'string', 'max:255'],

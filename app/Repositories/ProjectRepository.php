@@ -184,7 +184,8 @@ class ProjectRepository implements ProjectRepositoryInterface
                 COUNT(CASE WHEN status = ? THEN 1 END) as completed,
                 COUNT(CASE WHEN status = ? THEN 1 END) as on_hold,
                 COUNT(CASE WHEN YEAR(created_at) = ? AND MONTH(created_at) = ? THEN 1 END) as added_this_month,
-                COUNT(CASE WHEN status = ? AND created_at <= ? THEN 1 END) as active_last_week
+                COUNT(CASE WHEN status = ? AND created_at <= ? THEN 1 END) as active_last_week,
+                SUM(budget) as total_budget
             ', [
                 'active',
                 'completed',
@@ -234,8 +235,28 @@ class ProjectRepository implements ProjectRepositoryInterface
                 'in_progress_tasks' => $taskStats->in_progress_tasks ?? 0,
                 'tasks_this_month' => $taskStats->tasks_this_month ?? 0,
                 'completion_rate' => $completionRate,
+                'total_budget' => (float) ($projectStats->total_budget ?? 0),
+                'budget_by_month' => $this->getBudgetByMonth(),
             ];
         });
+    }
+
+    /**
+     * Sum of project budgets grouped by the month projects started, used to
+     * chart budget over time (both monthly-within-a-year and year totals
+     * are derived from this on the frontend).
+     */
+    private function getBudgetByMonth(): array
+    {
+        return Project::query()
+            ->whereNotNull('budget')
+            ->selectRaw('DATE_FORMAT(start_date, "%Y-%m") as month')
+            ->selectRaw('SUM(budget) as total_budget')
+            ->selectRaw('COUNT(*) as total_projects')
+            ->groupBy(DB::raw('DATE_FORMAT(start_date, "%Y-%m")'))
+            ->orderBy('month')
+            ->get()
+            ->toArray();
     }
 
     private function assignTeams(int $projectId, array $teamIds): void
