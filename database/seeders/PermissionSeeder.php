@@ -80,6 +80,10 @@ class PermissionSeeder extends Seeder
             'statistics',
         ],
 
+        'payslip' => [
+            'view',
+        ],
+
         'company-about' => [
             'menu',
             'list',
@@ -206,6 +210,15 @@ class PermissionSeeder extends Seeder
             'task-pivot-create',
             'task-pivot-edit',
             'task-pivot-delete',
+        ],
+
+        'backup' => [
+            'create',
+        ],
+
+        'history' => [
+            'menu',
+            'view',
         ],
     ];
 

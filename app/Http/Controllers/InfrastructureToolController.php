@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\InfrastructureToolStoreRequest;
-use App\Http\Requests\VendorsTaskScopeUpdateRequest;
+use App\Http\Requests\InfrastructureToolUpdateRequest;
 use App\Http\Resources\InfrastructureToolResource;
 use App\Http\Resources\PaginateResource;
 use App\Interfaces\InfrastructureToolRepositoryInterface;
@@ -105,7 +105,7 @@ class InfrastructureToolController extends Controller implements HasMiddleware
     /**
      * Update the specified resource in storage.
      */
-    public function update(VendorsTaskScopeUpdateRequest $request, int $id)
+    public function update(InfrastructureToolUpdateRequest $request, int $id)
     {
         $validated = $request->validated();
 

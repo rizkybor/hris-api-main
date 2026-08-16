@@ -111,6 +111,12 @@ class RoleController extends Controller implements HasMiddleware
                 $role->syncPermissions($validated['permissions']);
             }
 
+            activity('Security')
+                ->causedBy($request->user())
+                ->withProperties(['role' => $role->name, 'permissions' => $validated['permissions'] ?? []])
+                ->event('role_created')
+                ->log("created role \"{$role->name}\"");
+
             return ResponseHelper::jsonResponse(true, 'Role Created Successfully', $role->load('permissions:id,name'), 201);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
@@ -149,6 +155,12 @@ class RoleController extends Controller implements HasMiddleware
                 $role->syncPermissions($validated['permissions']);
             }
 
+            activity('Security')
+                ->causedBy($request->user())
+                ->withProperties(['role' => $role->name, 'permissions' => $validated['permissions'] ?? null])
+                ->event('role_updated')
+                ->log("updated role \"{$role->name}\"");
+
             return ResponseHelper::jsonResponse(true, 'Role Updated Successfully', $role->fresh()->load('permissions:id,name'), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Role Not Found', null, 404);
@@ -157,7 +169,7 @@ class RoleController extends Controller implements HasMiddleware
         }
     }
 
-    public function destroy(int $id)
+    public function destroy(Request $request, int $id)
     {
         try {
             $role = Role::withCount('users')->findOrFail($id);
@@ -166,7 +178,14 @@ class RoleController extends Controller implements HasMiddleware
                 return ResponseHelper::jsonResponse(false, 'Cannot delete a role that is still assigned to users', null, 422);
             }
 
+            $roleName = $role->name;
             $role->delete();
+
+            activity('Security')
+                ->causedBy($request->user())
+                ->withProperties(['role' => $roleName])
+                ->event('role_deleted')
+                ->log("deleted role \"{$roleName}\"");
 
             return ResponseHelper::jsonResponse(true, 'Role Deleted Successfully', null, 200);
         } catch (ModelNotFoundException $e) {

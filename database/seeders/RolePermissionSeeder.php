@@ -56,6 +56,8 @@ class RolePermissionSeeder extends Seeder
                 'invoice-',
                 'payment-receipt-',
                 'letter-',
+                'payslip-',
+                'backup-',
             ], $employeeSpecific));
 
             $employee->syncPermissions(
@@ -66,6 +68,7 @@ class RolePermissionSeeder extends Seeder
                     'profile-view',
                     'employee-list',
                     'team-view',
+                    'payslip-view',
                     'attendance-my-attendances',
                     'attendance-check-in',
                     'attendance-check-out',
@@ -91,6 +94,7 @@ class RolePermissionSeeder extends Seeder
                     'profile-view',
                     'employee-menu',
                     'employee-list',
+                    'payslip-view',
                     'attendance-menu',
                     'attendance-list',
                     'leave-request-menu',

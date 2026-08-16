@@ -13,9 +13,9 @@ class FinanceSeeder extends Seeder
     public function run(): void
     {
         $employee = User::create([
-            'name' => 'Andy S, S.T.',
-            'email' => 'andyjcd@jcdigital.co.id',
-            'password' => bcrypt('mahasuciAllah1'),
+            'name' => env('SEED_FINANCE_NAME', 'Finance'),
+            'email' => env('SEED_FINANCE_EMAIL', 'finance@example.com'),
+            'password' => bcrypt(env('SEED_FINANCE_PASSWORD', 'password')),
             'profile_photo' => 'profile-pictures/female/1.avif',
         ]);
 

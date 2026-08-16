@@ -13,9 +13,9 @@ class HrSeeder extends Seeder
     public function run(): void
     {
         $employee = User::create([
-            'name' => 'Aldi PP, S.Ikom.',
-            'email' => 'aldijcd@jcdigital.co.id',
-            'password' => bcrypt('@Benzema09'),
+            'name' => env('SEED_HR_NAME', 'HR'),
+            'email' => env('SEED_HR_EMAIL', 'hr@example.com'),
+            'password' => bcrypt(env('SEED_HR_PASSWORD', 'password')),
             'profile_photo' => 'profile-pictures/male/3.avif',
         ]);
 
