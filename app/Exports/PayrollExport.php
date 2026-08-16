@@ -89,7 +89,11 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
             'Sakit',
             'Alpha',
             'Gaji Pokok',
-            'Potongan',
+            'Potongan Absensi',
+            'BPJS Kesehatan',
+            'BPJS JHT',
+            'BPJS JP',
+            'PPh 21',
             'Gaji Bersih',
             'Status',
             'Catatan',
@@ -117,7 +121,11 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
             $detail->sick_days ?? 0,
             $detail->absent_days ?? 0,
             $detail->original_salary ?? 0,
-            ($detail->original_salary - $detail->final_salary) ?? 0,
+            ($detail->original_salary - $detail->gross_salary) ?? 0,
+            $detail->bpjs_kesehatan_employee ?? 0,
+            $detail->bpjs_jht_employee ?? 0,
+            $detail->bpjs_jp_employee ?? 0,
+            $detail->pph21 ?? 0,
             $detail->final_salary ?? 0,
             $this->payroll->status === 'paid' ? 'Sudah Dibayar' : 'Menunggu',
             $detail->notes ?? '',
@@ -183,13 +191,13 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
                 // Center align specific columns
                 $sheet->getStyle("A2:A{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // No
                 $sheet->getStyle("I2:L{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Attendance columns
-                $sheet->getStyle("P2:P{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
+                $sheet->getStyle("T2:T{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
 
                 // Right align currency columns
-                $sheet->getStyle("M2:O{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT); // Salary columns
+                $sheet->getStyle("M2:S{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT); // Salary/BPJS/PPh21 columns
 
                 // Format currency columns
-                $sheet->getStyle("M2:O{$highestRow}")->getNumberFormat()->setFormatCode('#,##0');
+                $sheet->getStyle("M2:S{$highestRow}")->getNumberFormat()->setFormatCode('#,##0');
 
                 // Set row height for header
                 $sheet->getRowDimension(1)->setRowHeight(25);
@@ -225,9 +233,9 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
                     ],
                 ]);
-                $sheet->mergeCells('A1:Q1');
+                $sheet->mergeCells('A1:U1');
 
-                $sheet->getStyle('A2:Q5')->applyFromArray([
+                $sheet->getStyle('A2:U5')->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'size' => 11,

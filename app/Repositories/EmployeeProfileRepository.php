@@ -263,6 +263,8 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             'start_date' => $data['start_date'] ?? null,
             'monthly_salary' => $data['monthly_salary'] ?? null,
             'skill_level' => $data['skill_level'] ?? null,
+            'ptkp_status' => $data['ptkp_status'] ?? 'TK/0',
+            'annual_leave_quota' => $data['annual_leave_quota'] ?? 12,
         ];
 
         $this->jobInformationRepository->create($jobData);
@@ -333,6 +335,8 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             'start_date',
             'monthly_salary',
             'skill_level',
+            'ptkp_status',
+            'annual_leave_quota',
         ];
 
         $jobData = array_intersect_key($data, array_flip($fields));

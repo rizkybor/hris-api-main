@@ -32,6 +32,8 @@ class JobInformation extends Model
         'start_date',
         'monthly_salary',
         'skill_level',
+        'ptkp_status',
+        'annual_leave_quota',
     ];
 
     protected function casts(): array

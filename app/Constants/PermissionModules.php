@@ -37,6 +37,7 @@ class PermissionModules
         'payslip' => 'Payslips',
         'backup' => 'Database Backup',
         'history' => 'History',
+        'announcement' => 'Announcements',
     ];
 
     /**

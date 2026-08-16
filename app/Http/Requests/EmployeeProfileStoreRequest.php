@@ -7,6 +7,7 @@ use App\Enums\BankName;
 use App\Enums\EmploymentType;
 use App\Enums\Gender;
 use App\Enums\JobStatus;
+use App\Enums\PtkpStatus;
 use App\Enums\SkillLevel;
 use App\Enums\WorkLocation;
 use Illuminate\Foundation\Http\FormRequest;
@@ -52,6 +53,8 @@ class EmployeeProfileStoreRequest extends FormRequest
             'start_date' => ['required', 'date'],
             'monthly_salary' => ['required', 'numeric', 'min:0'],
             'skill_level' => ['required', 'string', 'in:'.implode(',', array_column(SkillLevel::cases(), 'value'))],
+            'ptkp_status' => ['nullable', 'string', 'in:'.implode(',', array_column(PtkpStatus::cases(), 'value'))],
+            'annual_leave_quota' => ['nullable', 'integer', 'min:0', 'max:365'],
 
             // Bank Information fields
             'bank_name' => ['required', 'string', 'in:'.implode(',', array_column(BankName::cases(), 'value'))],

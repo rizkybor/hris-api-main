@@ -220,6 +220,14 @@ class PermissionSeeder extends Seeder
             'menu',
             'view',
         ],
+
+        'announcement' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
     ];
 
     /**

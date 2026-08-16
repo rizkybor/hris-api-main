@@ -21,6 +21,8 @@ interface LeaveRequestRepositoryInterface
 
     public function getMyLeaveRequests();
 
+    public function getLeaveBalance(string $employeeId, ?int $year = null): array;
+
     public function store(
         array $data
     );

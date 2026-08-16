@@ -58,6 +58,7 @@ class RolePermissionSeeder extends Seeder
                 'letter-',
                 'payslip-',
                 'backup-',
+                'announcement-',
             ], $employeeSpecific));
 
             $employee->syncPermissions(
@@ -83,6 +84,8 @@ class RolePermissionSeeder extends Seeder
                     'task-list',
                     'task-edit',
                     'company-about-menu',
+                    'announcement-menu',
+                    'announcement-list',
                 ])->get()
             );
 
@@ -185,6 +188,8 @@ class RolePermissionSeeder extends Seeder
                     'letter-create',
                     'letter-edit',
                     'letter-delete',
+                    'announcement-menu',
+                    'announcement-list',
                 ])->get()
             );
         });
