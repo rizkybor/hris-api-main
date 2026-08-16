@@ -211,6 +211,10 @@ class PermissionSeeder extends Seeder
             'task-pivot-edit',
             'task-pivot-delete',
         ],
+
+        'backup' => [
+            'create',
+        ],
     ];
 
     /**

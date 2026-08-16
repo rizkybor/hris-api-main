@@ -57,6 +57,7 @@ class RolePermissionSeeder extends Seeder
                 'payment-receipt-',
                 'letter-',
                 'payslip-',
+                'backup-',
             ], $employeeSpecific));
 
             $employee->syncPermissions(
