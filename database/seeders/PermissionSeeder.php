@@ -199,6 +199,13 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
+        'certificate' => [
+            'menu',
+            'list',
+            'create',
+            'delete',
+        ],
+
         'vendors' => [
             'menu',
             'list',

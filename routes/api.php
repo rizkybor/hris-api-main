@@ -8,6 +8,9 @@ use App\Http\Controllers\DivisionCodeController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\CertificateTemplateController;
+use App\Http\Controllers\CertificateSettingController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\EmployeeProfileController;
@@ -277,5 +280,15 @@ Route::prefix('v1')
             // Business Documents: reference tables
             Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::apiResource('division-codes', DivisionCodeController::class)->only(['index', 'store', 'update', 'destroy']);
+
+            // Business Documents: Certificates
+            Route::get('certificate-setting', [CertificateSettingController::class, 'show']);
+            Route::put('certificate-setting', [CertificateSettingController::class, 'update']);
+            Route::apiResource('certificate-templates', CertificateTemplateController::class)->only(['index', 'store', 'destroy']);
+            Route::get('certificates/statistics', [CertificateController::class, 'getStatistics']);
+            Route::post('certificates/preview-number', [CertificateController::class, 'previewNumber']);
+            Route::post('certificates/generate', [CertificateController::class, 'generate']);
+            Route::get('certificates/{id}/download', [CertificateController::class, 'download']);
+            Route::apiResource('certificates', CertificateController::class)->only(['index', 'show', 'destroy']);
         });
     });
