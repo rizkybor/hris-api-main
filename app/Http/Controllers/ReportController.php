@@ -38,7 +38,9 @@ class ReportController extends Controller implements HasMiddleware
                 $request->start_date,
                 $request->end_date,
                 $request->employee_id,
-                $request->status
+                $request->status,
+                (int) ($request->page ?? 1),
+                (int) ($request->row_per_page ?? 15)
             );
 
             return ResponseHelper::jsonResponse(true, 'Attendance Report Retrieved Successfully', $data, 200);
@@ -50,7 +52,12 @@ class ReportController extends Controller implements HasMiddleware
     public function payroll(Request $request)
     {
         try {
-            $data = $this->reportRepository->getPayrollReport($request->start_date, $request->end_date);
+            $data = $this->reportRepository->getPayrollReport(
+                $request->start_date,
+                $request->end_date,
+                (int) ($request->page ?? 1),
+                (int) ($request->row_per_page ?? 15)
+            );
 
             return ResponseHelper::jsonResponse(true, 'Payroll Report Retrieved Successfully', $data, 200);
         } catch (\Throwable $e) {

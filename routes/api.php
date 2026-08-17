@@ -25,6 +25,7 @@ use App\Http\Controllers\ProjectCalculationController;
 use App\Http\Controllers\ProjectRateSettingController;
 use App\Http\Controllers\ProjectDocumentController;
 use App\Http\Controllers\ProjectTaskController;
+use App\Http\Controllers\ProjectTaskCommentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\BackupController;
@@ -88,6 +89,10 @@ Route::prefix('v1')
             Route::apiResource('project-tasks', ProjectTaskController::class);
             Route::get('project-tasks/all/paginated', [ProjectTaskController::class, 'getAllPaginated']);
             Route::get('my-tasks', [ProjectTaskController::class, 'getMyTasks']);
+
+            Route::get('project-tasks/{taskId}/comments', [ProjectTaskCommentController::class, 'index']);
+            Route::post('project-tasks/{taskId}/comments', [ProjectTaskCommentController::class, 'store']);
+            Route::delete('project-task-comments/{id}', [ProjectTaskCommentController::class, 'destroy']);
 
             // Project Documents
             Route::apiResource('project-documents', ProjectDocumentController::class);

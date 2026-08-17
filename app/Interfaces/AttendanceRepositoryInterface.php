@@ -13,7 +13,8 @@ interface AttendanceRepositoryInterface
 
     public function getAllPaginated(
         ?string $search,
-        int $rowPerPage
+        int $rowPerPage,
+        ?string $status = null
     );
 
     public function getMyAttendances();

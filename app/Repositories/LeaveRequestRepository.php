@@ -44,13 +44,18 @@ class LeaveRequestRepository implements LeaveRequestRepositoryInterface
 
     public function getAllPaginated(
         ?string $search,
-        int $rowPerPage
+        int $rowPerPage,
+        ?string $status = null
     ) {
         $query = $this->getAll(
             $search,
             null,
             false
         );
+
+        if ($status) {
+            $query->where('status', $status);
+        }
 
         return $query->paginate($rowPerPage);
     }

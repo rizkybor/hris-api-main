@@ -50,7 +50,8 @@ class AttendanceRepository implements AttendanceRepositoryInterface
 
     public function getAllPaginated(
         ?string $search,
-        int $rowPerPage
+        int $rowPerPage,
+        ?string $status = null
     ): LengthAwarePaginator {
         $query = $this->getAll(
             $search,
@@ -58,6 +59,10 @@ class AttendanceRepository implements AttendanceRepositoryInterface
             null, // limit
             false
         );
+
+        if ($status) {
+            $query->where('status', $status);
+        }
 
         return $query->paginate($rowPerPage);
     }

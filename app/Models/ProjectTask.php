@@ -25,6 +25,7 @@ class ProjectTask extends Model
         'project_id',
         'name',
         'description',
+        'image',
         'assignee_id',
         'priority',
         'status',
@@ -46,5 +47,10 @@ class ProjectTask extends Model
     public function assignee()
     {
         return $this->belongsTo(EmployeeProfile::class, 'assignee_id');
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(ProjectTaskComment::class)->orderBy('created_at');
     }
 }
