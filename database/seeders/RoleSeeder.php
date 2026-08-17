@@ -28,6 +28,11 @@ class RoleSeeder extends Seeder
         ]);
 
         Role::firstOrCreate([
+            'name' => 'operational_director',
+            'guard_name' => 'sanctum',
+        ]);
+
+        Role::firstOrCreate([
             'name' => 'finance',
             'guard_name' => 'sanctum',
         ]);

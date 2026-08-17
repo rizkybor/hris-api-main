@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Services\EmployeeCodeGenerator;
 use Illuminate\Database\Seeder;
 
-class HrSeeder extends Seeder
+class OperationalDirectorSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -36,7 +36,7 @@ class HrSeeder extends Seeder
 
         $employeeProfile->jobInformation()->create([
             'employee_id' => $employeeProfile->id,
-            'job_title' => 'Operational Manager',
+            'job_title' => 'Operational Director',
             'years_experience' => 5,
             'status' => 'active',
             'employment_type' => 'full_time',
@@ -62,6 +62,6 @@ class HrSeeder extends Seeder
             'email' => 'hr@gmail.com',
         ]);
 
-        $employee->assignRole('hr');
+        $employee->assignRole('operational_director');
     }
 }

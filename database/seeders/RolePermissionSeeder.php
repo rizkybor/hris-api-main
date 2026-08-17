@@ -19,6 +19,7 @@ class RolePermissionSeeder extends Seeder
             $superadmin = Role::firstOrCreate(['name' => 'superadmin']);
             $manager = Role::firstOrCreate(['name' => 'manager']);
             $hr = Role::firstOrCreate(['name' => 'hr']);
+            $operationalDirector = Role::firstOrCreate(['name' => 'operational_director']);
             $employee = Role::firstOrCreate(['name' => 'staff']);
             $finance = Role::firstOrCreate(['name' => 'finance']);
 
@@ -63,6 +64,41 @@ class RolePermissionSeeder extends Seeder
             $manager->syncPermissions($this->permissionsAllExcept($employeeSpecific));
 
             $hr->syncPermissions($this->permissionsByPrefixes([
+                'dashboard-',
+                'team-',
+                'employee-',
+                'project-',
+                'task-',
+                'attendance-',
+                'leave-request-',
+                'credential-account-',
+                'files-company-',
+                'company-about-',
+                'sdm-resource-',
+                'vendors-',
+                'vendors-attachment',
+                'vendors-task-list',
+                'vendors-task-scope',
+                'vendors-task-payment',
+                'vendors-task-pivot',
+                'report-',
+                'purchase-order-',
+                'invoice-',
+                'payment-receipt-',
+                'letter-',
+                'certificate-',
+                'payslip-',
+                'backup-',
+                'announcement-',
+                'asset-',
+                'performance-review-',
+                'staff-permission-',
+            ], $employeeSpecific));
+
+            // Operational Director shares HR's operational scope -- it's a
+            // distinct role (Aldi's account), not a rename of HR, so both
+            // remain independently selectable and permissioned.
+            $operationalDirector->syncPermissions($this->permissionsByPrefixes([
                 'dashboard-',
                 'team-',
                 'employee-',
