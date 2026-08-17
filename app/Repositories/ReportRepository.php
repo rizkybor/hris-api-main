@@ -9,76 +9,98 @@ use App\Models\EmployeeProfile;
 use App\Models\FixedCost;
 use App\Models\InfrastructureTool;
 use App\Models\Payroll;
+use App\Models\PayrollDetail;
 use App\Models\SdmResource;
 use Carbon\Carbon;
 
 class ReportRepository implements ReportRepositoryInterface
 {
-    public function getAttendanceReport(?string $startDate, ?string $endDate, ?int $employeeId, ?string $status)
+    public function getAttendanceReport(?string $startDate, ?string $endDate, ?int $employeeId, ?string $status, int $page = 1, int $rowPerPage = 15)
     {
         $startDate = $startDate ?: now()->startOfMonth()->toDateString();
         $endDate = $endDate ?: now()->endOfMonth()->toDateString();
 
-        $query = Attendance::query()
-            ->with(['employee.user', 'employee.jobInformation.team'])
-            ->whereBetween('date', [$startDate, $endDate]);
+        $baseQuery = Attendance::query()->whereBetween('date', [$startDate, $endDate]);
 
         if ($employeeId) {
-            $query->where('employee_id', $employeeId);
+            $baseQuery->where('employee_id', $employeeId);
         }
 
         if ($status) {
-            $query->where('status', $status);
+            $baseQuery->where('status', $status);
         }
 
-        $rows = $query->orderBy('date', 'desc')->get();
-
         $summary = [
-            'total_records' => $rows->count(),
-            'present' => $rows->where('status', 'present')->count(),
-            'late' => $rows->where('status', 'late')->count(),
-            'absent' => $rows->where('status', 'absent')->count(),
-            'sick_leave' => $rows->where('status', 'sick_leave')->count(),
+            'total_records' => (clone $baseQuery)->count(),
+            'present' => (clone $baseQuery)->where('status', 'present')->count(),
+            'late' => (clone $baseQuery)->where('status', 'late')->count(),
+            'absent' => (clone $baseQuery)->where('status', 'absent')->count(),
+            'sick_leave' => (clone $baseQuery)->where('status', 'sick_leave')->count(),
         ];
+
+        $paginated = (clone $baseQuery)
+            ->with(['employee.user', 'employee.jobInformation.team'])
+            ->orderBy('date', 'desc')
+            ->paginate($rowPerPage, ['*'], 'page', $page);
 
         return [
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
             'summary' => $summary,
-            'rows' => $rows,
+            'rows' => $paginated->items(),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'to' => $paginated->lastItem(),
+            ],
         ];
     }
 
-    public function getPayrollReport(?string $startDate, ?string $endDate)
+    public function getPayrollReport(?string $startDate, ?string $endDate, int $page = 1, int $rowPerPage = 15)
     {
         $startDate = $startDate ?: now()->startOfYear()->toDateString();
         $endDate = $endDate ?: now()->endOfYear()->toDateString();
 
-        $payrolls = Payroll::query()
-            ->with(['payrollDetails.employee.user', 'payrollDetails.employee.jobInformation.team'])
+        $payrollIds = Payroll::query()
             ->whereBetween('salary_month', [$startDate, $endDate])
-            ->orderBy('salary_month', 'desc')
-            ->get();
-
-        $details = $payrolls->flatMap(function ($payroll) {
-            return $payroll->payrollDetails->map(function ($detail) use ($payroll) {
-                $detail->setAttribute('salary_month', $payroll->salary_month);
-                $detail->setAttribute('payment_status', $payroll->status);
-
-                return $detail;
-            });
-        });
+            ->pluck('id');
 
         $summary = [
-            'total_payroll_runs' => $payrolls->count(),
-            'total_employees_paid' => $details->count(),
-            'total_original_salary' => (float) $details->sum('original_salary'),
-            'total_final_salary' => (float) $details->sum('final_salary'),
+            'total_payroll_runs' => $payrollIds->count(),
+            'total_employees_paid' => PayrollDetail::query()->whereIn('payroll_id', $payrollIds)->count(),
+            'total_original_salary' => (float) PayrollDetail::query()->whereIn('payroll_id', $payrollIds)->sum('original_salary'),
+            'total_final_salary' => (float) PayrollDetail::query()->whereIn('payroll_id', $payrollIds)->sum('final_salary'),
         ];
+
+        $paginated = PayrollDetail::query()
+            ->whereIn('payroll_id', $payrollIds)
+            ->with(['employee.user', 'employee.jobInformation.team', 'payroll'])
+            ->join('payrolls', 'payrolls.id', '=', 'payroll_details.payroll_id')
+            ->orderBy('payrolls.salary_month', 'desc')
+            ->select('payroll_details.*')
+            ->paginate($rowPerPage, ['*'], 'page', $page);
+
+        $paginated->getCollection()->transform(function ($detail) {
+            $detail->setAttribute('salary_month', $detail->payroll->salary_month);
+            $detail->setAttribute('payment_status', $detail->payroll->status);
+
+            return $detail;
+        });
 
         return [
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
             'summary' => $summary,
-            'rows' => $details->values(),
+            'rows' => $paginated->items(),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'to' => $paginated->lastItem(),
+            ],
         ];
     }
 
