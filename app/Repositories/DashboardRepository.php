@@ -23,8 +23,11 @@ class DashboardRepository implements DashboardRepositoryInterface
             $lastWeekStart = Carbon::now()->subWeek()->startOfWeek();
             $lastWeekEnd = Carbon::now()->subWeek()->endOfWeek();
 
-            // Single query for employee and team stats
+            // Single query for employee and team stats. Raw DB::table() bypasses
+            // Eloquent's soft-delete global scope, so deleted employees must be
+            // filtered explicitly or they keep inflating the totals.
             $employeeTeamStats = DB::table('employee_profiles')
+                ->whereNull('employee_profiles.deleted_at')
                 ->crossJoin('teams')
                 ->selectRaw('
                     COUNT(DISTINCT employee_profiles.id) as total_employees,

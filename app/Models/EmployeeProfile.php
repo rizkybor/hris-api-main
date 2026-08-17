@@ -80,6 +80,11 @@ class EmployeeProfile extends Model
         return $this->hasMany(EmergencyContact::class, 'employee_id');
     }
 
+    public function files()
+    {
+        return $this->hasMany(EmployeeFile::class, 'employee_id')->orderByDesc('created_at');
+    }
+
     public function teamMembers()
     {
         return $this->hasMany(TeamMember::class, 'employee_id');

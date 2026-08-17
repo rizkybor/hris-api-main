@@ -29,14 +29,14 @@ class EmployeeProfileDto
         public readonly string $employment_type,
         public readonly string $work_location,
         public readonly string $start_date,
-        public readonly float $monthly_salary,
+        public readonly ?float $monthly_salary,
         public readonly string $skill_level,
-        // Bank Information
-        public readonly string $bank_name,
-        public readonly string $account_number,
-        public readonly string $account_holder_name,
+        // Bank Information (optional -- e.g. interns without a payroll account yet)
+        public readonly ?string $bank_name,
+        public readonly ?string $account_number,
+        public readonly ?string $account_holder_name,
         public readonly ?string $bank_branch,
-        public readonly string $account_type,
+        public readonly ?string $account_type,
         // Emergency Contacts
         public readonly array $emergency_contacts = [],
     ) {}
@@ -104,14 +104,14 @@ class EmployeeProfileDto
             employment_type: $data['employment_type'],
             work_location: $data['work_location'],
             start_date: $data['start_date'],
-            monthly_salary: (float) $data['monthly_salary'],
+            monthly_salary: isset($data['monthly_salary']) ? (float) $data['monthly_salary'] : null,
             skill_level: $data['skill_level'],
             // Bank Information
-            bank_name: $data['bank_name'],
-            account_number: $data['account_number'],
-            account_holder_name: $data['account_holder_name'],
+            bank_name: $data['bank_name'] ?? null,
+            account_number: $data['account_number'] ?? null,
+            account_holder_name: $data['account_holder_name'] ?? null,
             bank_branch: $data['bank_branch'] ?? null,
-            account_type: $data['account_type'],
+            account_type: $data['account_type'] ?? null,
             // Emergency Contacts
             emergency_contacts: $data['emergency_contacts'] ?? [],
         );
@@ -142,14 +142,17 @@ class EmployeeProfileDto
             employment_type: $data['employment_type'] ?? $existingProfile->jobInformation?->employment_type ?? 'full_time',
             work_location: $data['work_location'] ?? $existingProfile->jobInformation?->work_location ?? 'office',
             start_date: $data['start_date'] ?? ($existingProfile->jobInformation?->start_date ? $existingProfile->jobInformation->start_date->format('Y-m-d') : now()->format('Y-m-d')),
-            monthly_salary: isset($data['monthly_salary']) ? (float) $data['monthly_salary'] : ($existingProfile->jobInformation?->monthly_salary ?? 0.0),
+            // array_key_exists (not isset/??) so explicitly clearing a field
+            // to blank actually saves as null instead of silently keeping
+            // the previous value.
+            monthly_salary: array_key_exists('monthly_salary', $data) ? (is_null($data['monthly_salary']) ? null : (float) $data['monthly_salary']) : $existingProfile->jobInformation?->monthly_salary,
             skill_level: $data['skill_level'] ?? $existingProfile->jobInformation?->skill_level ?? 'beginner',
             // Bank Information
-            bank_name: $data['bank_name'] ?? $existingProfile->bankInformation?->bank_name ?? '',
-            account_number: $data['account_number'] ?? $existingProfile->bankInformation?->account_number ?? '',
-            account_holder_name: $data['account_holder_name'] ?? $existingProfile->bankInformation?->account_holder_name ?? '',
+            bank_name: array_key_exists('bank_name', $data) ? $data['bank_name'] : $existingProfile->bankInformation?->bank_name,
+            account_number: array_key_exists('account_number', $data) ? $data['account_number'] : $existingProfile->bankInformation?->account_number,
+            account_holder_name: array_key_exists('account_holder_name', $data) ? $data['account_holder_name'] : $existingProfile->bankInformation?->account_holder_name,
             bank_branch: $data['bank_branch'] ?? $existingProfile->bankInformation?->bank_branch,
-            account_type: $data['account_type'] ?? $existingProfile->bankInformation?->account_type ?? 'savings',
+            account_type: array_key_exists('account_type', $data) ? $data['account_type'] : $existingProfile->bankInformation?->account_type,
             // Emergency Contacts
             emergency_contacts: $data['emergency_contacts'] ?? $existingProfile->emergency_contacts ?? [],
         );

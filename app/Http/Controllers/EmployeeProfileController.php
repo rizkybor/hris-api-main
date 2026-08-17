@@ -224,9 +224,13 @@ class EmployeeProfileController extends Controller implements HasMiddleware
         try {
             $team = $this->employeeProfileRepository->getMyTeam();
 
+            if (! $team) {
+                return ResponseHelper::jsonResponse(true, 'You are not assigned to any team yet', null, 200);
+            }
+
             return ResponseHelper::jsonResponse(true, 'Team Retrieved Successfully', new TeamResource($team), 200);
         } catch (ModelNotFoundException $e) {
-            return ResponseHelper::jsonResponse(false, 'Team Not Found', null, 404);
+            return ResponseHelper::jsonResponse(false, 'Employee Not Found', null, 404);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

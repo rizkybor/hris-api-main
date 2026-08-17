@@ -167,6 +167,20 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
+        'option' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'staff-permission' => [
+            'menu',
+            'list',
+            'edit',
+        ],
+
         'purchase-order' => [
             'menu',
             'list',

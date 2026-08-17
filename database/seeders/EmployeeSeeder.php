@@ -59,6 +59,6 @@ class EmployeeSeeder extends Seeder
             'email' => 'emergency@gmail.com',
         ]);
 
-        $employee->assignRole('employee');
+        $employee->assignRole('staff');
     }
 }

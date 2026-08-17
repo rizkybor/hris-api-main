@@ -36,7 +36,7 @@ class ProjectRepository implements ProjectRepositoryInterface
             ->withCount('tasks')
             ->orderByDesc('created_at');
 
-        if (Auth::user()->hasRole('employee')) {
+        if (Auth::user()->hasRole('staff')) {
             $employeeId = Auth::user()->employeeProfile->id;
 
             // Get team ID from JobInformation
