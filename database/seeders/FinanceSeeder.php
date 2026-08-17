@@ -17,7 +17,7 @@ class FinanceSeeder extends Seeder
             'name' => env('SEED_FINANCE_NAME', 'Andy Saputra'),
             'email' => env('SEED_FINANCE_EMAIL', 'finance@example.com'),
             'password' => bcrypt(env('SEED_FINANCE_PASSWORD', 'password')),
-            'profile_photo' => 'profile-pictures/female/1.avif',
+            'profile_photo' => 'profile-pictures/male/2.avif',
         ]);
 
         $employeeProfile = $employee->employeeProfile()->create([
@@ -25,7 +25,7 @@ class FinanceSeeder extends Seeder
             'identity_number' => '333434141',
             'phone' => '081234567891',
             'date_of_birth' => '1995-05-15',
-            'gender' => 'female',
+            'gender' => 'male',
             'place_of_birth' => 'Jakarta',
             'address' => 'Jl. Thamrin No. 5',
             'city' => 'Jakarta',
