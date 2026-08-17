@@ -65,6 +65,7 @@ class RolePermissionSeeder extends Seeder
                 'announcement-',
                 'asset-',
                 'performance-review-',
+                'staff-permission-',
             ], $employeeSpecific));
 
             $employee->syncPermissions(

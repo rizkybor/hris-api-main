@@ -30,6 +30,7 @@ use App\Http\Controllers\ProjectTaskCommentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ConfigurableOptionController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\StaffPermissionController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnnouncementController;
@@ -232,6 +233,11 @@ Route::prefix('v1')
 
             // Settings: Configurable Dropdown Options
             Route::apiResource('configurable-options', ConfigurableOptionController::class)->except(['show']);
+
+            // Settings: Per-account Staff Permissions
+            Route::get('staff-accounts', [StaffPermissionController::class, 'index']);
+            Route::get('staff-accounts/{employee}/permissions', [StaffPermissionController::class, 'show']);
+            Route::put('staff-accounts/{employee}/permissions', [StaffPermissionController::class, 'update']);
 
             // Settings: Database Backup
             Route::get('backups', [BackupController::class, 'index']);

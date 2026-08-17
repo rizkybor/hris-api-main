@@ -624,7 +624,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
         ];
     }
 
-    public function getMyTeam(): Team
+    public function getMyTeam(): ?Team
     {
         $userId = auth()->user()->id;
 
@@ -635,7 +635,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             ->firstOrFail();
 
         if (! $employee->jobInformation || ! $employee->jobInformation->team) {
-            throw new \Exception('You are not assigned to any team');
+            return null;
         }
 
         $team = $employee->jobInformation->team;
@@ -653,7 +653,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             ->firstOrFail();
 
         if (! $employee->jobInformation || ! $employee->jobInformation->team) {
-            throw new \Exception('You are not assigned to any team');
+            return new Collection();
         }
 
         return $employee->jobInformation->team
@@ -675,7 +675,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             ->firstOrFail();
 
         if (! $employee->jobInformation || ! $employee->jobInformation->team) {
-            throw new \Exception('You are not assigned to any team');
+            return new Collection();
         }
 
         return $employee->jobInformation->team

@@ -30,6 +30,7 @@ class PermissionModules
         'report' => 'Reports',
         'role' => 'Roles & Permissions',
         'option' => 'Dropdown Options',
+        'staff-permission' => 'Staff Account Permissions',
         'purchase-order' => 'Purchase Orders',
         'invoice' => 'Invoices',
         'payment-receipt' => 'Payment Receipts',
