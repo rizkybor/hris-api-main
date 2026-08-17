@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use App\Services\EmployeeCodeGenerator;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -27,7 +28,7 @@ class EmployeeProfileFactory extends Factory
             'user_id' => User::factory()->state([
                 'profile_photo' => $profilePicture,
             ])->afterCreating(function (User $user) {
-                $user->assignRole('employee');
+                $user->assignRole('staff');
             }),
             'code' => $this->generateEmployeeCode(),
             'identity_number' => $this->generateIdentityNumber(),
@@ -55,17 +56,14 @@ class EmployeeProfileFactory extends Factory
     }
 
     /**
-     * Generate employee code with format EMP-YYYY-XXXXXX (up to 999999 for 500k employees)
+     * Employee code in the live format ([COUNTRY]JCD[YEAR]-[COMPANY ID][TYPE][5-DIGIT ID]-[CHECK DIGIT]).
+     * The employment type isn't known yet at this point (it's set on the
+     * related JobInformation record afterwards), so this always issues a
+     * Full-Time-series code; it's fake data, not something re-issued later.
      */
     private function generateEmployeeCode(): string
     {
-        static $counter = 1;
-
-        $year = date('Y');
-        $number = str_pad($counter, 6, '0', STR_PAD_LEFT);
-        $counter++;
-
-        return "EMP-{$year}-{$number}";
+        return app(EmployeeCodeGenerator::class)->generate('full_time');
     }
 
     /**
@@ -123,7 +121,7 @@ class EmployeeProfileFactory extends Factory
             'user_id' => User::factory()->state([
                 'profile_photo' => $profilePicture,
             ])->afterCreating(function (User $user) {
-                $user->assignRole('employee');
+                $user->assignRole('staff');
             }),
         ]);
     }
@@ -140,7 +138,7 @@ class EmployeeProfileFactory extends Factory
             'user_id' => User::factory()->state([
                 'profile_photo' => $profilePicture,
             ])->afterCreating(function (User $user) {
-                $user->assignRole('employee');
+                $user->assignRole('staff');
             }),
         ]);
     }

@@ -52,7 +52,7 @@ class EmployeeProfileUpdateRequest extends FormRequest
             'password' => ['sometimes', 'required', 'string', Password::defaults()],
             'profile_photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
             'roles' => ['sometimes', 'required', 'array'],
-            'roles.*' => ['required', 'string', Rule::in(Role::pluck('name'))],
+            'roles.*' => ['required', 'string', Rule::in(Role::where('name', '!=', 'superadmin')->pluck('name'))],
 
             // Employee Profile fields
             'code' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('employee_profiles', 'code')->ignore($employeeId)],

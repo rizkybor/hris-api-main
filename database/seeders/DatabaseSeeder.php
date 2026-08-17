@@ -15,9 +15,9 @@ class DatabaseSeeder extends Seeder
             // 1. Seed roles and permissions first
             RoleSeeder::class,
 
-            // 2. Seed specific users (Manager, HR, Finance, Employee)
+            // 2. Seed specific users (Super Admin, Manager, HR, Finance)
+            SuperAdminSeeder::class,
             ManagerSeeder::class,
-            EmployeeSeeder::class,
             HrSeeder::class,
             FinanceSeeder::class,
             CredentialAccountSeeder::class,

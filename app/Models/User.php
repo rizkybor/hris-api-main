@@ -28,6 +28,17 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
+     * The one account that must always exist and can never be deleted,
+     * regardless of who's asking.
+     */
+    public const PROTECTED_EMAIL = 'superadmin@jcdigital.co.id';
+
+    public function isProtected(): bool
+    {
+        return $this->email === self::PROTECTED_EMAIL;
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

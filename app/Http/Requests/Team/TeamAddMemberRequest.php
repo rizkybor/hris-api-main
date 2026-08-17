@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Team;
 
+use App\Rules\NotProtectedEmployee;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TeamAddMemberRequest extends FormRequest
@@ -14,7 +15,7 @@ class TeamAddMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'employee_id' => ['required', 'integer', 'exists:employee_profiles,id'],
+            'employee_id' => ['required', 'integer', 'exists:employee_profiles,id', new NotProtectedEmployee('a team member')],
         ];
     }
 

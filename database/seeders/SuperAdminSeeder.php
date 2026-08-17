@@ -1,0 +1,30 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Seeder;
+
+class SuperAdminSeeder extends Seeder
+{
+    /**
+     * The one account that always exists, has every permission, and can
+     * never be deleted (see User::PROTECTED_EMAIL). It has no employee
+     * profile -- it's a system-level account, not a staff member.
+     */
+    public function run(): void
+    {
+        $user = User::firstOrCreate(
+            ['email' => User::PROTECTED_EMAIL],
+            [
+                'name' => env('SEED_SUPERADMIN_NAME', 'Super Admin'),
+                'password' => bcrypt(env('SEED_SUPERADMIN_PASSWORD', 'password')),
+                'profile_photo' => 'profile-pictures/male/1.avif',
+            ]
+        );
+
+        if (! $user->hasRole('superadmin')) {
+            $user->assignRole('superadmin');
+        }
+    }
+}
