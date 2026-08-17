@@ -45,8 +45,21 @@ class RolePermissionSeeder extends Seeder
             // that unrelated admin capability. The "My Tasks" link stays
             // visible for Super Admin but is harmless -- it just shows an
             // empty list, since nothing is ever assigned to that account.
+            //
+            // It also skips the "People & Work" section (Employees, Our
+            // Teams, Org Chart, Attendance, Projects, Payroll) -- day-to-day
+            // HR/PM operations belong to Manager/HR/Finance, not the system
+            // account. Only the "-menu" permissions are excluded (these are
+            // pure sidebar-visibility gates with no backend middleware of
+            // their own), so this only hides the section; it doesn't take
+            // away any deeper permission Super Admin might still need.
             $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, [
                 'payslip-view',
+                'employee-menu',
+                'team-menu',
+                'attendance-menu',
+                'project-menu',
+                'payroll-menu',
             ])));
 
             $manager->syncPermissions($this->permissionsAllExcept($employeeSpecific));
