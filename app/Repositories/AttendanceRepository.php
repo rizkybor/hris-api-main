@@ -98,7 +98,10 @@ class AttendanceRepository implements AttendanceRepositoryInterface
             ->selectRaw("
                 COUNT(CASE WHEN status = 'present' THEN 1 END) as present_days,
                 COUNT(CASE WHEN status = 'sick' THEN 1 END) as sick_days,
-                COUNT(CASE WHEN status = 'absent' THEN 1 END) as absent_days
+                COUNT(CASE WHEN status = 'absent' THEN 1 END) as absent_days,
+                AVG(CASE WHEN check_in IS NOT NULL AND check_out IS NOT NULL
+                    THEN TIMESTAMPDIFF(MINUTE, check_in, check_out)
+                END) as avg_minutes
             ")
             ->first();
 
@@ -107,6 +110,7 @@ class AttendanceRepository implements AttendanceRepositoryInterface
             'present_days' => (int) $stats->present_days,
             'sick_days' => (int) $stats->sick_days,
             'absent_days' => (int) $stats->absent_days,
+            'average_hours' => $stats->avg_minutes ? round($stats->avg_minutes / 60, 1) : 0,
         ];
     }
 
@@ -244,7 +248,7 @@ class AttendanceRepository implements AttendanceRepositoryInterface
 
             // Get cached employee count
             $totalEmployees = cache()->remember(CacheConstants::CACHE_KEY_EMPLOYEE_TOTAL_COUNT, CacheConstants::ONE_HOUR, function () {
-                return DB::table('employee_profiles')->count();
+                return DB::table('employee_profiles')->whereNull('deleted_at')->count();
             });
 
             // Calculate rates

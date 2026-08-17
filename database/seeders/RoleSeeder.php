@@ -28,7 +28,7 @@ class RoleSeeder extends Seeder
         ]);
 
         Role::firstOrCreate([
-            'name' => 'employee',
+            'name' => 'staff',
             'guard_name' => 'sanctum',
         ]);
     }

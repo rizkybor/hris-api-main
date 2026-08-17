@@ -3,7 +3,6 @@
 namespace App\Repositories;
 
 use App\Enums\Department;
-use App\Enums\EmploymentType;
 use App\Enums\JobStatus;
 use App\Enums\LeaveType;
 use App\Enums\SkillLevel;
@@ -11,6 +10,7 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\WorkLocation;
 use App\Interfaces\OptionRepositoryInterface;
+use App\Models\ConfigurableOption;
 
 class OptionRepository implements OptionRepositoryInterface
 {
@@ -24,7 +24,22 @@ class OptionRepository implements OptionRepositoryInterface
 
     public function getEmploymentTypeOptions(): array
     {
-        return $this->mapEnumToOptions(EmploymentType::cases());
+        return $this->mapConfigurableOptions('employment_type');
+    }
+
+    public function getPtkpStatusOptions(): array
+    {
+        return $this->mapConfigurableOptions('ptkp_status');
+    }
+
+    public function getBankNameOptions(): array
+    {
+        return $this->mapConfigurableOptions('bank_name');
+    }
+
+    public function getPreferredLanguageOptions(): array
+    {
+        return $this->mapConfigurableOptions('preferred_language');
     }
 
     public function getJobStatusOptions(): array
@@ -66,5 +81,19 @@ class OptionRepository implements OptionRepositoryInterface
             'value' => $case->value,
             'label' => $case->label(),
         ], $cases);
+    }
+
+    /**
+     * Options that a manager can add/remove at runtime via Settings.
+     */
+    private function mapConfigurableOptions(string $category): array
+    {
+        return ConfigurableOption::category($category)
+            ->active()
+            ->ordered()
+            ->get(['value', 'label'])
+            ->map(fn ($option) => ['value' => $option->value, 'label' => $option->label])
+            ->values()
+            ->all();
     }
 }

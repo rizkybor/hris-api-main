@@ -45,8 +45,8 @@ class AuthRepository implements AuthRepositoryInterface
         $user = Auth::user();
         $user->load(['roles', 'permissions']);
 
-        if ($user->hasRole('employee')) {
-            $user->load('employeeProfile');
+        if ($user->hasRole('staff')) {
+            $user->load('employeeProfile.jobInformation');
         }
 
         return $user;

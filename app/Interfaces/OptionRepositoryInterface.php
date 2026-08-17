@@ -22,4 +22,10 @@ interface OptionRepositoryInterface
     public function getWorkLocationOptions(): array;
 
     public function getSkillLevelOptions(): array;
+
+    public function getPtkpStatusOptions(): array;
+
+    public function getBankNameOptions(): array;
+
+    public function getPreferredLanguageOptions(): array;
 }

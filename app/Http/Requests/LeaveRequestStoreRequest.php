@@ -43,4 +43,19 @@ class LeaveRequestStoreRequest extends FormRequest
             'employee_id' => Auth::user()->employeeProfile->id,
         ]);
     }
+
+    /**
+     * Interns don't accrue Annual Leave quota, so they're not eligible to
+     * request it (per company policy).
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $employmentType = Auth::user()->employeeProfile?->jobInformation?->employment_type;
+
+            if ($employmentType === 'intern' && $this->input('leave_type') === 'annual_leave') {
+                $validator->errors()->add('leave_type', 'Interns are not eligible for Annual Leave. Please choose a different leave type.');
+            }
+        });
+    }
 }
