@@ -19,13 +19,9 @@ class RolePermissionSeeder extends Seeder
             $superadmin = Role::firstOrCreate(['name' => 'superadmin']);
             $manager = Role::firstOrCreate(['name' => 'manager']);
             $hr = Role::firstOrCreate(['name' => 'hr']);
+            $operationalDirector = Role::firstOrCreate(['name' => 'operational_director']);
             $employee = Role::firstOrCreate(['name' => 'staff']);
             $finance = Role::firstOrCreate(['name' => 'finance']);
-
-            // Super Admin gets literally every permission that exists, with
-            // no exclusions -- unlike Manager, which is denied the
-            // employee-self-service-only permissions below.
-            $superadmin->syncPermissions(Permission::all());
 
             $employeeSpecific = [
                 'attendance-my-attendances',
@@ -40,9 +36,71 @@ class RolePermissionSeeder extends Seeder
                 'performance-review-acknowledge',
             ];
 
+            // Super Admin gets every permission except the full "My
+            // Workspace" self-service set (My Profile, My Team, My
+            // Attendance, Clock In/Out, My Tasks, My Payslips) -- it's a
+            // system account, not a staff member with their own workspace
+            // to view. Excluding "task-list" also removes viewing/posting
+            // comments on project tasks (the same permission gates both,
+            // and Super Admin doesn't need that either).
+            //
+            // It also skips most of the "People & Work" section (Our Teams,
+            // Org Chart, Attendance, Projects, Payroll) -- day-to-day HR/PM
+            // operations belong to Manager/HR/Finance, not the system
+            // account. Employees is the exception: Super Admin keeps full
+            // access (Create, Edit, Delete, List, Menu Access) so it can
+            // manage the account roster directly. Only the "-menu"
+            // permissions are excluded (these are pure sidebar-visibility
+            // gates with no backend middleware of their own), so this only
+            // hides the section; it doesn't take away any deeper permission
+            // Super Admin might still need.
+            $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, [
+                'payslip-view',
+                'task-list',
+                'team-menu',
+                'attendance-menu',
+                'project-menu',
+                'payroll-menu',
+            ])));
+
             $manager->syncPermissions($this->permissionsAllExcept($employeeSpecific));
 
             $hr->syncPermissions($this->permissionsByPrefixes([
+                'dashboard-',
+                'team-',
+                'employee-',
+                'project-',
+                'task-',
+                'attendance-',
+                'leave-request-',
+                'credential-account-',
+                'files-company-',
+                'company-about-',
+                'sdm-resource-',
+                'vendors-',
+                'vendors-attachment',
+                'vendors-task-list',
+                'vendors-task-scope',
+                'vendors-task-payment',
+                'vendors-task-pivot',
+                'report-',
+                'purchase-order-',
+                'invoice-',
+                'payment-receipt-',
+                'letter-',
+                'certificate-',
+                'payslip-',
+                'backup-',
+                'announcement-',
+                'asset-',
+                'performance-review-',
+                'staff-permission-',
+            ], $employeeSpecific));
+
+            // Operational Director shares HR's operational scope -- it's a
+            // distinct role (Aldi's account), not a rename of HR, so both
+            // remain independently selectable and permissioned.
+            $operationalDirector->syncPermissions($this->permissionsByPrefixes([
                 'dashboard-',
                 'team-',
                 'employee-',

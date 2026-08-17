@@ -11,6 +11,9 @@ class SuperAdminSeeder extends Seeder
      * The one account that always exists, has every permission, and can
      * never be deleted (see User::PROTECTED_EMAIL). It has no employee
      * profile -- it's a system-level account, not a staff member.
+     *
+     * No profile_photo is seeded on purpose -- the Avatar component falls
+     * back to colored initials, so there's no need for a stock photo.
      */
     public function run(): void
     {
@@ -19,7 +22,6 @@ class SuperAdminSeeder extends Seeder
             [
                 'name' => env('SEED_SUPERADMIN_NAME', 'Super Admin'),
                 'password' => bcrypt(env('SEED_SUPERADMIN_PASSWORD', 'password')),
-                'profile_photo' => 'profile-pictures/male/1.avif',
             ]
         );
 

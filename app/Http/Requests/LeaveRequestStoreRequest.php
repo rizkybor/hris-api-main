@@ -40,7 +40,7 @@ class LeaveRequestStoreRequest extends FormRequest
     public function prepareForValidation()
     {
         $this->merge([
-            'employee_id' => Auth::user()->employeeProfile->id,
+            'employee_id' => Auth::user()->employeeProfile?->id,
         ]);
     }
 

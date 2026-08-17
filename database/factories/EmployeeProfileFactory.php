@@ -21,13 +21,9 @@ class EmployeeProfileFactory extends Factory
         $gender = fake()->randomElement(['male', 'female']);
         $dateOfBirth = fake()->dateTimeBetween('-55 years', '-22 years');
 
-        // Create user with matching profile picture
-        $profilePicture = $this->getProfilePictureByGender($gender);
-
         return [
-            'user_id' => User::factory()->state([
-                'profile_photo' => $profilePicture,
-            ])->afterCreating(function (User $user) {
+            // No profile_photo -- Avatar falls back to colored initials.
+            'user_id' => User::factory()->afterCreating(function (User $user) {
                 $user->assignRole('staff');
             }),
             'code' => $this->generateEmployeeCode(),
@@ -43,16 +39,6 @@ class EmployeeProfileFactory extends Factory
             'preferred_language' => fake()->randomElement(['English', 'Indonesian', 'Mandarin', 'Japanese']),
             'additional_notes' => fake()->optional(0.3)->sentence(),
         ];
-    }
-
-    /**
-     * Get profile picture based on gender
-     */
-    private function getProfilePictureByGender(string $gender): string
-    {
-        $number = fake()->numberBetween(1, 3);
-
-        return "profile-pictures/{$gender}/{$number}.avif";
     }
 
     /**
@@ -114,13 +100,9 @@ class EmployeeProfileFactory extends Factory
      */
     public function male(): static
     {
-        $profilePicture = $this->getProfilePictureByGender('male');
-
         return $this->state(fn(array $attributes) => [
             'gender' => 'male',
-            'user_id' => User::factory()->state([
-                'profile_photo' => $profilePicture,
-            ])->afterCreating(function (User $user) {
+            'user_id' => User::factory()->afterCreating(function (User $user) {
                 $user->assignRole('staff');
             }),
         ]);
@@ -131,13 +113,9 @@ class EmployeeProfileFactory extends Factory
      */
     public function female(): static
     {
-        $profilePicture = $this->getProfilePictureByGender('female');
-
         return $this->state(fn(array $attributes) => [
             'gender' => 'female',
-            'user_id' => User::factory()->state([
-                'profile_photo' => $profilePicture,
-            ])->afterCreating(function (User $user) {
+            'user_id' => User::factory()->afterCreating(function (User $user) {
                 $user->assignRole('staff');
             }),
         ]);

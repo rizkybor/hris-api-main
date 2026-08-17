@@ -70,7 +70,7 @@ class LeaveRequestRepository implements LeaveRequestRepositoryInterface
     public function getMyLeaveRequests()
     {
         return LeaveRequest::with(['employee.user', 'approver.user'])
-            ->where('employee_id', Auth::user()->employeeProfile->id)
+            ->where('employee_id', Auth::user()->employeeProfile?->id)
             ->whereDate('created_at', '>=', now()->subDays(6)->startOfDay())
             ->whereDate('created_at', '<=', now()->endOfDay())
             ->orderBy('created_at', 'desc')
@@ -133,7 +133,7 @@ class LeaveRequestRepository implements LeaveRequestRepositoryInterface
 
             $data = [
                 'status' => 'approved',
-                'approved_by' => Auth::user()->employeeProfile->id,
+                'approved_by' => Auth::user()->employeeProfile?->id,
             ];
 
             $leaveRequestDto = LeaveRequestDto::fromArrayForUpdate($data, $leaveRequest);
@@ -154,7 +154,7 @@ class LeaveRequestRepository implements LeaveRequestRepositoryInterface
 
             $data = [
                 'status' => 'rejected',
-                'approved_by' => Auth::user()->employeeProfile->id,
+                'approved_by' => Auth::user()->employeeProfile?->id,
             ];
 
             $leaveRequestDto = LeaveRequestDto::fromArrayForUpdate($data, $leaveRequest);

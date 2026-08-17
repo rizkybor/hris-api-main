@@ -71,7 +71,7 @@ class AnnouncementController extends Controller implements HasMiddleware
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'body' => 'required|string',
-            'audience' => 'nullable|string|in:all,manager,hr,finance,staff',
+            'audience' => 'nullable|string|in:all,manager,operational_director,hr,finance,staff',
             'is_pinned' => 'nullable|boolean',
             'expires_at' => 'nullable|date',
         ]);
@@ -100,7 +100,7 @@ class AnnouncementController extends Controller implements HasMiddleware
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'body' => 'sometimes|required|string',
-            'audience' => 'nullable|string|in:all,manager,hr,finance,staff',
+            'audience' => 'nullable|string|in:all,manager,operational_director,hr,finance,staff',
             'is_pinned' => 'nullable|boolean',
             'expires_at' => 'nullable|date',
         ]);
