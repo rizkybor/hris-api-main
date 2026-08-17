@@ -44,17 +44,19 @@ class RolePermissionSeeder extends Seeder
             // comments on project tasks (the same permission gates both,
             // and Super Admin doesn't need that either).
             //
-            // It also skips the "People & Work" section (Employees, Our
-            // Teams, Org Chart, Attendance, Projects, Payroll) -- day-to-day
-            // HR/PM operations belong to Manager/HR/Finance, not the system
-            // account. Only the "-menu" permissions are excluded (these are
-            // pure sidebar-visibility gates with no backend middleware of
-            // their own), so this only hides the section; it doesn't take
-            // away any deeper permission Super Admin might still need.
+            // It also skips most of the "People & Work" section (Our Teams,
+            // Org Chart, Attendance, Projects, Payroll) -- day-to-day HR/PM
+            // operations belong to Manager/HR/Finance, not the system
+            // account. Employees is the exception: Super Admin keeps full
+            // access (Create, Edit, Delete, List, Menu Access) so it can
+            // manage the account roster directly. Only the "-menu"
+            // permissions are excluded (these are pure sidebar-visibility
+            // gates with no backend middleware of their own), so this only
+            // hides the section; it doesn't take away any deeper permission
+            // Super Admin might still need.
             $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, [
                 'payslip-view',
                 'task-list',
-                'employee-menu',
                 'team-menu',
                 'attendance-menu',
                 'project-menu',
