@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Backup;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class DatabaseBackupService
 {
@@ -17,6 +19,31 @@ class DatabaseBackupService
         'telescope_entries_tags',
         'telescope_monitoring',
     ];
+
+    /**
+     * Generate a full SQL dump and persist it to the private local disk,
+     * recording it in the `backups` table so it shows up in the backup
+     * history instead of only ever existing as a one-off browser download.
+     */
+    public function createAndStore(int $userId): Backup
+    {
+        $filename = 'hris-backup-'.now()->format('Y-m-d_His').'.sql';
+        $diskPath = 'backups/'.$filename;
+
+        Storage::disk('local')->makeDirectory('backups');
+        $absolutePath = Storage::disk('local')->path($diskPath);
+
+        $handle = fopen($absolutePath, 'w');
+        $this->streamDump($handle);
+        fclose($handle);
+
+        return Backup::create([
+            'filename' => $filename,
+            'disk_path' => $diskPath,
+            'size_bytes' => Storage::disk('local')->size($diskPath),
+            'created_by' => $userId,
+        ]);
+    }
 
     /**
      * Stream a full SQL dump of every table in the current database to the

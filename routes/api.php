@@ -217,7 +217,10 @@ Route::prefix('v1')
             Route::apiResource('roles', RoleController::class);
 
             // Settings: Database Backup
-            Route::get('backup/download', [BackupController::class, 'download']);
+            Route::get('backups', [BackupController::class, 'index']);
+            Route::post('backups', [BackupController::class, 'store']);
+            Route::get('backups/{id}/download', [BackupController::class, 'download']);
+            Route::delete('backups/{id}', [BackupController::class, 'destroy']);
 
             // History / Activity Log
             Route::get('history', [ActivityLogController::class, 'index']);
