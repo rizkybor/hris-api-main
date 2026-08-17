@@ -90,7 +90,18 @@ class LeaveRequestController extends Controller implements HasMiddleware
     public function getMyLeaveBalance()
     {
         try {
-            $employeeId = Auth::user()->employeeProfile->id;
+            $employeeId = Auth::user()->employeeProfile?->id;
+
+            if (! $employeeId) {
+                return ResponseHelper::jsonResponse(true, 'This account has no employee profile', [
+                    'employee_id' => null,
+                    'year' => now()->year,
+                    'quota' => 0,
+                    'used' => 0,
+                    'remaining' => 0,
+                ], 200);
+            }
+
             $balance = $this->leaveRequestRepository->getLeaveBalance($employeeId);
 
             return ResponseHelper::jsonResponse(true, 'Leave Balance Retrieved Successfully', $balance, 200);

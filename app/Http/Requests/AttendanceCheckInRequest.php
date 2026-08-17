@@ -38,7 +38,7 @@ class AttendanceCheckInRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'employee_id' => Auth::user()->employeeProfile->id,
+            'employee_id' => Auth::user()->employeeProfile?->id,
         ]);
     }
 }

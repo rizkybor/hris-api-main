@@ -76,8 +76,14 @@ class AttendanceRepository implements AttendanceRepositoryInterface
 
     public function getMyAttendances(): Collection
     {
+        $employeeId = Auth::user()->employeeProfile?->id;
+
+        if (! $employeeId) {
+            return new Collection();
+        }
+
         return Attendance::with(['employee.user'])
-            ->where('employee_id', Auth::user()->employeeProfile->id)
+            ->where('employee_id', $employeeId)
             ->whereDate('date', '>=', now()->subDays(6)->startOfDay())
             ->whereDate('date', '<=', now()->endOfDay())
             ->orderBy('date', 'desc')
@@ -86,7 +92,20 @@ class AttendanceRepository implements AttendanceRepositoryInterface
 
     public function getMyAttendanceStatistics()
     {
-        $employeeId = Auth::user()->employeeProfile->id;
+        // Accounts with no employee profile (e.g. Super Admin) have no
+        // attendance to report -- zeroed stats, not a query against NULL.
+        $employeeId = Auth::user()->employeeProfile?->id;
+
+        if (! $employeeId) {
+            return [
+                'total_days' => now()->day,
+                'present_days' => 0,
+                'sick_days' => 0,
+                'absent_days' => 0,
+                'average_hours' => 0,
+            ];
+        }
+
         $startOfMonth = now()->startOfMonth();
         $endOfMonth = now()->endOfMonth();
 
@@ -116,8 +135,14 @@ class AttendanceRepository implements AttendanceRepositoryInterface
 
     public function getLastAttendanceByEmployee(): ?Attendance
     {
+        $employeeId = Auth::user()->employeeProfile?->id;
+
+        if (! $employeeId) {
+            return null;
+        }
+
         return Attendance::with(['employee.user'])
-            ->where('employee_id', Auth::user()->employeeProfile->id)
+            ->where('employee_id', $employeeId)
             ->where('date', now()->format('Y-m-d'))
             ->first();
     }
@@ -125,7 +150,13 @@ class AttendanceRepository implements AttendanceRepositoryInterface
     public function checkIn(array $data): Attendance
     {
         return DB::transaction(function () use ($data) {
-            $existingAttendance = Attendance::where('employee_id', Auth::user()->employeeProfile->id)
+            $employeeId = Auth::user()->employeeProfile?->id;
+
+            if (! $employeeId) {
+                throw new \Exception('This account has no employee profile, so it cannot clock in.');
+            }
+
+            $existingAttendance = Attendance::where('employee_id', $employeeId)
                 ->where('date', now()->format('Y-m-d'))
                 ->first();
 
@@ -148,7 +179,13 @@ class AttendanceRepository implements AttendanceRepositoryInterface
     public function checkOut(array $data): Attendance
     {
         return DB::transaction(function () use ($data) {
-            $attendance = Attendance::where('employee_id', Auth::user()->employeeProfile->id)
+            $employeeId = Auth::user()->employeeProfile?->id;
+
+            if (! $employeeId) {
+                throw new \Exception('This account has no employee profile, so it cannot clock out.');
+            }
+
+            $attendance = Attendance::where('employee_id', $employeeId)
                 ->where('date', now()->format('Y-m-d'))
                 ->whereNull('check_out')
                 ->first();

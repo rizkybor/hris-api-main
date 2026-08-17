@@ -10,6 +10,9 @@ class HrSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * No profile_photo is seeded on purpose -- the Avatar component falls
+     * back to colored initials, so there's no need for a stock photo.
      */
     public function run(): void
     {
@@ -17,7 +20,6 @@ class HrSeeder extends Seeder
             'name' => env('SEED_HR_NAME', 'Aldi Pratama Putra'),
             'email' => env('SEED_HR_EMAIL', 'hr@example.com'),
             'password' => bcrypt(env('SEED_HR_PASSWORD', 'password')),
-            'profile_photo' => 'profile-pictures/male/3.avif',
         ]);
 
         $employeeProfile = $employee->employeeProfile()->create([
