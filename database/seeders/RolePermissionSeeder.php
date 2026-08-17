@@ -35,16 +35,13 @@ class RolePermissionSeeder extends Seeder
                 'performance-review-acknowledge',
             ];
 
-            // Super Admin gets every permission except most of the "My
+            // Super Admin gets every permission except the full "My
             // Workspace" self-service set (My Profile, My Team, My
-            // Attendance, Clock In/Out, My Payslips) -- it's a system
-            // account, not a staff member with their own workspace to view.
-            // "My Tasks" is intentionally left alone: its permission
-            // ("task-list") is the same one that gates viewing/posting task
-            // comments on any project, so excluding it would also break
-            // that unrelated admin capability. The "My Tasks" link stays
-            // visible for Super Admin but is harmless -- it just shows an
-            // empty list, since nothing is ever assigned to that account.
+            // Attendance, Clock In/Out, My Tasks, My Payslips) -- it's a
+            // system account, not a staff member with their own workspace
+            // to view. Excluding "task-list" also removes viewing/posting
+            // comments on project tasks (the same permission gates both,
+            // and Super Admin doesn't need that either).
             //
             // It also skips the "People & Work" section (Employees, Our
             // Teams, Org Chart, Attendance, Projects, Payroll) -- day-to-day
@@ -55,6 +52,7 @@ class RolePermissionSeeder extends Seeder
             // away any deeper permission Super Admin might still need.
             $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, [
                 'payslip-view',
+                'task-list',
                 'employee-menu',
                 'team-menu',
                 'attendance-menu',
