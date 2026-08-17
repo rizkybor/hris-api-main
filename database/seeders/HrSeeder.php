@@ -34,7 +34,7 @@ class HrSeeder extends Seeder
 
         $employeeProfile->jobInformation()->create([
             'employee_id' => $employeeProfile->id,
-            'job_title' => 'Hr',
+            'job_title' => 'Operational Manager',
             'years_experience' => 5,
             'status' => 'active',
             'employment_type' => 'full_time',
@@ -54,7 +54,7 @@ class HrSeeder extends Seeder
 
         $employeeProfile->emergencyContacts()->create([
             'employee_id' => $employeeProfile->id,
-            'full_name' => 'Hr',
+            'full_name' => 'Aldi Emergency Contact',
             'phone' => '081234567890',
             'relationship' => 'Family',
             'email' => 'hr@gmail.com',
