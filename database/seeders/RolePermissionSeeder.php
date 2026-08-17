@@ -22,11 +22,6 @@ class RolePermissionSeeder extends Seeder
             $employee = Role::firstOrCreate(['name' => 'staff']);
             $finance = Role::firstOrCreate(['name' => 'finance']);
 
-            // Super Admin gets literally every permission that exists, with
-            // no exclusions -- unlike Manager, which is denied the
-            // employee-self-service-only permissions below.
-            $superadmin->syncPermissions(Permission::all());
-
             $employeeSpecific = [
                 'attendance-my-attendances',
                 'attendance-last-attendance',
@@ -39,6 +34,20 @@ class RolePermissionSeeder extends Seeder
                 'performance-review-my-reviews',
                 'performance-review-acknowledge',
             ];
+
+            // Super Admin gets every permission except most of the "My
+            // Workspace" self-service set (My Profile, My Team, My
+            // Attendance, Clock In/Out, My Payslips) -- it's a system
+            // account, not a staff member with their own workspace to view.
+            // "My Tasks" is intentionally left alone: its permission
+            // ("task-list") is the same one that gates viewing/posting task
+            // comments on any project, so excluding it would also break
+            // that unrelated admin capability. The "My Tasks" link stays
+            // visible for Super Admin but is harmless -- it just shows an
+            // empty list, since nothing is ever assigned to that account.
+            $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, [
+                'payslip-view',
+            ])));
 
             $manager->syncPermissions($this->permissionsAllExcept($employeeSpecific));
 
