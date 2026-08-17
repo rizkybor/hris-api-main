@@ -12,7 +12,7 @@ class VendorsDto
         public readonly string $pic_phone,
         public readonly ?string $email = null,
         public readonly ?string $address = null,
-        public readonly string $type,
+        public readonly ?string $type = null,
         public readonly ?string $field = null,
         public readonly ?string $notes = null,
     ) {}
@@ -45,7 +45,7 @@ class VendorsDto
             pic_phone: $data['pic_phone'],
             email: $data['email'] ?? null,
             address: $data['address'] ?? null,
-            type: $data['type'],
+            type: $data['type'] ?? null,
             field: $data['field'] ?? null,
             notes: $data['notes'] ?? null,
         );

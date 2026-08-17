@@ -47,7 +47,14 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Was `null` (tokens lived forever). A leaked/stolen token -- e.g. from
+    // a compromised device, or exfiltrated via a future XSS bug given the
+    // token is stored in a JS-readable cookie, not httpOnly -- had no
+    // natural expiry, so the only way to invalidate it was manually
+    // revoking it. Sanctum checks this against each token's `created_at` on
+    // every request, so lowering it applies retroactively to every
+    // already-issued token, not just new ones.
+    'expiration' => env('SANCTUM_TOKEN_EXPIRATION', 1440), // 24 hours
 
     /*
     |--------------------------------------------------------------------------

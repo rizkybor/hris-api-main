@@ -39,6 +39,15 @@ class CredentialAccount extends Model
         'password',
     ];
 
+    /**
+     * Transparently encrypts on write and decrypts on read (using APP_KEY)
+     * so stored third-party credentials are never at rest in plaintext --
+     * e.g. in the database file itself, or in a full SQL backup dump.
+     */
+    protected $casts = [
+        'password' => 'encrypted',
+    ];
+
     public function scopeSearch($query, $search)
     {
         return $query->where(function ($q) use ($search) {

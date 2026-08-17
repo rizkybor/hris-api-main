@@ -52,9 +52,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')
     ->group(function () {
 
-        Route::post('login', [AuthController::class, 'login']);
-        Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-        Route::post('reset-password', [AuthController::class, 'resetPassword']);
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:password-reset');
+        Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset');
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
@@ -218,7 +218,10 @@ Route::prefix('v1')
 
             // Settings: Database Backup
             Route::get('backups', [BackupController::class, 'index']);
-            Route::post('backups', [BackupController::class, 'store']);
+            // A full DB dump (every table, chunked reads) is heavy enough
+            // that letting it be triggered without limit is a DoS vector on
+            // its own, independent of anyone's login credentials.
+            Route::post('backups', [BackupController::class, 'store'])->middleware('throttle:3,1');
             Route::get('backups/{id}/download', [BackupController::class, 'download']);
             Route::delete('backups/{id}', [BackupController::class, 'destroy']);
 
@@ -290,7 +293,11 @@ Route::prefix('v1')
             Route::apiResource('certificate-templates', CertificateTemplateController::class)->only(['index', 'store', 'destroy']);
             Route::get('certificates/statistics', [CertificateController::class, 'getStatistics']);
             Route::post('certificates/preview-number', [CertificateController::class, 'previewNumber']);
-            Route::post('certificates/generate', [CertificateController::class, 'generate']);
+            // PDF rendering (and ZIP bundling for bulk requests up to 500
+            // recipients) is CPU/IO-heavy enough to be a DoS vector if it
+            // can be fired without limit; 10/min is generous for legitimate
+            // bulk-generation usage while still bounding the worst case.
+            Route::post('certificates/generate', [CertificateController::class, 'generate'])->middleware('throttle:10,1');
             Route::get('certificates/{id}/download', [CertificateController::class, 'download']);
             Route::apiResource('certificates', CertificateController::class)->only(['index', 'show', 'destroy']);
         });

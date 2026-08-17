@@ -19,7 +19,11 @@ class TeamStoreRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'expected_size' => ['nullable', 'integer', 'min:1'],
             'description' => ['nullable', 'string'],
-            'icon' => ['required', 'image', 'max:2048'],
+            // Explicit mimes list (matches every other upload in the app)
+            // instead of the bare 'image' rule, which also accepts SVG --
+            // an SVG can embed <script>, and unlike every other upload here
+            // this one had no extension whitelist at all.
+            'icon' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'department' => ['required', 'string', 'in:'.implode(',', array_column(Department::cases(), 'value'))],
             'status' => ['nullable', 'string', 'in:'.implode(',', array_column(TeamStatus::cases(), 'value'))],
             'team_lead_id' => ['nullable', 'exists:users,id'],
