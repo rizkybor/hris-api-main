@@ -8,6 +8,9 @@ use App\Http\Controllers\DivisionCodeController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\CertificateTemplateController;
+use App\Http\Controllers\CertificateSettingController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\EmployeeProfileController;
@@ -18,6 +21,8 @@ use App\Http\Controllers\OptionController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PayslipController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectCalculationController;
+use App\Http\Controllers\ProjectRateSettingController;
 use App\Http\Controllers\ProjectDocumentController;
 use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\ReportController;
@@ -34,6 +39,7 @@ use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\InfrastructureToolController;
 use App\Http\Controllers\CompanyFinanceController;
 use App\Http\Controllers\SdmResourceController;
+use App\Http\Controllers\SdmFieldController;
 use App\Http\Controllers\CompanyAboutController;
 use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\VendorsAttachmentController;
@@ -85,6 +91,13 @@ Route::prefix('v1')
 
             // Project Documents
             Route::apiResource('project-documents', ProjectDocumentController::class);
+
+            // Project Calculator
+            Route::get('project-calculator/rate-setting', [ProjectRateSettingController::class, 'show']);
+            Route::put('project-calculator/rate-setting', [ProjectRateSettingController::class, 'update']);
+            Route::get('project-calculations/statistics', [ProjectCalculationController::class, 'getStatistics']);
+            Route::post('project-calculations/preview', [ProjectCalculationController::class, 'preview']);
+            Route::apiResource('project-calculations', ProjectCalculationController::class);
 
             Route::get('attendances/all/paginated', [AttendanceController::class, 'getAllPaginated']);
             Route::get('attendances/statistics', [AttendanceController::class, 'getStatistics']);
@@ -162,6 +175,7 @@ Route::prefix('v1')
             // Sdm Resources routes
             Route::get('sdm-resources/all/paginated', [SdmResourceController::class, 'getAllPaginated']);
             Route::apiResource('sdm-resources', SdmResourceController::class);
+            Route::apiResource('sdm-fields', SdmFieldController::class)->except(['show']);
 
             // Company About
             Route::apiResource('company-about', CompanyAboutController::class);
@@ -203,7 +217,10 @@ Route::prefix('v1')
             Route::apiResource('roles', RoleController::class);
 
             // Settings: Database Backup
-            Route::get('backup/download', [BackupController::class, 'download']);
+            Route::get('backups', [BackupController::class, 'index']);
+            Route::post('backups', [BackupController::class, 'store']);
+            Route::get('backups/{id}/download', [BackupController::class, 'download']);
+            Route::delete('backups/{id}', [BackupController::class, 'destroy']);
 
             // History / Activity Log
             Route::get('history', [ActivityLogController::class, 'index']);
@@ -266,5 +283,15 @@ Route::prefix('v1')
             // Business Documents: reference tables
             Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::apiResource('division-codes', DivisionCodeController::class)->only(['index', 'store', 'update', 'destroy']);
+
+            // Business Documents: Certificates
+            Route::get('certificate-setting', [CertificateSettingController::class, 'show']);
+            Route::put('certificate-setting', [CertificateSettingController::class, 'update']);
+            Route::apiResource('certificate-templates', CertificateTemplateController::class)->only(['index', 'store', 'destroy']);
+            Route::get('certificates/statistics', [CertificateController::class, 'getStatistics']);
+            Route::post('certificates/preview-number', [CertificateController::class, 'previewNumber']);
+            Route::post('certificates/generate', [CertificateController::class, 'generate']);
+            Route::get('certificates/{id}/download', [CertificateController::class, 'download']);
+            Route::apiResource('certificates', CertificateController::class)->only(['index', 'show', 'destroy']);
         });
     });

@@ -23,9 +23,11 @@ class SdmResourceStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'sdm_component' => ['required', 'string', 'max:255'],
-            'metrik' => ['required', 'string', 'max:255'],
-            'capacity_target' => ['required', 'string', 'max:255'],
+            'sdm_field_id' => ['required', 'integer', 'exists:sdm_fields,id'],
+            'productive_hours_per_month' => ['required', 'numeric', 'min:0'],
+            'sdm_component' => ['nullable', 'string', 'max:255'],
+            'metrik' => ['nullable', 'string', 'max:255'],
+            'capacity_target' => ['nullable', 'string', 'max:255'],
             'budget' => ['nullable', 'numeric', 'min:0'],
             'actual' => ['nullable', 'numeric', 'min:0'],
             'rag_status' => ['required', 'string', 'in:'.implode(',', array_column(SdmResourceStatus::cases(), 'value'))],
@@ -36,6 +38,8 @@ class SdmResourceStoreRequest extends FormRequest
     public function attributes()
     {
         return [
+            'sdm_field_id' => 'Bidang',
+            'productive_hours_per_month' => 'Jam Produktif / Bulan',
             'sdm_component' => 'SDM Component',
             'metrik' => 'Metrik',
             'capacity_target' => 'Capacity Target',
