@@ -25,6 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Authenticate middleware trying to redirect to a nonexistent 'login'
         // route -- which throws RouteNotFoundException and surfaces as a 500.
         $middleware->redirectGuestsTo(fn () => null);
+
+        $middleware->append(\App\Http\Middleware\AddSecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // This app is API-only (no server-rendered login page exists in
