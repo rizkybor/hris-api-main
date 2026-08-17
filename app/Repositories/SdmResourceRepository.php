@@ -18,6 +18,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
         bool $execute = true
     ): Builder|Collection {
         $query = SdmResource::query()
+            ->with('field')
             ->where(function ($query) use ($search) {
                 if ($search) {
                     $query->search($search); // Asumsikan scope search ada di model
@@ -52,7 +53,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
     public function getById(
         string $id
     ): SdmResource {
-        return SdmResource::findOrFail($id);
+        return SdmResource::with('field')->findOrFail($id);
     }
 
     public function getStatistic(?string $search = null): array

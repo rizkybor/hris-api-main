@@ -32,9 +32,9 @@ class ProjectCalculationController extends Controller implements HasMiddleware
     private function currentRateSetting(): ProjectRateSetting
     {
         return ProjectRateSetting::first() ?? ProjectRateSetting::create([
-            'team_monthly_cost' => 10800000,
-            'productive_hours_per_person' => 120,
-            'team_size' => 3,
+            'selected_fixed_cost_ids' => [],
+            'selected_sdm_resource_ids' => [],
+            'selected_infrastructure_tool_ids' => [],
             'margin_multiplier' => 2.5,
             'pm_overhead_percent' => 12,
             'default_infra_setup_cost' => 2000000,
@@ -100,7 +100,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 $rateSetting->rate_sell_per_hour,
                 $data['pm_overhead_percent'] ?? null,
                 $data['infra_setup_cost'] ?? null,
-                (float) $rateSetting->productive_hours_per_person * $rateSetting->team_size,
+                (float) $rateSetting->total_productive_hours_per_month,
                 $data['include_ppn'] ?? false,
                 $data['ppn_percent'] ?? 11,
             );
@@ -124,7 +124,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 $rateSetting->rate_sell_per_hour,
                 $data['pm_overhead_percent'] ?? null,
                 $data['infra_setup_cost'] ?? null,
-                (float) $rateSetting->productive_hours_per_person * $rateSetting->team_size,
+                (float) $rateSetting->total_productive_hours_per_month,
                 $data['include_ppn'] ?? false,
                 $data['ppn_percent'] ?? 11,
             );
@@ -183,7 +183,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 $rateSetting->rate_sell_per_hour,
                 $data['pm_overhead_percent'] ?? null,
                 $data['infra_setup_cost'] ?? null,
-                (float) $rateSetting->productive_hours_per_person * $rateSetting->team_size,
+                (float) $rateSetting->total_productive_hours_per_month,
                 $data['include_ppn'] ?? false,
                 $data['ppn_percent'] ?? 11,
             );

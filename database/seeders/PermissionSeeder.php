@@ -138,6 +138,13 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
+        'sdm-field' => [
+            'menu',
+            'create',
+            'edit',
+            'delete',
+        ],
+
         'files-company' => [
             'menu',
             'list',

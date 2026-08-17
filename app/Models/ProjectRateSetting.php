@@ -20,30 +20,74 @@ class ProjectRateSetting extends Model
     }
 
     protected $fillable = [
-        'team_monthly_cost',
-        'productive_hours_per_person',
-        'team_size',
+        'selected_fixed_cost_ids',
+        'selected_sdm_resource_ids',
+        'selected_infrastructure_tool_ids',
         'margin_multiplier',
         'pm_overhead_percent',
         'default_infra_setup_cost',
     ];
 
     protected $casts = [
-        'team_monthly_cost' => 'decimal:2',
-        'productive_hours_per_person' => 'decimal:2',
-        'team_size' => 'integer',
+        'selected_fixed_cost_ids' => 'array',
+        'selected_sdm_resource_ids' => 'array',
+        'selected_infrastructure_tool_ids' => 'array',
         'margin_multiplier' => 'decimal:2',
         'pm_overhead_percent' => 'decimal:2',
         'default_infra_setup_cost' => 'decimal:2',
     ];
 
+    public function selectedFixedCosts()
+    {
+        return FixedCost::whereIn('id', $this->selected_fixed_cost_ids ?? [])->get();
+    }
+
+    public function selectedSdmResources()
+    {
+        return SdmResource::with('field')->whereIn('id', $this->selected_sdm_resource_ids ?? [])->get();
+    }
+
+    public function selectedInfrastructureTools()
+    {
+        return InfrastructureTool::whereIn('id', $this->selected_infrastructure_tool_ids ?? [])->get();
+    }
+
+    /**
+     * Total Biaya Operasional Tim / Bulan -- no longer typed in by hand, it's
+     * the sum of whichever Fixed Cost (actual), SDM Resource (actual), and
+     * Infrastructure Tool (monthly_fee) line items are selected.
+     */
+    public function getTeamMonthlyCostAttribute(): float
+    {
+        $fixedCostTotal = (float) $this->selectedFixedCosts()->sum('actual');
+        $sdmTotal = (float) $this->selectedSdmResources()->sum('actual');
+        $infraTotal = (float) $this->selectedInfrastructureTools()->sum('monthly_fee');
+
+        return round($fixedCostTotal + $sdmTotal + $infraTotal, 2);
+    }
+
+    /**
+     * Total Jam Produktif Tim / Bulan -- summed from the productive hours of
+     * whichever SDM Resource team members are selected.
+     */
+    public function getTotalProductiveHoursPerMonthAttribute(): float
+    {
+        return round((float) $this->selectedSdmResources()->sum('productive_hours_per_month'), 2);
+    }
+
+    /**
+     * Jumlah Orang di Tim -- the count of selected SDM Resource team members.
+     */
+    public function getTeamSizeAttribute(): int
+    {
+        return count($this->selected_sdm_resource_ids ?? []);
+    }
+
     public function getRateCostPerHourAttribute(): float
     {
-        $totalProductiveHours = $this->productive_hours_per_person * $this->team_size;
+        $hours = $this->total_productive_hours_per_month;
 
-        return $totalProductiveHours > 0
-            ? round(((float) $this->team_monthly_cost) / $totalProductiveHours, 2)
-            : 0;
+        return $hours > 0 ? round($this->team_monthly_cost / $hours, 2) : 0;
     }
 
     public function getRateSellPerHourAttribute(): float

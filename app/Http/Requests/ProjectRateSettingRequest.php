@@ -9,9 +9,12 @@ class ProjectRateSettingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'team_monthly_cost' => ['required', 'numeric', 'min:0'],
-            'productive_hours_per_person' => ['required', 'numeric', 'min:1'],
-            'team_size' => ['required', 'integer', 'min:1'],
+            'selected_fixed_cost_ids' => ['nullable', 'array'],
+            'selected_fixed_cost_ids.*' => ['integer', 'exists:fixed_costs,id'],
+            'selected_sdm_resource_ids' => ['nullable', 'array'],
+            'selected_sdm_resource_ids.*' => ['integer', 'exists:sdm_resources,id'],
+            'selected_infrastructure_tool_ids' => ['nullable', 'array'],
+            'selected_infrastructure_tool_ids.*' => ['integer', 'exists:infrastructure_tools,id'],
             'margin_multiplier' => ['required', 'numeric', 'min:1'],
             'pm_overhead_percent' => ['required', 'numeric', 'min:0', 'max:100'],
             'default_infra_setup_cost' => ['required', 'numeric', 'min:0'],
@@ -21,9 +24,9 @@ class ProjectRateSettingRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'team_monthly_cost' => 'Total Biaya Operasional Tim / Bulan',
-            'productive_hours_per_person' => 'Jam Produktif per Orang / Bulan',
-            'team_size' => 'Jumlah Orang di Tim',
+            'selected_fixed_cost_ids' => 'Fixed Cost items',
+            'selected_sdm_resource_ids' => 'SDM Resource items',
+            'selected_infrastructure_tool_ids' => 'Infrastructure Tool items',
             'margin_multiplier' => 'Multiplier Margin Jual',
             'pm_overhead_percent' => 'PM Overhead',
             'default_infra_setup_cost' => 'Biaya Setup Infrastruktur Default',

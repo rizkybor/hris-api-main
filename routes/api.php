@@ -36,6 +36,7 @@ use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\InfrastructureToolController;
 use App\Http\Controllers\CompanyFinanceController;
 use App\Http\Controllers\SdmResourceController;
+use App\Http\Controllers\SdmFieldController;
 use App\Http\Controllers\CompanyAboutController;
 use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\VendorsAttachmentController;
@@ -171,6 +172,7 @@ Route::prefix('v1')
             // Sdm Resources routes
             Route::get('sdm-resources/all/paginated', [SdmResourceController::class, 'getAllPaginated']);
             Route::apiResource('sdm-resources', SdmResourceController::class);
+            Route::apiResource('sdm-fields', SdmFieldController::class)->except(['show']);
 
             // Company About
             Route::apiResource('company-about', CompanyAboutController::class);

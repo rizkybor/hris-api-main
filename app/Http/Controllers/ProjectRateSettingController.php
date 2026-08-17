@@ -27,9 +27,9 @@ class ProjectRateSettingController extends Controller implements HasMiddleware
     private function current(): ProjectRateSetting
     {
         return ProjectRateSetting::first() ?? ProjectRateSetting::create([
-            'team_monthly_cost' => 10800000,
-            'productive_hours_per_person' => 120,
-            'team_size' => 3,
+            'selected_fixed_cost_ids' => [],
+            'selected_sdm_resource_ids' => [],
+            'selected_infrastructure_tool_ids' => [],
             'margin_multiplier' => 2.5,
             'pm_overhead_percent' => 12,
             'default_infra_setup_cost' => 2000000,
