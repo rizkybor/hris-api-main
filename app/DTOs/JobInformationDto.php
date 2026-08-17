@@ -15,7 +15,7 @@ class JobInformationDto
         public readonly string $employment_type,
         public readonly string $work_location,
         public readonly string $start_date,
-        public readonly float $monthly_salary,
+        public readonly ?float $monthly_salary,
         public readonly string $skill_level,
     ) {}
 
@@ -46,7 +46,7 @@ class JobInformationDto
             employment_type: $data['employment_type'],
             work_location: $data['work_location'],
             start_date: $data['start_date'],
-            monthly_salary: (float) $data['monthly_salary'],
+            monthly_salary: isset($data['monthly_salary']) ? (float) $data['monthly_salary'] : null,
             skill_level: $data['skill_level'],
         );
     }
@@ -62,7 +62,10 @@ class JobInformationDto
             employment_type: $data['employment_type'] ?? $existingJob->employment_type ?? 'full_time',
             work_location: $data['work_location'] ?? $existingJob->work_location ?? 'office',
             start_date: $data['start_date'] ?? ($existingJob->start_date ? $existingJob->start_date->format('Y-m-d') : now()->format('Y-m-d')),
-            monthly_salary: isset($data['monthly_salary']) ? (float) $data['monthly_salary'] : ($existingJob->monthly_salary ?? 0.0),
+            // array_key_exists (not isset/??) so explicitly clearing the
+            // field to blank actually saves as null instead of silently
+            // keeping the previous salary.
+            monthly_salary: array_key_exists('monthly_salary', $data) ? (is_null($data['monthly_salary']) ? null : (float) $data['monthly_salary']) : $existingJob->monthly_salary,
             skill_level: $data['skill_level'] ?? $existingJob->skill_level ?? 'beginner',
         );
     }

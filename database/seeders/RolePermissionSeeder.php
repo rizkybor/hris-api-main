@@ -18,7 +18,7 @@ class RolePermissionSeeder extends Seeder
         DB::transaction(function () {
             $manager = Role::firstOrCreate(['name' => 'manager']);
             $hr = Role::firstOrCreate(['name' => 'hr']);
-            $employee = Role::firstOrCreate(['name' => 'employee']);
+            $employee = Role::firstOrCreate(['name' => 'staff']);
             $finance = Role::firstOrCreate(['name' => 'finance']);
 
             $employeeSpecific = [

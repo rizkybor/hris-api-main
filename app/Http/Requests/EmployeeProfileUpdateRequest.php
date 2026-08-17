@@ -3,20 +3,37 @@
 namespace App\Http\Requests;
 
 use App\Enums\AccountType;
-use App\Enums\BankName;
-use App\Enums\EmploymentType;
 use App\Enums\Gender;
 use App\Enums\JobStatus;
-use App\Enums\PtkpStatus;
 use App\Enums\SkillLevel;
 use App\Enums\WorkLocation;
+use App\Models\ConfigurableOption;
 use App\Models\EmployeeProfile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Permission\Models\Role;
 
 class EmployeeProfileUpdateRequest extends FormRequest
 {
+    /**
+     * Optional select/number fields submit as an empty string when left
+     * blank; normalize those to null so `nullable` rules actually skip them
+     * instead of failing on an empty string.
+     */
+    protected function prepareForValidation(): void
+    {
+        $optionalFields = ['bank_name', 'account_number', 'account_holder_name', 'bank_branch', 'account_type', 'monthly_salary', 'ptkp_status'];
+
+        $blanked = collect($optionalFields)
+            ->filter(fn ($field) => $this->has($field) && $this->input($field) === '')
+            ->mapWithKeys(fn ($field) => [$field => null]);
+
+        if ($blanked->isNotEmpty()) {
+            $this->merge($blanked->toArray());
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -35,7 +52,7 @@ class EmployeeProfileUpdateRequest extends FormRequest
             'password' => ['sometimes', 'required', 'string', Password::defaults()],
             'profile_photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
             'roles' => ['sometimes', 'required', 'array'],
-            'roles.*' => ['required', 'string', 'in:hr,finance,employee'],
+            'roles.*' => ['required', 'string', Rule::in(Role::pluck('name'))],
 
             // Employee Profile fields
             'code' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('employee_profiles', 'code')->ignore($employeeId)],
@@ -48,7 +65,7 @@ class EmployeeProfileUpdateRequest extends FormRequest
             'address' => ['sometimes', 'required', 'string'],
             'city' => ['sometimes', 'required', 'string', 'max:100'],
             'postal_code' => ['sometimes', 'required', 'string', 'max:10'],
-            'preferred_language' => ['nullable', 'string', 'max:50'],
+            'preferred_language' => ['nullable', 'string', Rule::in($this->configurableValues('preferred_language'))],
             'additional_notes' => ['nullable', 'string'],
 
             // Job Information fields
@@ -56,22 +73,22 @@ class EmployeeProfileUpdateRequest extends FormRequest
             'team_id' => ['nullable', 'exists:teams,id'],
             'years_experience' => ['sometimes', 'required', 'integer', 'min:0'],
             'status' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(JobStatus::cases(), 'value'))],
-            'employment_type' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(EmploymentType::cases(), 'value'))],
+            'employment_type' => ['sometimes', 'required', 'string', Rule::in($this->configurableValues('employment_type'))],
             'work_location' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(WorkLocation::cases(), 'value'))],
             'start_date' => ['sometimes', 'required', 'date'],
-            'monthly_salary' => ['sometimes', 'required', 'numeric', 'min:0'],
+            'monthly_salary' => ['nullable', 'numeric', 'min:0'],
             'skill_level' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(SkillLevel::cases(), 'value'))],
-            'ptkp_status' => ['nullable', 'string', 'in:'.implode(',', array_column(PtkpStatus::cases(), 'value'))],
+            'ptkp_status' => ['nullable', 'string', Rule::in($this->configurableValues('ptkp_status'))],
             'annual_leave_quota' => ['nullable', 'integer', 'min:0', 'max:365'],
             'probation_end_date' => ['nullable', 'date'],
             'contract_end_date' => ['nullable', 'date'],
 
-            // Bank Information fields
-            'bank_name' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(BankName::cases(), 'value'))],
-            'account_number' => ['sometimes', 'required', 'string', 'max:50'],
-            'account_holder_name' => ['sometimes', 'required', 'string', 'max:255'],
+            // Bank Information fields (optional -- e.g. interns without a payroll account yet)
+            'bank_name' => ['nullable', 'string', Rule::in($this->configurableValues('bank_name'))],
+            'account_number' => ['nullable', 'string', 'max:50'],
+            'account_holder_name' => ['nullable', 'string', 'max:255'],
             'bank_branch' => ['nullable', 'string', 'max:255'],
-            'account_type' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(AccountType::cases(), 'value'))],
+            'account_type' => ['nullable', 'string', 'in:'.implode(',', array_column(AccountType::cases(), 'value'))],
 
             // Emergency Contacts fields (array)
             'emergency_contacts' => ['sometimes', 'required', 'array', 'min:1'],
@@ -81,6 +98,16 @@ class EmployeeProfileUpdateRequest extends FormRequest
             'emergency_contacts.*.phone' => ['sometimes', 'string', 'max:20'],
             'emergency_contacts.*.email' => ['nullable', 'email', 'max:255'],
         ];
+    }
+
+    /**
+     * Active values for a manager-configurable dropdown category (see
+     * Settings > Dropdown Options), used so validation always matches
+     * whatever options are currently enabled.
+     */
+    private function configurableValues(string $category): array
+    {
+        return ConfigurableOption::category($category)->active()->pluck('value')->all();
     }
 
     public function attributes()

@@ -14,6 +14,7 @@ use App\Http\Controllers\CertificateSettingController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\EmployeeProfileController;
+use App\Http\Controllers\EmployeeFileController;
 use App\Http\Controllers\FilesCompanyController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\NotificationController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\ProjectDocumentController;
 use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\ProjectTaskCommentController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ConfigurableOptionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
@@ -81,6 +83,10 @@ Route::prefix('v1')
             Route::get('employees/{id}/performance-statistics', [EmployeeProfileController::class, 'getPerformanceStatistics']);
             Route::get('employees/all/paginated', [EmployeeProfileController::class, 'getAllPaginated']);
             Route::apiResource('employees', EmployeeProfileController::class);
+
+            Route::get('employees/{employeeId}/files', [EmployeeFileController::class, 'index']);
+            Route::post('employees/{employeeId}/files', [EmployeeFileController::class, 'store']);
+            Route::delete('employee-files/{id}', [EmployeeFileController::class, 'destroy']);
 
             Route::get('projects/statistics', [ProjectController::class, 'getStatistics']);
             Route::get('projects/all/paginated', [ProjectController::class, 'getAllPaginated']);
@@ -148,6 +154,9 @@ Route::prefix('v1')
             Route::get('options/leave-types', [OptionController::class, 'getLeaveTypes']);
             Route::get('options/work-locations', [OptionController::class, 'getWorkLocations']);
             Route::get('options/skill-levels', [OptionController::class, 'getSkillLevels']);
+            Route::get('options/ptkp-statuses', [OptionController::class, 'getPtkpStatuses']);
+            Route::get('options/bank-names', [OptionController::class, 'getBankNames']);
+            Route::get('options/preferred-languages', [OptionController::class, 'getPreferredLanguages']);
 
             // Dashboard routes
             Route::get('dashboard/statistics', [DashboardController::class, 'getStatistics']);
@@ -220,6 +229,9 @@ Route::prefix('v1')
             // Settings: Roles & Permissions
             Route::get('permissions', [RoleController::class, 'permissions']);
             Route::apiResource('roles', RoleController::class);
+
+            // Settings: Configurable Dropdown Options
+            Route::apiResource('configurable-options', ConfigurableOptionController::class)->except(['show']);
 
             // Settings: Database Backup
             Route::get('backups', [BackupController::class, 'index']);

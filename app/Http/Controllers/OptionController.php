@@ -181,4 +181,67 @@ class OptionController extends Controller
             );
         }
     }
+
+    public function getPtkpStatuses()
+    {
+        try {
+            $ptkpStatuses = $this->optionRepository->getPtkpStatusOptions();
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'PTKP status options retrieved successfully',
+                $ptkpStatuses,
+                200
+            );
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(
+                false,
+                'Failed to retrieve PTKP status options',
+                null,
+                500
+            );
+        }
+    }
+
+    public function getBankNames()
+    {
+        try {
+            $bankNames = $this->optionRepository->getBankNameOptions();
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'Bank name options retrieved successfully',
+                $bankNames,
+                200
+            );
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(
+                false,
+                'Failed to retrieve bank name options',
+                null,
+                500
+            );
+        }
+    }
+
+    public function getPreferredLanguages()
+    {
+        try {
+            $preferredLanguages = $this->optionRepository->getPreferredLanguageOptions();
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'Preferred language options retrieved successfully',
+                $preferredLanguages,
+                200
+            );
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(
+                false,
+                'Failed to retrieve preferred language options',
+                null,
+                500
+            );
+        }
+    }
 }

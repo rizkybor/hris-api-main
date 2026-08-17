@@ -172,7 +172,9 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             $employee = $this->createEmployeeProfile($data, $user->id);
 
             $this->createJobInformation($data, $employee->id);
-            $this->createBankInformation($data, $employee->id);
+            if (! empty($data['bank_name'])) {
+                $this->createBankInformation($data, $employee->id);
+            }
             $this->createEmergencyContacts($data, $employee->id);
             $this->manageTeamMembership($employee->id, $data['team_id'] ?? null);
 
@@ -276,9 +278,9 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
     {
         $bankData = [
             'employee_id' => $employeeId,
-            'bank_name' => $data['bank_name'],
-            'account_number' => $data['account_number'],
-            'account_holder_name' => $data['account_holder_name'],
+            'bank_name' => $data['bank_name'] ?? null,
+            'account_number' => $data['account_number'] ?? null,
+            'account_holder_name' => $data['account_holder_name'] ?? null,
             'bank_branch' => $data['bank_branch'] ?? null,
             'account_type' => $data['account_type'] ?? null,
         ];
@@ -464,8 +466,11 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             $currentMonth = now()->month;
             $currentYear = now()->year;
 
-            // Single optimized query for employee counts
+            // Single optimized query for employee counts. Raw DB::table() bypasses
+            // Eloquent's soft-delete global scope, so deleted_at must be filtered
+            // explicitly or removed employees keep inflating the counts.
             $employeeStats = DB::table('employee_profiles')
+                ->whereNull('employee_profiles.deleted_at')
                 ->leftJoin('job_information', 'employee_profiles.id', '=', 'job_information.employee_id')
                 ->selectRaw("
                     COUNT(DISTINCT employee_profiles.id) as total,

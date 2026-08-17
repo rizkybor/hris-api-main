@@ -29,6 +29,7 @@ class PermissionModules
         'files-company' => 'Document Files',
         'report' => 'Reports',
         'role' => 'Roles & Permissions',
+        'option' => 'Dropdown Options',
         'purchase-order' => 'Purchase Orders',
         'invoice' => 'Invoices',
         'payment-receipt' => 'Payment Receipts',
