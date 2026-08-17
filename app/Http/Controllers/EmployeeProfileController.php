@@ -145,6 +145,12 @@ class EmployeeProfileController extends Controller implements HasMiddleware
     public function destroy(string $id): JsonResponse
     {
         try {
+            $employee = $this->employeeProfileRepository->getById($id);
+
+            if ($employee->user?->isProtected()) {
+                return ResponseHelper::jsonResponse(false, 'The Super Admin account cannot be deleted.', null, 403);
+            }
+
             $this->employeeProfileRepository->delete($id);
 
             return ResponseHelper::jsonResponse(true, 'Employee Deleted Successfully', null, 200);

@@ -16,6 +16,7 @@ use App\Models\EmployeeProfile;
 use App\Models\JobInformation;
 use App\Models\Team;
 use App\Models\TeamMember;
+use App\Services\EmployeeCodeGenerator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -27,7 +28,8 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
         private UserRepositoryInterface $userRepository,
         private JobInformationRepositoryInterface $jobInformationRepository,
         private BankInformationRepositoryInterface $bankInformationRepository,
-        private EmergencyContactRepositoryInterface $emergencyContactRepository
+        private EmergencyContactRepositoryInterface $emergencyContactRepository,
+        private EmployeeCodeGenerator $employeeCodeGenerator
     ) {}
 
     public function getAll(
@@ -212,6 +214,10 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
         return DB::transaction(function () use ($id) {
             $employee = $this->getById($id);
 
+            if ($employee->user?->isProtected()) {
+                throw new \RuntimeException('The Super Admin account cannot be deleted.');
+            }
+
             $employee->delete();
 
             // Clear statistics cache
@@ -239,7 +245,10 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
     private function createEmployeeProfile(array $data, int $userId): EmployeeProfile
     {
-        $employeeCode = $this->generateEmployeeCode();
+        $employeeCode = $this->employeeCodeGenerator->generate(
+            $data['employment_type'] ?? 'full_time',
+            $data['start_date'] ?? null
+        );
 
         $employeeData = array_merge($data, [
             'user_id' => $userId,
@@ -296,25 +305,6 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
             $this->emergencyContactRepository->create($emergencyContactDto->toArray());
         }
-    }
-
-    private function generateEmployeeCode(): string
-    {
-        $year = now()->format('Y');
-        $month = now()->format('m');
-
-        $lastEmployee = EmployeeProfile::where('code', 'like', "EMP{$year}{$month}%")
-            ->orderBy('code', 'desc')
-            ->first();
-
-        if ($lastEmployee) {
-            $lastSequence = (int) substr($lastEmployee->code, -4);
-            $newSequence = $lastSequence + 1;
-        } else {
-            $newSequence = 1;
-        }
-
-        return sprintf('EMP%s%s%04d', $year, $month, $newSequence);
     }
 
     private function updateUser(int $userId, array $data): void

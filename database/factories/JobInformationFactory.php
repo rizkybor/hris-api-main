@@ -45,7 +45,7 @@ class JobInformationFactory extends Factory
         ];
 
         $statuses = ['active', 'inactive', 'on_leave', 'probation'];
-        $employmentTypes = ['full_time', 'part_time', 'contract', 'internship', 'freelance'];
+        $employmentTypes = ['full_time', 'part_time', 'contract', 'intern'];
         $workLocations = ['office', 'remote', 'hybrid'];
 
         $yearsExperience = fake()->numberBetween(0, 15);
