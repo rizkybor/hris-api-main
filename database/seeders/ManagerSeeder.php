@@ -21,7 +21,7 @@ class ManagerSeeder extends Seeder
         ]);
 
         $employeeProfile = $manager->employeeProfile()->create([
-            'code' => app(EmployeeCodeGenerator::class)->generate('full_time', '2024-01-01'),
+            'code' => app(EmployeeCodeGenerator::class)->generate('full_time', '2025-12-10'),
             'identity_number' => '111121121',
             'phone' => '081234567892',
             'date_of_birth' => '1995-01-01',
@@ -39,7 +39,7 @@ class ManagerSeeder extends Seeder
             'status' => 'active',
             'employment_type' => 'full_time',
             'work_location' => 'office',
-            'start_date' => '2024-01-01',
+            'start_date' => '2025-12-10',
             'monthly_salary' => 15000000,
             'skill_level' => 'expert',
         ]);
