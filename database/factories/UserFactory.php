@@ -19,31 +19,22 @@ class UserFactory extends Factory
     /**
      * Define the model's default state.
      *
+     * No profile_photo is generated on purpose -- the Avatar component
+     * falls back to colored initials, so fake accounts don't need a
+     * stock photo (and referencing one that doesn't exist on disk just
+     * shows a broken image).
+     *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
-        $gender = fake()->randomElement(['male', 'female']);
-        $profilePicture = $this->getRandomProfilePicture($gender);
-
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'profile_photo' => $profilePicture,
         ];
-    }
-
-    /**
-     * Get random profile picture based on gender
-     */
-    private function getRandomProfilePicture(string $gender): string
-    {
-        $number = fake()->numberBetween(1, 3);
-
-        return "profile-pictures/{$gender}/{$number}.avif";
     }
 
     /**

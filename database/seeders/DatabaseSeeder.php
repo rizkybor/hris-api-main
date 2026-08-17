@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
             // 2. Seed specific users (Super Admin, Manager, HR, Finance)
             SuperAdminSeeder::class,
             ManagerSeeder::class,
-            HrSeeder::class,
+            OperationalDirectorSeeder::class,
             FinanceSeeder::class,
             CredentialAccountSeeder::class,
             FilesCompanySeeder::class,
