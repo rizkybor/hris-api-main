@@ -13,6 +13,7 @@ use App\Enums\WorkLocation;
 use App\Models\EmployeeProfile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class EmployeeProfileUpdateRequest extends FormRequest
 {
@@ -31,7 +32,7 @@ class EmployeeProfileUpdateRequest extends FormRequest
             // User fields
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'email', Rule::unique('users', 'email')->ignore($userId)],
-            'password' => ['sometimes', 'required', 'string', 'min:8'],
+            'password' => ['sometimes', 'required', 'string', Password::defaults()],
             'profile_photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
             'roles' => ['sometimes', 'required', 'array'],
             'roles.*' => ['required', 'string', 'in:hr,finance,employee'],
