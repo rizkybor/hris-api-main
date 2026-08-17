@@ -11,6 +11,7 @@ use App\Enums\PtkpStatus;
 use App\Enums\SkillLevel;
 use App\Enums\WorkLocation;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 class EmployeeProfileStoreRequest extends FormRequest
 {
@@ -25,7 +26,7 @@ class EmployeeProfileStoreRequest extends FormRequest
             // User fields
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', Password::defaults()],
             'profile_photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
             'roles' => ['required', 'array'],
             'roles.*' => ['required', 'string', 'in:hr,finance,employee'],

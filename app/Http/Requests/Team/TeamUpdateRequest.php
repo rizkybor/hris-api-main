@@ -14,7 +14,7 @@ class TeamUpdateRequest extends FormRequest
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'expected_size' => ['nullable', 'integer', 'min:1'],
             'description' => ['nullable', 'string'],
-            'icon' => ['sometimes', 'image', 'max:2048'],
+            'icon' => ['sometimes', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'department' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(Department::cases(), 'value'))],
             'status' => ['nullable', 'string', 'in:'.implode(',', array_column(TeamStatus::cases(), 'value'))],
             'team_lead_id' => ['nullable', 'exists:users,id'],

@@ -4,6 +4,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -24,6 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Authenticate middleware trying to redirect to a nonexistent 'login'
         // route -- which throws RouteNotFoundException and surfaces as a 500.
         $middleware->redirectGuestsTo(fn () => null);
+
+        $middleware->append(\App\Http\Middleware\AddSecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // This app is API-only (no server-rendered login page exists in
@@ -40,5 +43,17 @@ return Application::configure(basePath: dirname(__DIR__))
                 'message' => 'Unauthenticated.',
                 'data' => null,
             ], 401);
+        });
+
+        // Match the app-wide {success, message, data} envelope instead of
+        // Laravel's bare {"message": "Too Many Attempts."} default, so the
+        // frontend can handle a 429 the same way it handles every other
+        // error response.
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many attempts. Please wait a moment and try again.',
+                'data' => null,
+            ], 429, $e->getHeaders());
         });
     })->create();
