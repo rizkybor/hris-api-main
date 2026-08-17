@@ -42,6 +42,22 @@ class DocumentNumberService
         });
     }
 
+    /**
+     * Read-only look at what the next sequence number would be, without
+     * consuming it. Used for live "here's what your number will look like"
+     * previews so the real counter isn't burned by a form the user never
+     * submits.
+     */
+    public function peekNextSequence(string $documentType, string $scopeKey, int $year): int
+    {
+        $sequence = DocumentNumberSequence::where('document_type', $documentType)
+            ->where('scope_key', $scopeKey)
+            ->where('year', $year)
+            ->first();
+
+        return ($sequence->last_number ?? 0) + 1;
+    }
+
     public function romanMonth(int $month): string
     {
         return self::ROMAN_MONTHS[$month] ?? '';
@@ -99,5 +115,78 @@ class DocumentNumberService
         );
 
         return ['number' => $number, 'sequence' => $seq, 'year' => $year];
+    }
+
+    /**
+     * Certificate numbering: sequence resets to 0001 whenever company,
+     * category, program, year, or month differ, and increments whenever
+     * they're all the same -- so the scope bucket folds company+category+
+     * program+month together (year is already its own axis on the
+     * sequences table).
+     */
+    private function certificateScopeKey(string $companyCode, string $categoryCode, string $programCode, string $monthRoman): string
+    {
+        return strtoupper("{$companyCode}|{$categoryCode}|{$programCode}|{$monthRoman}");
+    }
+
+    public function generateCertificateNumber(
+        string $companyCode,
+        string $categoryCode,
+        string $programCode,
+        \Carbon\Carbon $date,
+        ?string $format = null
+    ): array {
+        $year = (int) $date->year;
+        $monthRoman = $this->romanMonth($date->month);
+        $scopeKey = $this->certificateScopeKey($companyCode, $categoryCode, $programCode, $monthRoman);
+        $seq = $this->nextSequence('certificate', $scopeKey, $year);
+
+        return [
+            'number' => $this->formatCertificateNumber($format, $companyCode, $categoryCode, $programCode, $year, $monthRoman, $seq),
+            'sequence' => $seq,
+            'year' => $year,
+            'month_roman' => $monthRoman,
+        ];
+    }
+
+    public function peekCertificateNumber(
+        string $companyCode,
+        string $categoryCode,
+        string $programCode,
+        \Carbon\Carbon $date,
+        ?string $format = null
+    ): array {
+        $year = (int) $date->year;
+        $monthRoman = $this->romanMonth($date->month);
+        $scopeKey = $this->certificateScopeKey($companyCode, $categoryCode, $programCode, $monthRoman);
+        $seq = $this->peekNextSequence('certificate', $scopeKey, $year);
+
+        return [
+            'number' => $this->formatCertificateNumber($format, $companyCode, $categoryCode, $programCode, $year, $monthRoman, $seq),
+            'sequence' => $seq,
+            'year' => $year,
+            'month_roman' => $monthRoman,
+        ];
+    }
+
+    public function formatCertificateNumber(
+        ?string $format,
+        string $companyCode,
+        string $categoryCode,
+        string $programCode,
+        int $year,
+        string $monthRoman,
+        int $sequence
+    ): string {
+        $format = $format ?: \App\Models\CertificateSetting::DEFAULT_FORMAT;
+
+        return strtr($format, [
+            '{company}' => strtoupper($companyCode),
+            '{category}' => strtoupper($categoryCode),
+            '{program}' => strtoupper($programCode),
+            '{year}' => (string) $year,
+            '{month_roman}' => $monthRoman,
+            '{sequence}' => str_pad((string) $sequence, 4, '0', STR_PAD_LEFT),
+        ]);
     }
 }

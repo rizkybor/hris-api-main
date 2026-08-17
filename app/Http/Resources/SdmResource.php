@@ -16,6 +16,9 @@ class SdmResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'sdm_field_id' => $this->sdm_field_id,
+            'sdm_field_name' => $this->field?->name,
+            'productive_hours_per_month' => $this->productive_hours_per_month !== null ? (float) $this->productive_hours_per_month : null,
             'sdm_component' => $this->sdm_component,
             'metrik' => $this->metrik,
             'capacity_target' => $this->capacity_target,

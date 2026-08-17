@@ -109,6 +109,14 @@ class PermissionSeeder extends Seeder
             'statistic'
         ],
 
+        'project-calculator' => [
+            'menu',
+            'create',
+            'edit',
+            'delete',
+            'settings',
+        ],
+
         'fixed-cost' => [
             'list',
             'create',
@@ -125,6 +133,13 @@ class PermissionSeeder extends Seeder
 
         'sdm-resource' => [
             'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'sdm-field' => [
+            'menu',
             'create',
             'edit',
             'delete',
@@ -184,6 +199,13 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
+        'certificate' => [
+            'menu',
+            'list',
+            'create',
+            'delete',
+        ],
+
         'vendors' => [
             'menu',
             'list',
@@ -213,7 +235,9 @@ class PermissionSeeder extends Seeder
         ],
 
         'backup' => [
+            'list',
             'create',
+            'delete',
         ],
 
         'history' => [

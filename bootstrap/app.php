@@ -1,8 +1,10 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,7 +17,28 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'project.member' => \App\Http\Middleware\EnsureProjectMembership::class,
         ]);
+
+        // This app is API-only (the SPA lives in a separate frontend project,
+        // and routes/web.php has no login page), so an unauthenticated request
+        // should always get a 401 JSON response rather than the default
+        // Authenticate middleware trying to redirect to a nonexistent 'login'
+        // route -- which throws RouteNotFoundException and surfaces as a 500.
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // This app is API-only (no server-rendered login page exists in
+        // routes/web.php), so an unauthenticated request must always get a
+        // 401 JSON response. Laravel's default exception handler falls back
+        // to redirect()->guest(route('login')) for requests that don't send
+        // an Accept: application/json header (e.g. window.open() downloads,
+        // direct navigation) -- since no 'login' route is defined, that
+        // fallback throws RouteNotFoundException and surfaces as a 500
+        // instead of a clean 401.
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+                'data' => null,
+            ], 401);
+        });
     })->create();
