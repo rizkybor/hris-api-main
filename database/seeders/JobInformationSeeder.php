@@ -43,9 +43,9 @@ class JobInformationSeeder extends Seeder
             'Mobile Developer', 'Technical Lead',
         ];
 
-        $employmentTypes = ['full-time', 'part-time', 'contract', 'intern'];
+        $employmentTypes = ['full_time', 'part_time', 'contract', 'intern'];
         $workLocations = ['office', 'remote', 'hybrid'];
-        $skillLevels = ['junior', 'mid', 'senior', 'lead', 'principal'];
+        $skillLevels = ['beginner', 'intermediate', 'advanced', 'expert'];
 
         $now = now();
         $processedCount = 0;
