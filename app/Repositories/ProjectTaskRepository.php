@@ -8,6 +8,7 @@ use App\Models\ProjectTask;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Storage;
 
 class ProjectTaskRepository implements ProjectTaskRepositoryInterface
 {
@@ -86,7 +87,14 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
         $taskDto = ProjectTaskDto::fromArray($data);
         $taskArray = $taskDto->toArray();
 
-        return ProjectTask::create($taskArray);
+        $task = ProjectTask::create($taskArray);
+
+        if (isset($data['image'])) {
+            $imagePath = $data['image']->store('task-images', 'public');
+            $task->update(['image' => $imagePath]);
+        }
+
+        return $task;
     }
 
     public function update(string $id, array $data): ProjectTask
@@ -95,12 +103,31 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
         $taskDto = ProjectTaskDto::fromArrayForUpdate($data, $task);
         $task->update($taskDto->toArray());
 
+        if (! empty($data['remove_image'])) {
+            if ($task->image && Storage::disk('public')->exists($task->image)) {
+                Storage::disk('public')->delete($task->image);
+            }
+            $task->update(['image' => null]);
+        } elseif (isset($data['image'])) {
+            if ($task->image && Storage::disk('public')->exists($task->image)) {
+                Storage::disk('public')->delete($task->image);
+            }
+
+            $imagePath = $data['image']->store('task-images', 'public');
+            $task->update(['image' => $imagePath]);
+        }
+
         return $task;
     }
 
     public function delete(string $id): ProjectTask
     {
         $task = $this->getById($id);
+
+        if ($task->image && Storage::disk('public')->exists($task->image)) {
+            Storage::disk('public')->delete($task->image);
+        }
+
         $task->delete();
 
         return $task;

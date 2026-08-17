@@ -39,6 +39,10 @@ class PurchaseOrderController extends Controller implements HasMiddleware
                 $query->search($request->search);
             }
 
+            if ($request->status) {
+                $query->where('status', $request->status);
+            }
+
             $rowPerPage = (int) ($request->row_per_page ?? 10);
             $orders = $query->paginate($rowPerPage);
 

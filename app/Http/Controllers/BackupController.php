@@ -36,7 +36,10 @@ class BackupController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
-            $backups = Backup::with('creator')->latest()->paginate($request->row_per_page ?? 10);
+            $backups = Backup::with('creator')
+                ->when($request->search, fn ($q) => $q->where('filename', 'like', '%'.$request->search.'%'))
+                ->latest()
+                ->paginate($request->row_per_page ?? 10);
 
             return ResponseHelper::jsonResponse(true, 'Backups Retrieved Successfully', PaginateResource::make($backups, BackupResource::class), 200);
         } catch (\Throwable $e) {

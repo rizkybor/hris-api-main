@@ -45,6 +45,10 @@ class LetterController extends Controller implements HasMiddleware
                 $query->where('employee_id', $request->employee_id);
             }
 
+            if ($request->status) {
+                $query->where('status', $request->status);
+            }
+
             $rowPerPage = (int) ($request->row_per_page ?? 10);
             $letters = $query->paginate($rowPerPage);
 

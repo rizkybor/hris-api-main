@@ -40,6 +40,8 @@ class CertificateController extends Controller implements HasMiddleware
         try {
             $query = Certificate::with('creator')
                 ->when($request->search, fn ($q) => $q->search($request->search))
+                ->when($request->type === 'batch', fn ($q) => $q->whereNotNull('batch_id'))
+                ->when($request->type === 'individual', fn ($q) => $q->whereNull('batch_id'))
                 ->latest();
 
             $certificates = $query->paginate($request->row_per_page ?? 10);
