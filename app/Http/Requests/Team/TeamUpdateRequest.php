@@ -4,6 +4,7 @@ namespace App\Http\Requests\Team;
 
 use App\Enums\Department;
 use App\Enums\TeamStatus;
+use App\Rules\NotProtectedUser;
 use Illuminate\Foundation\Http\FormRequest;
 
 class TeamUpdateRequest extends FormRequest
@@ -17,7 +18,7 @@ class TeamUpdateRequest extends FormRequest
             'icon' => ['sometimes', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'department' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_column(Department::cases(), 'value'))],
             'status' => ['nullable', 'string', 'in:'.implode(',', array_column(TeamStatus::cases(), 'value'))],
-            'team_lead_id' => ['nullable', 'exists:users,id'],
+            'team_lead_id' => ['nullable', 'exists:users,id', new NotProtectedUser('Team Lead')],
             'responsibilities' => ['sometimes', 'required', 'array'],
             'responsibilities.*' => ['string'],
         ];

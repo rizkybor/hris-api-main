@@ -141,6 +141,10 @@ class RoleController extends Controller implements HasMiddleware
         try {
             $role = Role::findOrFail($id);
 
+            if ($role->name === 'superadmin') {
+                return ResponseHelper::jsonResponse(false, 'The Super Admin role cannot be edited. Change it directly in the database if it is ever truly necessary.', null, 403);
+            }
+
             $validated = $request->validate([
                 'name' => ['sometimes', 'string', 'max:255', Rule::unique('roles', 'name')->ignore($role->id)],
                 'permissions' => ['array'],
@@ -173,6 +177,10 @@ class RoleController extends Controller implements HasMiddleware
     {
         try {
             $role = Role::withCount('users')->findOrFail($id);
+
+            if ($role->name === 'superadmin') {
+                return ResponseHelper::jsonResponse(false, 'The Super Admin role cannot be deleted. Remove it directly in the database if it is ever truly necessary.', null, 403);
+            }
 
             if ($role->users_count > 0) {
                 return ResponseHelper::jsonResponse(false, 'Cannot delete a role that is still assigned to users', null, 422);

@@ -16,10 +16,16 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
+            $superadmin = Role::firstOrCreate(['name' => 'superadmin']);
             $manager = Role::firstOrCreate(['name' => 'manager']);
             $hr = Role::firstOrCreate(['name' => 'hr']);
             $employee = Role::firstOrCreate(['name' => 'staff']);
             $finance = Role::firstOrCreate(['name' => 'finance']);
+
+            // Super Admin gets literally every permission that exists, with
+            // no exclusions -- unlike Manager, which is denied the
+            // employee-self-service-only permissions below.
+            $superadmin->syncPermissions(Permission::all());
 
             $employeeSpecific = [
                 'attendance-my-attendances',

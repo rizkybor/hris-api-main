@@ -17,6 +17,7 @@ class BankInformationFactory extends Factory
      */
     public function definition(): array
     {
+        // Keep in sync with the "bank_name" ConfigurableOption seed data.
         $banks = [
             'bca',
             'mandiri',
@@ -28,8 +29,6 @@ class BankInformationFactory extends Factory
             'maybank_indonesia',
             'ocbc_nisp',
             'panin_bank',
-            'btn',
-            'mega',
         ];
 
         $accountTypes = ['savings', 'checking', 'current'];

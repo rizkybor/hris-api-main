@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Services\EmployeeCodeGenerator;
 use Illuminate\Database\Seeder;
 
 class HrSeeder extends Seeder
@@ -13,14 +14,14 @@ class HrSeeder extends Seeder
     public function run(): void
     {
         $employee = User::create([
-            'name' => env('SEED_HR_NAME', 'HR'),
+            'name' => env('SEED_HR_NAME', 'Aldi Pratama Putra'),
             'email' => env('SEED_HR_EMAIL', 'hr@example.com'),
             'password' => bcrypt(env('SEED_HR_PASSWORD', 'password')),
             'profile_photo' => 'profile-pictures/male/3.avif',
         ]);
 
         $employeeProfile = $employee->employeeProfile()->create([
-            'code' => 'HR001',
+            'code' => app(EmployeeCodeGenerator::class)->generate('full_time', '2024-01-01'),
             'identity_number' => '222323131',
             'phone' => '081234567890',
             'date_of_birth' => '2000-01-01',
@@ -48,7 +49,7 @@ class HrSeeder extends Seeder
             'bank_name' => 'bca',
             'account_number' => '244422131',
             'account_holder_name' => 'Aldi Pratama Putra',
-            'account_type' => 'saving',
+            'account_type' => 'savings',
         ]);
 
         $employeeProfile->emergencyContacts()->create([

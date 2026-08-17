@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\ProjectPriority;
 use App\Enums\ProjectStatus;
 use App\Enums\ProjectType;
+use App\Rules\NotProtectedEmployee;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProjectStoreRequest extends FormRequest
@@ -26,7 +27,7 @@ class ProjectStoreRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'budget' => ['nullable', 'numeric', 'min:0'],
-            'project_leader_id' => ['nullable', 'exists:employee_profiles,id'],
+            'project_leader_id' => ['nullable', 'exists:employee_profiles,id', new NotProtectedEmployee('Project Leader')],
             'teams' => ['nullable', 'array'],
             'teams.*' => ['integer', 'exists:teams,id'],
         ];

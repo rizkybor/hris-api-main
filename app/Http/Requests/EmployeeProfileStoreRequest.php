@@ -47,7 +47,7 @@ class EmployeeProfileStoreRequest extends FormRequest
             'password' => ['required', 'string', Password::defaults()],
             'profile_photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
             'roles' => ['required', 'array'],
-            'roles.*' => ['required', 'string', Rule::in(Role::pluck('name'))],
+            'roles.*' => ['required', 'string', Rule::in(Role::where('name', '!=', 'superadmin')->pluck('name'))],
 
             // Employee Profile fields
             'identity_number' => ['required', 'string', 'max:20', 'unique:employee_profiles,identity_number'],
