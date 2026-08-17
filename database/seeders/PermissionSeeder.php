@@ -109,6 +109,14 @@ class PermissionSeeder extends Seeder
             'statistic'
         ],
 
+        'project-calculator' => [
+            'menu',
+            'create',
+            'edit',
+            'delete',
+            'settings',
+        ],
+
         'fixed-cost' => [
             'list',
             'create',

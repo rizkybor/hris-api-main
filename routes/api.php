@@ -18,6 +18,8 @@ use App\Http\Controllers\OptionController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PayslipController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectCalculationController;
+use App\Http\Controllers\ProjectRateSettingController;
 use App\Http\Controllers\ProjectDocumentController;
 use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\ReportController;
@@ -85,6 +87,13 @@ Route::prefix('v1')
 
             // Project Documents
             Route::apiResource('project-documents', ProjectDocumentController::class);
+
+            // Project Calculator
+            Route::get('project-calculator/rate-setting', [ProjectRateSettingController::class, 'show']);
+            Route::put('project-calculator/rate-setting', [ProjectRateSettingController::class, 'update']);
+            Route::get('project-calculations/statistics', [ProjectCalculationController::class, 'getStatistics']);
+            Route::post('project-calculations/preview', [ProjectCalculationController::class, 'preview']);
+            Route::apiResource('project-calculations', ProjectCalculationController::class);
 
             Route::get('attendances/all/paginated', [AttendanceController::class, 'getAllPaginated']);
             Route::get('attendances/statistics', [AttendanceController::class, 'getStatistics']);
