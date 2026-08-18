@@ -49,7 +49,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
     private function assertAllowedRole()
     {
         if (! Auth::user()->hasAnyRole(self::ALLOWED_ROLES)) {
-            return ResponseHelper::jsonResponse(false, 'Anda tidak memiliki akses ke Meeting Note.', null, 403);
+            return ResponseHelper::jsonResponse(false, 'You do not have access to Meeting Note.', null, 403);
         }
 
         return null;

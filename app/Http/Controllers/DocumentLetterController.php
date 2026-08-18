@@ -83,7 +83,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
         $user = Auth::user();
 
         if ($user->hasRole('staff')) {
-            return ResponseHelper::jsonResponse(false, 'Staff tidak diizinkan membuat Official Memo.', null, 403);
+            return ResponseHelper::jsonResponse(false, 'Staff are not allowed to create an Official Memo.', null, 403);
         }
 
         $validated = $request->validated();
@@ -233,14 +233,14 @@ class DocumentLetterController extends Controller implements HasMiddleware
         $user = Auth::user();
 
         if (! $user->hasRole('finance')) {
-            return ResponseHelper::jsonResponse(false, 'Hanya Finance Manager yang dapat menyetujui Official Memo.', null, 403);
+            return ResponseHelper::jsonResponse(false, 'Only Finance Manager can approve an Official Memo.', null, 403);
         }
 
         try {
             $documentLetter = DocumentLetter::findOrFail($id);
 
             if ($documentLetter->status !== 'pending') {
-                return ResponseHelper::jsonResponse(false, 'Hanya Official Memo berstatus Pending yang dapat disetujui.', null, 422);
+                return ResponseHelper::jsonResponse(false, 'Only Official Memos with Pending status can be approved.', null, 422);
             }
 
             $documentLetter->update([
@@ -268,14 +268,14 @@ class DocumentLetterController extends Controller implements HasMiddleware
         $user = Auth::user();
 
         if (! $user->hasRole('finance')) {
-            return ResponseHelper::jsonResponse(false, 'Hanya Finance Manager yang dapat menolak Official Memo.', null, 403);
+            return ResponseHelper::jsonResponse(false, 'Only Finance Manager can reject an Official Memo.', null, 403);
         }
 
         try {
             $documentLetter = DocumentLetter::findOrFail($id);
 
             if ($documentLetter->status !== 'pending') {
-                return ResponseHelper::jsonResponse(false, 'Hanya Official Memo berstatus Pending yang dapat ditolak.', null, 422);
+                return ResponseHelper::jsonResponse(false, 'Only Official Memos with Pending status can be rejected.', null, 422);
             }
 
             $documentLetter->update([
@@ -305,11 +305,11 @@ class DocumentLetterController extends Controller implements HasMiddleware
         $user = Auth::user();
 
         if ($documentLetter->created_by !== $user->id && ! $user->hasRole('superadmin')) {
-            return ResponseHelper::jsonResponse(false, 'Anda hanya dapat mengubah Official Memo yang Anda buat sendiri.', null, 403);
+            return ResponseHelper::jsonResponse(false, 'You can only edit an Official Memo you created yourself.', null, 403);
         }
 
         if ($documentLetter->status !== 'draft') {
-            return ResponseHelper::jsonResponse(false, 'Official Memo hanya dapat diubah selama berstatus Draft.', null, 422);
+            return ResponseHelper::jsonResponse(false, 'An Official Memo can only be edited while it is in Draft status.', null, 422);
         }
 
         return null;
