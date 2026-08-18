@@ -18,8 +18,6 @@ class DocumentLetterStoreRequest extends FormRequest
             'subject' => ['required', 'string', 'max:255'],
             'document_date' => ['required', 'date'],
             'body' => ['required', 'string'],
-            'recipient_team_ids' => ['required', 'array', 'min:1'],
-            'recipient_team_ids.*' => ['integer', 'exists:teams,id'],
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'mimes:pdf,doc,docx,png,jpg,jpeg', 'max:5120'],
         ];

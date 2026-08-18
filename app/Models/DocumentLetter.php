@@ -59,34 +59,20 @@ class DocumentLetter extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    public function recipients()
-    {
-        return $this->belongsToMany(Team::class, 'document_letter_recipients', 'document_letter_id', 'team_id');
-    }
-
     public function attachments()
     {
         return $this->hasMany(DocumentLetterAttachment::class);
     }
 
     /**
-     * Documents a Staff account is allowed to see: only ones addressed to
-     * a team they belong to, or ones they authored themselves.
+     * Documents a Staff account is allowed to see. Recipient is always
+     * Finance Manager (the sole approver), so there's no team-targeting
+     * left to check -- Staff only ever sees what they authored themselves,
+     * and Staff can't create an Official Memo in the first place.
      */
     public function scopeVisibleTo($query, User $user)
     {
-        $employeeId = $user->employeeProfile?->id;
-        $teamIds = $employeeId
-            ? Team::whereHas('members', fn ($q) => $q->where('employee_id', $employeeId))->pluck('id')
-            : collect();
-
-        return $query->where(function ($q) use ($user, $teamIds) {
-            $q->where('created_by', $user->id);
-
-            if ($teamIds->isNotEmpty()) {
-                $q->orWhereHas('recipients', fn ($r) => $r->whereIn('teams.id', $teamIds));
-            }
-        });
+        return $query->where('created_by', $user->id);
     }
 
     public function scopeSearch($query, $search)

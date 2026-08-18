@@ -24,7 +24,7 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class DocumentLetterController extends Controller implements HasMiddleware
 {
-    private const RELATIONS = ['sender.user', 'creator', 'approver', 'recipients', 'attachments'];
+    private const RELATIONS = ['sender.user', 'creator', 'approver', 'attachments'];
 
     public function __construct(
         private DocumentNumberService $numberService,
@@ -104,7 +104,6 @@ class DocumentLetterController extends Controller implements HasMiddleware
                     'created_by' => $user->id,
                 ]);
 
-                $documentLetter->recipients()->sync($validated['recipient_team_ids']);
                 $this->storeAttachments($documentLetter, $request->file('attachments', []));
 
                 return $documentLetter;
@@ -154,10 +153,6 @@ class DocumentLetterController extends Controller implements HasMiddleware
 
             $documentLetter = DB::transaction(function () use ($documentLetter, $validated, $request) {
                 $documentLetter->update(collect($validated)->only(['document_number', 'subject', 'document_date', 'body'])->toArray());
-
-                if (isset($validated['recipient_team_ids'])) {
-                    $documentLetter->recipients()->sync($validated['recipient_team_ids']);
-                }
 
                 foreach ($validated['remove_attachment_ids'] ?? [] as $attachmentId) {
                     $this->deleteAttachment($documentLetter, $attachmentId);

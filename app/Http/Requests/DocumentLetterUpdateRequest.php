@@ -19,8 +19,6 @@ class DocumentLetterUpdateRequest extends FormRequest
             'subject' => ['sometimes', 'required', 'string', 'max:255'],
             'document_date' => ['sometimes', 'required', 'date'],
             'body' => ['sometimes', 'required', 'string'],
-            'recipient_team_ids' => ['sometimes', 'required', 'array', 'min:1'],
-            'recipient_team_ids.*' => ['integer', 'exists:teams,id'],
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'mimes:pdf,doc,docx,png,jpg,jpeg', 'max:5120'],
             'remove_attachment_ids' => ['nullable', 'array'],

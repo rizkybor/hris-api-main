@@ -36,10 +36,6 @@ class DocumentLetterResource extends JsonResource
                 'id' => $this->approver->id,
                 'name' => $this->approver->name,
             ] : null),
-            'recipients' => $this->whenLoaded('recipients', fn () => $this->recipients->map(fn ($team) => [
-                'id' => $team->id,
-                'name' => $team->name,
-            ])),
             'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments->map(fn ($file) => [
                 'id' => $file->id,
                 'original_name' => $file->original_name,
