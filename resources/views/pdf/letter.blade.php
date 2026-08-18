@@ -3,6 +3,13 @@
 <head>
     <meta charset="utf-8">
     @include('pdf.partials.style-letterhead')
+    <style>
+        .body-content table { width: 100%; border-collapse: collapse; margin: 3mm 0; }
+        .body-content table td, .body-content table th { border: 1px solid #94a3b8; padding: 4px 6px; }
+        .body-content table th { background-color: #eef2ff; font-weight: bold; }
+        .body-content ul, .body-content ol { margin: 0 0 3mm 0; padding-left: 18px; }
+        .body-content blockquote { margin: 3mm 0; padding-left: 8px; border-left: 3px solid #cbd5e1; color: #475569; }
+    </style>
 </head>
 <body>
     <div class="side-stripe"></div>
@@ -22,7 +29,7 @@
             </tr>
         </table>
 
-        <p style="margin: 0 0 6mm 0;">Tangerang Selatan, {{ $letter->date->translatedFormat('d F Y') }}</p>
+        <p style="margin: 0 0 6mm 0;">Tangerang Selatan, {{ $letter->date->locale('id')->translatedFormat('d F Y') }}</p>
 
         <table style="margin-bottom: 6mm;">
             <tr>
@@ -45,8 +52,15 @@
             </p>
         @endif
 
-        <div style="text-align: justify; line-height: 1.6; margin-bottom: {{ $letter->items ? '6mm' : '14mm' }};">
-            {!! nl2br(e($letter->body)) !!}
+        <div class="body-content" style="text-align: justify; line-height: 1.6; margin-bottom: {{ $letter->items ? '6mm' : '14mm' }};">
+            {{-- RichTextEditor bodies are already HTML (wrapped in <p> tags etc.) and render as-is.
+                 Older letters saved before the rich text editor was added are plain text, so they
+                 still need escaping + nl2br to preserve line breaks without showing raw tags. --}}
+            @if(str_contains($letter->body, '<'))
+                {!! $letter->body !!}
+            @else
+                {!! nl2br(e($letter->body)) !!}
+            @endif
         </div>
 
         @if($letter->items)
