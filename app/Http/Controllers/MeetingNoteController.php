@@ -10,6 +10,7 @@ use App\Http\Resources\PaginateResource;
 use App\Models\MeetingNote;
 use App\Models\MeetingNoteAttachment;
 use App\Models\MeetingNoteViewer;
+use App\Models\User;
 use App\Services\DocumentNumberService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -48,7 +49,10 @@ class MeetingNoteController extends Controller implements HasMiddleware
 
     private function assertAllowedRole()
     {
-        if (! Auth::user()->hasAnyRole(self::ALLOWED_ROLES)) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->hasAnyRole(self::ALLOWED_ROLES)) {
             return ResponseHelper::jsonResponse(false, 'You do not have access to Meeting Note.', null, 403);
         }
 
@@ -96,6 +100,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
         }
 
         $validated = $request->validated();
+        /** @var User $user */
         $user = Auth::user();
 
         try {
@@ -162,6 +167,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
         }
 
         $validated = $request->validated();
+        /** @var User $user */
         $user = Auth::user();
 
         try {
@@ -236,6 +242,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
     {
         try {
             $note = MeetingNote::with('attendees.user')->findOrFail($id);
+            /** @var User $user */
             $user = Auth::user();
 
             if ($note->created_by !== $user->id) {
@@ -276,7 +283,10 @@ class MeetingNoteController extends Controller implements HasMiddleware
         }
 
         try {
-            $notes = Auth::user()->pinnedMeetingNotes()
+            /** @var User $user */
+            $user = Auth::user();
+
+            $notes = $user->pinnedMeetingNotes()
                 ->with(self::RELATIONS)
                 ->orderByDesc('user_pinned_notes.created_at')
                 ->get()
