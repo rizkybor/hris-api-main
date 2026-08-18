@@ -10,17 +10,24 @@ class DivisionCodeSeeder extends Seeder
     public function run(): void
     {
         $codes = [
-            ['code' => 'KPUS', 'name' => 'Kantor Pusat'],
-            ['code' => 'OPS', 'name' => 'Operasional'],
-            ['code' => 'HR', 'name' => 'Human Resources'],
-            ['code' => 'FIN', 'name' => 'Finance'],
             ['code' => 'BD', 'name' => 'Business Development'],
-            ['code' => 'IT', 'name' => 'Information Technology'],
-            ['code' => 'GA', 'name' => 'General Affairs'],
+            ['code' => 'CR', 'name' => 'Creative/Branding'],
+            ['code' => 'DIR', 'name' => 'Direksi'],
+            ['code' => 'FIN', 'name' => 'Keuangan'],
+            ['code' => 'GA', 'name' => 'General Affairs / Administrasi'],
+            ['code' => 'HR', 'name' => 'Human Resources'],
+            ['code' => 'IT', 'name' => 'Teknologi Informasi'],
+            ['code' => 'LEG', 'name' => 'Legal'],
+            ['code' => 'OPS', 'name' => 'Operasional'],
+            ['code' => 'PRC', 'name' => 'Procurement'],
         ];
 
+        // Replace the previous set entirely -- keep only what's listed
+        // above, since it's the authoritative company division list.
+        DivisionCode::whereNotIn('code', array_column($codes, 'code'))->delete();
+
         foreach ($codes as $code) {
-            DivisionCode::firstOrCreate(['code' => $code['code']], $code);
+            DivisionCode::updateOrCreate(['code' => $code['code']], $code);
         }
     }
 }

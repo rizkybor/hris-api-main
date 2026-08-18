@@ -8,6 +8,8 @@ use App\Http\Controllers\DivisionCodeController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
+use App\Http\Controllers\DocumentLetterController;
+use App\Http\Controllers\MeetingNoteController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateTemplateController;
 use App\Http\Controllers\CertificateSettingController;
@@ -285,32 +287,55 @@ Route::prefix('v1')
             // Global search
             Route::get('search', [SearchController::class, 'search']);
 
-            // Business Documents: Purchase Orders
-            Route::get('purchase-orders/{id}/export-pdf', [PurchaseOrderController::class, 'exportPdf']);
-            Route::post('purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel']);
-            Route::apiResource('purchase-orders', PurchaseOrderController::class);
+            // =====================================================================
+            // Document Letters (frontend "Document Letters" menu / DocumentsHub.vue)
+            // Sub-modules below are ordered to match the hub's card order:
+            // Surat-Surat, Invoice, Payment Receipt, Purchase Order, Official
+            // Memo, Meeting Note, Sertifikat.
+            // =====================================================================
 
-            // Business Documents: Invoices
+            // Document Letters: Letters (Surat)
+            Route::get('letters/{id}/export-pdf', [LetterController::class, 'exportPdf']);
+            Route::post('letters/{id}/cancel', [LetterController::class, 'cancel']);
+            Route::apiResource('letters', LetterController::class);
+
+            // Document Letters: Letters reference tables (Letter Codes, Division Codes)
+            Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::apiResource('division-codes', DivisionCodeController::class)->only(['index', 'store', 'update', 'destroy']);
+
+            // Document Letters: Invoices
             Route::get('invoices/{id}/export-pdf', [InvoiceController::class, 'exportPdf']);
             Route::post('invoices/{id}/mark-as-paid', [InvoiceController::class, 'markAsPaid']);
             Route::post('invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
             Route::apiResource('invoices', InvoiceController::class);
 
-            // Business Documents: Payment Receipts
+            // Document Letters: Payment Receipts
             Route::get('payment-receipts/{id}/export-pdf', [PaymentReceiptController::class, 'exportPdf']);
             Route::post('payment-receipts/{id}/cancel', [PaymentReceiptController::class, 'cancel']);
             Route::apiResource('payment-receipts', PaymentReceiptController::class);
 
-            // Business Documents: Letters (Surat)
-            Route::get('letters/{id}/export-pdf', [LetterController::class, 'exportPdf']);
-            Route::post('letters/{id}/cancel', [LetterController::class, 'cancel']);
-            Route::apiResource('letters', LetterController::class);
+            // Document Letters: Purchase Orders
+            Route::get('purchase-orders/{id}/export-pdf', [PurchaseOrderController::class, 'exportPdf']);
+            Route::post('purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel']);
+            Route::apiResource('purchase-orders', PurchaseOrderController::class);
 
-            // Business Documents: reference tables
-            Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);
-            Route::apiResource('division-codes', DivisionCodeController::class)->only(['index', 'store', 'update', 'destroy']);
+            // Document Letters: Official Memo (Nota Dinas) -- approval workflow,
+            // recipient is always Finance Manager (the sole approver)
+            Route::post('document-letters/{id}/submit', [DocumentLetterController::class, 'submit']);
+            Route::post('document-letters/{id}/approve', [DocumentLetterController::class, 'approve']);
+            Route::post('document-letters/{id}/reject', [DocumentLetterController::class, 'reject']);
+            Route::apiResource('document-letters', DocumentLetterController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 
-            // Business Documents: Certificates
+            // Document Letters: Meeting Note -- shared repository restricted to
+            // Manager/Operational Director/HR/Finance Manager, with per-user
+            // pin-to-dashboard and polling-based presence
+            Route::get('meeting-notes/pinned', [MeetingNoteController::class, 'pinned']);
+            Route::post('meeting-notes/{id}/pin', [MeetingNoteController::class, 'togglePin']);
+            Route::post('meeting-notes/{id}/heartbeat', [MeetingNoteController::class, 'heartbeat']);
+            Route::get('meeting-notes/{id}/viewers', [MeetingNoteController::class, 'viewers']);
+            Route::apiResource('meeting-notes', MeetingNoteController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+
+            // Document Letters: Certificates
             Route::get('certificate-setting', [CertificateSettingController::class, 'show']);
             Route::put('certificate-setting', [CertificateSettingController::class, 'update']);
             Route::apiResource('certificate-templates', CertificateTemplateController::class)->only(['index', 'store', 'destroy']);

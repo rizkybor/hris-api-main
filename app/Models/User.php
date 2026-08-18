@@ -82,4 +82,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Team::class, 'team_lead_id');
     }
+
+    public function pinnedMeetingNotes()
+    {
+        return $this->belongsToMany(MeetingNote::class, 'user_pinned_notes', 'user_id', 'document_id')->withTimestamps();
+    }
 }
