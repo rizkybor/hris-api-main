@@ -54,7 +54,14 @@ class RolePermissionSeeder extends Seeder
             // gates with no backend middleware of their own), so this only
             // hides the section; it doesn't take away any deeper permission
             // Super Admin might still need.
-            $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, [
+            // Approving/rejecting an Official Memo is reserved for Finance
+            // Manager alone -- excluded from every other role's grant below,
+            // even Super Admin/Manager, per the spec's explicit "hanya
+            // Finance Manager" rule. The controller also hard-checks
+            // hasRole('finance') so this holds even if permissions drift.
+            $officialMemoApproveOnly = ['document-letter-approve'];
+
+            $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly, [
                 'payslip-view',
                 'task-list',
                 'team-menu',
@@ -63,7 +70,7 @@ class RolePermissionSeeder extends Seeder
                 'payroll-menu',
             ])));
 
-            $manager->syncPermissions($this->permissionsAllExcept($employeeSpecific));
+            $manager->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly)));
 
             $hr->syncPermissions($this->permissionsByPrefixes([
                 'dashboard-',
@@ -88,6 +95,7 @@ class RolePermissionSeeder extends Seeder
                 'invoice-',
                 'payment-receipt-',
                 'letter-',
+                'document-letter-',
                 'certificate-',
                 'payslip-',
                 'backup-',
@@ -95,7 +103,7 @@ class RolePermissionSeeder extends Seeder
                 'asset-',
                 'performance-review-',
                 'staff-permission-',
-            ], $employeeSpecific));
+            ], array_merge($employeeSpecific, $officialMemoApproveOnly)));
 
             // Operational Director shares HR's operational scope -- it's a
             // distinct role (Aldi's account), not a rename of HR, so both
@@ -123,6 +131,7 @@ class RolePermissionSeeder extends Seeder
                 'invoice-',
                 'payment-receipt-',
                 'letter-',
+                'document-letter-',
                 'certificate-',
                 'payslip-',
                 'backup-',
@@ -130,7 +139,7 @@ class RolePermissionSeeder extends Seeder
                 'asset-',
                 'performance-review-',
                 'staff-permission-',
-            ], $employeeSpecific));
+            ], array_merge($employeeSpecific, $officialMemoApproveOnly)));
 
             $employee->syncPermissions(
                 Permission::whereIn('name', [
@@ -160,6 +169,10 @@ class RolePermissionSeeder extends Seeder
                     'asset-my-assets',
                     'performance-review-my-reviews',
                     'performance-review-acknowledge',
+                    // View-only: documents addressed to their team, or that
+                    // they authored themselves -- no create/edit/delete/approve.
+                    'document-letter-menu',
+                    'document-letter-list',
                 ])->get()
             );
 
@@ -267,6 +280,14 @@ class RolePermissionSeeder extends Seeder
                     'letter-create',
                     'letter-edit',
                     'letter-delete',
+                    // Finance Manager is the sole approver of Official Memos,
+                    // and can also author its own like any non-Staff role.
+                    'document-letter-menu',
+                    'document-letter-list',
+                    'document-letter-create',
+                    'document-letter-edit',
+                    'document-letter-delete',
+                    'document-letter-approve',
                     'certificate-menu',
                     'certificate-list',
                     'certificate-create',

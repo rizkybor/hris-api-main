@@ -8,6 +8,7 @@ use App\Http\Controllers\DivisionCodeController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
+use App\Http\Controllers\DocumentLetterController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateTemplateController;
 use App\Http\Controllers\CertificateSettingController;
@@ -305,6 +306,12 @@ Route::prefix('v1')
             Route::get('letters/{id}/export-pdf', [LetterController::class, 'exportPdf']);
             Route::post('letters/{id}/cancel', [LetterController::class, 'cancel']);
             Route::apiResource('letters', LetterController::class);
+
+            // Document Letter (Nota Dinas): approval workflow
+            Route::post('document-letters/{id}/submit', [DocumentLetterController::class, 'submit']);
+            Route::post('document-letters/{id}/approve', [DocumentLetterController::class, 'approve']);
+            Route::post('document-letters/{id}/reject', [DocumentLetterController::class, 'reject']);
+            Route::apiResource('document-letters', DocumentLetterController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 
             // Business Documents: reference tables
             Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);
