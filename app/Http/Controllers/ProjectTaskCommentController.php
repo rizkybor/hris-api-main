@@ -4,13 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Resources\ProjectTaskCommentResource;
+use App\Models\EmployeeProfile;
 use App\Models\ProjectTask;
 use App\Models\ProjectTaskComment;
+use App\Models\User;
+use App\Notifications\ProjectTaskCommentMention;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProjectTaskCommentController extends Controller implements HasMiddleware
@@ -48,6 +52,7 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
 
         try {
             $task = ProjectTask::with('project')->findOrFail($taskId);
+            /** @var User $user */
             $user = $request->user();
             $employeeId = $user->employeeProfile?->id;
 
@@ -79,6 +84,10 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
                 return ResponseHelper::jsonResponse(false, 'You can only mention the project leader, the task\'s assignee, or employees assigned to this project\'s teams', null, 422);
             }
 
+            if ($employeeId && in_array($employeeId, $mentionedIds, true)) {
+                return ResponseHelper::jsonResponse(false, 'You can\'t mention yourself', null, 422);
+            }
+
             $comment = $task->comments()->create([
                 'parent_id' => $validated['parent_id'] ?? null,
                 'user_id' => Auth::id(),
@@ -87,6 +96,9 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
             ]);
 
             $comment->load(['user', 'parent.user', 'task.project']);
+
+            $this->notifyMentionedEmployees($comment, $mentionedIds);
+            $this->logCommentActivity($task, $comment, $user, $mentionedIds);
 
             return ResponseHelper::jsonResponse(true, 'Comment Added Successfully', new ProjectTaskCommentResource($comment), 201);
         } catch (ModelNotFoundException $e) {
@@ -100,6 +112,7 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
     {
         try {
             $comment = ProjectTaskComment::with('task.project')->findOrFail($id);
+            /** @var User $user */
             $user = $request->user();
 
             $isManager = $user->hasRole('manager');
@@ -118,5 +131,54 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * @param  array<int>  $mentionedIds
+     */
+    private function notifyMentionedEmployees(ProjectTaskComment $comment, array $mentionedIds): void
+    {
+        if (empty($mentionedIds)) {
+            return;
+        }
+
+        $mentionedUsers = EmployeeProfile::with('user')
+            ->whereIn('id', $mentionedIds)
+            ->get()
+            ->pluck('user')
+            ->filter();
+
+        Notification::send($mentionedUsers, new ProjectTaskCommentMention($comment));
+    }
+
+    /**
+     * @param  array<int>  $mentionedIds
+     */
+    private function logCommentActivity(ProjectTask $task, ProjectTaskComment $comment, User $user, array $mentionedIds): void
+    {
+        $description = $comment->parent_id ? 'replied to a comment' : 'commented';
+
+        if (! empty($mentionedIds)) {
+            $mentionedNames = EmployeeProfile::with('user')
+                ->whereIn('id', $mentionedIds)
+                ->get()
+                ->pluck('user.name')
+                ->filter()
+                ->implode(', ');
+
+            if ($mentionedNames) {
+                $description .= " and mentioned {$mentionedNames}";
+            }
+        }
+
+        activity('Project')
+            ->causedBy($user)
+            ->performedOn($task)
+            ->event('commented')
+            ->withProperties([
+                'comment_id' => $comment->id,
+                'mentioned_employee_ids' => $mentionedIds,
+            ])
+            ->log("{$description} on \"{$task->name}\"");
     }
 }
