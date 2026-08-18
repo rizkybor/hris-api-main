@@ -10,8 +10,10 @@ use App\Http\Resources\DocumentLetterResource;
 use App\Http\Resources\PaginateResource;
 use App\Models\DocumentLetter;
 use App\Models\DocumentLetterAttachment;
+use App\Models\User;
 use App\Services\DocumentNumberService;
 use App\Services\EmailService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -34,7 +36,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['document-letter-menu|document-letter-list']), only: ['index', 'show']),
+            new Middleware(PermissionMiddleware::using(['document-letter-menu|document-letter-list']), only: ['index', 'show', 'exportPdf']),
             new Middleware(PermissionMiddleware::using(['document-letter-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['document-letter-edit']), only: ['update', 'submit']),
             new Middleware(PermissionMiddleware::using(['document-letter-delete']), only: ['destroy']),
@@ -293,6 +295,40 @@ class DocumentLetterController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * Streams the Official Memo as a PDF on the company's Nota Dinas
+     * letterhead. Staff are scoped to their own documents, same as show().
+     */
+    public function exportPdf(string $id)
+    {
+        $user = Auth::user();
+        $query = DocumentLetter::with(['sender.user', 'sender.jobInformation', 'approver']);
+
+        if ($user->hasRole('staff')) {
+            $query->visibleTo($user);
+        }
+
+        $documentLetter = $query->findOrFail($id);
+
+        $senderName = $documentLetter->sender?->user?->name ?? '-';
+        $senderTitle = $documentLetter->sender?->jobInformation?->job_title ?? 'Karyawan';
+
+        $financeManager = User::role('finance')->with(['employeeProfile.jobInformation'])->first();
+        $recipientLine = $financeManager
+            ? $financeManager->name.' — '.($financeManager->employeeProfile?->jobInformation?->job_title ?? 'Direktur Keuangan')
+            : 'Finance Manager';
+
+        $pdf = Pdf::loadView('pdf.official-memo', [
+            'documentLetter' => $documentLetter,
+            'senderName' => $senderName,
+            'senderTitle' => $senderTitle,
+            'recipientLine' => $recipientLine,
+            'senderLine' => $senderName.' — '.$senderTitle,
+        ])->setPaper('a4');
+
+        return $pdf->stream(str_replace('/', '-', $documentLetter->document_number).'.pdf');
     }
 
     /**
