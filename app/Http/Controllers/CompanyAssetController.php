@@ -174,7 +174,7 @@ class CompanyAssetController extends Controller implements HasMiddleware
                 $asset = CompanyAsset::findOrFail($id);
 
                 if ($asset->status === 'assigned') {
-                    throw new \Exception('Aset ini sedang dipakai oleh karyawan lain. Kembalikan dulu sebelum menugaskan ke karyawan baru.');
+                    throw new \Exception('This asset is currently assigned to another employee. Return it first before assigning to a new employee.');
                 }
 
                 $condition = $validated['condition_at_assignment'] ?? $asset->condition;
@@ -220,7 +220,7 @@ class CompanyAssetController extends Controller implements HasMiddleware
                 $asset = CompanyAsset::findOrFail($id);
 
                 if ($asset->status !== 'assigned' || ! $asset->assigned_to) {
-                    throw new \Exception('Aset ini sedang tidak ditugaskan ke siapa pun.');
+                    throw new \Exception('This asset is not currently assigned to anyone.');
                 }
 
                 $condition = $validated['condition_at_return'] ?? $asset->condition;
