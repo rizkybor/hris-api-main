@@ -43,7 +43,12 @@ class AuthRepository implements AuthRepositoryInterface
 
         /** @var User $user */
         $user = Auth::user();
-        $user->load(['roles', 'permissions']);
+        // employeeProfile is loaded for every role, not just staff -- e.g.
+        // Manager/HR/Operational Director/Finance need their own employee_id
+        // client-side too (to exclude themselves from @mention suggestions
+        // on Meeting Note comments). The deeper .jobInformation stays
+        // staff-only since only the staff "My Workspace" widgets use it.
+        $user->load(['roles', 'permissions', 'employeeProfile']);
 
         if ($user->hasRole('staff')) {
             $user->load('employeeProfile.jobInformation');
