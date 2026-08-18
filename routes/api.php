@@ -9,6 +9,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
 use App\Http\Controllers\DocumentLetterController;
+use App\Http\Controllers\MeetingNoteController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateTemplateController;
 use App\Http\Controllers\CertificateSettingController;
@@ -312,6 +313,13 @@ Route::prefix('v1')
             Route::post('document-letters/{id}/approve', [DocumentLetterController::class, 'approve']);
             Route::post('document-letters/{id}/reject', [DocumentLetterController::class, 'reject']);
             Route::apiResource('document-letters', DocumentLetterController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+
+            // Meeting Note: shared repository (Manager/Operational Director/HR/Finance), pin-to-dashboard, presence
+            Route::get('meeting-notes/pinned', [MeetingNoteController::class, 'pinned']);
+            Route::post('meeting-notes/{id}/pin', [MeetingNoteController::class, 'togglePin']);
+            Route::post('meeting-notes/{id}/heartbeat', [MeetingNoteController::class, 'heartbeat']);
+            Route::get('meeting-notes/{id}/viewers', [MeetingNoteController::class, 'viewers']);
+            Route::apiResource('meeting-notes', MeetingNoteController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 
             // Business Documents: reference tables
             Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);

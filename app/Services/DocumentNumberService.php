@@ -133,6 +133,21 @@ class DocumentNumberService
     }
 
     /**
+     * MN/[NomorUrut 3-digit]/JCD/[BulanRomawi]/[Tahun 4-digit]
+     */
+    public function generateMeetingNoteNumber(Carbon $date): array
+    {
+        $year = (int) $date->year;
+        $seq = $this->nextSequence('meeting_note', '', $year);
+
+        return [
+            'number' => sprintf('MN/%03d/JCD/%s/%d', $seq, $this->romanMonth($date->month), $year),
+            'sequence' => $seq,
+            'year' => $year,
+        ];
+    }
+
+    /**
      * Certificate numbering: sequence resets to 0001 whenever company,
      * category, program, year, or month differ, and increments whenever
      * they're all the same -- so the scope bucket folds company+category+

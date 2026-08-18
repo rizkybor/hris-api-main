@@ -222,6 +222,15 @@ class PermissionSeeder extends Seeder
             'approve',
         ],
 
+        'meeting-note' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'pin',
+        ],
+
         'certificate' => [
             'menu',
             'list',

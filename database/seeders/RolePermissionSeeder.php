@@ -61,7 +61,20 @@ class RolePermissionSeeder extends Seeder
             // hasRole('finance') so this holds even if permissions drift.
             $officialMemoApproveOnly = ['document-letter-approve'];
 
-            $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly, [
+            // Meeting Note is deliberately scoped to Manager, Operational
+            // Director, HR, and Finance Manager only -- not even Super
+            // Admin, per spec. The controller also hard-checks hasAnyRole()
+            // so this holds even if permissions drift.
+            $meetingNotePermissions = [
+                'meeting-note-menu',
+                'meeting-note-list',
+                'meeting-note-create',
+                'meeting-note-edit',
+                'meeting-note-delete',
+                'meeting-note-pin',
+            ];
+
+            $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly, $meetingNotePermissions, [
                 'payslip-view',
                 'task-list',
                 'team-menu',
@@ -96,6 +109,7 @@ class RolePermissionSeeder extends Seeder
                 'payment-receipt-',
                 'letter-',
                 'document-letter-',
+                'meeting-note-',
                 'certificate-',
                 'payslip-',
                 'backup-',
@@ -132,6 +146,7 @@ class RolePermissionSeeder extends Seeder
                 'payment-receipt-',
                 'letter-',
                 'document-letter-',
+                'meeting-note-',
                 'certificate-',
                 'payslip-',
                 'backup-',
@@ -288,6 +303,14 @@ class RolePermissionSeeder extends Seeder
                     'document-letter-edit',
                     'document-letter-delete',
                     'document-letter-approve',
+                    // Finance Manager is one of the 4 roles allowed into
+                    // Meeting Note's shared repository.
+                    'meeting-note-menu',
+                    'meeting-note-list',
+                    'meeting-note-create',
+                    'meeting-note-edit',
+                    'meeting-note-delete',
+                    'meeting-note-pin',
                     'certificate-menu',
                     'certificate-list',
                     'certificate-create',
