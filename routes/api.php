@@ -93,6 +93,7 @@ Route::prefix('v1')
 
             Route::get('projects/statistics', [ProjectController::class, 'getStatistics']);
             Route::get('projects/all/paginated', [ProjectController::class, 'getAllPaginated']);
+            Route::get('projects/{id}/export-progress', [ProjectController::class, 'exportProgress']);
             Route::apiResource('projects', ProjectController::class);
 
             Route::apiResource('project-tasks', ProjectTaskController::class);

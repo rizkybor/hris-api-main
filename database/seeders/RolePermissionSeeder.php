@@ -174,6 +174,7 @@ class RolePermissionSeeder extends Seeder
                     'leave-request-my-requests',
                     'project-menu',
                     'project-list',
+                    'project-export',
                     'task-menu',
                     'task-create',
                     'task-list',
@@ -230,6 +231,12 @@ class RolePermissionSeeder extends Seeder
                     'company-finance-edit',
                     'company-finance-delete',
                     'company-finance-statistic',
+                    // Finance Manager needs to view projects and pull the
+                    // client-facing progress report, but not create/edit/
+                    // delete them -- that stays with PM-facing roles.
+                    'project-menu',
+                    'project-list',
+                    'project-export',
                     'project-calculator-menu',
                     'project-calculator-create',
                     'project-calculator-edit',
