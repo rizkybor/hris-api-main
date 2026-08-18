@@ -31,7 +31,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
      */
     private const ALLOWED_ROLES = ['manager', 'operational_director', 'hr', 'finance'];
 
-    private const RELATIONS = ['creator', 'updater', 'attendees.user', 'attachments'];
+    private const RELATIONS = ['creator.employeeProfile', 'updater', 'attendees.user', 'attachments'];
 
     public function __construct(private DocumentNumberService $numberService) {}
 

@@ -27,6 +27,11 @@ class MeetingNoteResource extends JsonResource
             'creator' => $this->whenLoaded('creator', fn () => $this->creator ? [
                 'id' => $this->creator->id,
                 'name' => $this->creator->name,
+                // The creator's own employee_profile id -- distinct from the
+                // user id above -- so the frontend can offer them as an
+                // @mention target the same way it does Internal Attendees
+                // (mentions are keyed by employee_profile id, not user id).
+                'employee_id' => $this->creator->employeeProfile?->id,
             ] : null),
             'updater' => $this->whenLoaded('updater', fn () => $this->updater ? [
                 'id' => $this->updater->id,

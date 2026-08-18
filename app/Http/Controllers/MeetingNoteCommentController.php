@@ -76,10 +76,17 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
 
             $mentionedIds = $validated['mentioned_employee_ids'] ?? [];
             if (! empty($mentionedIds)) {
-                $attendeeIds = $note->attendees()->pluck('employee_profiles.id');
-                $invalidMentions = collect($mentionedIds)->diff($attendeeIds);
+                // Same pair as the eligibility check above: attendees, plus
+                // the note's creator even if they aren't one themselves.
+                $allowedMentionIds = $note->attendees()->pluck('employee_profiles.id');
+                $creatorEmployeeId = $note->creator?->employeeProfile?->id;
+                if ($creatorEmployeeId) {
+                    $allowedMentionIds->push($creatorEmployeeId);
+                }
+
+                $invalidMentions = collect($mentionedIds)->diff($allowedMentionIds);
                 if ($invalidMentions->isNotEmpty()) {
-                    return ResponseHelper::jsonResponse(false, 'You can only mention employees checked in as Internal Attendees', null, 422);
+                    return ResponseHelper::jsonResponse(false, 'You can only mention employees checked in as Internal Attendees, or the note\'s creator', null, 422);
                 }
             }
 
