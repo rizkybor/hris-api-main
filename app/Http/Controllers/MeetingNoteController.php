@@ -10,6 +10,7 @@ use App\Http\Resources\PaginateResource;
 use App\Models\MeetingNote;
 use App\Models\MeetingNoteAttachment;
 use App\Models\MeetingNoteViewer;
+use App\Models\User;
 use App\Services\DocumentNumberService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -31,7 +32,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
      */
     private const ALLOWED_ROLES = ['manager', 'operational_director', 'hr', 'finance'];
 
-    private const RELATIONS = ['creator', 'updater', 'attendees.user', 'attachments'];
+    private const RELATIONS = ['creator.employeeProfile', 'updater', 'attendees.user', 'attachments'];
 
     public function __construct(private DocumentNumberService $numberService) {}
 
@@ -48,7 +49,10 @@ class MeetingNoteController extends Controller implements HasMiddleware
 
     private function assertAllowedRole()
     {
-        if (! Auth::user()->hasAnyRole(self::ALLOWED_ROLES)) {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (! $user->hasAnyRole(self::ALLOWED_ROLES)) {
             return ResponseHelper::jsonResponse(false, 'You do not have access to Meeting Note.', null, 403);
         }
 
@@ -96,6 +100,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
         }
 
         $validated = $request->validated();
+        /** @var User $user */
         $user = Auth::user();
 
         try {
@@ -162,6 +167,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
         }
 
         $validated = $request->validated();
+        /** @var User $user */
         $user = Auth::user();
 
         try {
@@ -226,25 +232,36 @@ class MeetingNoteController extends Controller implements HasMiddleware
     }
 
     /**
-     * Toggle the current user's personal pin -- entirely independent of
-     * every other user's pin state, per spec.
+     * Pin/unpin is a shared, note-level toggle controlled solely by the
+     * note's creator -- pinning surfaces it on the Sticky Notes dashboard
+     * of every checked-off Internal Attendee too, not just the creator's
+     * own. Only the creator (not "any of the 4 allowed roles") may call
+     * this, per spec.
      */
     public function togglePin(string $id)
     {
-        if ($guardError = $this->assertAllowedRole()) {
-            return $guardError;
-        }
-
         try {
-            $note = MeetingNote::findOrFail($id);
+            $note = MeetingNote::with('attendees.user')->findOrFail($id);
+            /** @var User $user */
             $user = Auth::user();
 
-            $alreadyPinned = $user->pinnedMeetingNotes()->where('document_id', $note->id)->exists();
+            if ($note->created_by !== $user->id) {
+                return ResponseHelper::jsonResponse(false, 'Only the note\'s creator can pin or unpin it.', null, 403);
+            }
+
+            $userIds = $note->attendees
+                ->pluck('user.id')
+                ->filter()
+                ->push($user->id)
+                ->unique()
+                ->values();
+
+            $alreadyPinned = $note->pinnedByUsers()->where('users.id', $user->id)->exists();
 
             if ($alreadyPinned) {
-                $user->pinnedMeetingNotes()->detach($note->id);
+                $note->pinnedByUsers()->detach($userIds);
             } else {
-                $user->pinnedMeetingNotes()->syncWithoutDetaching([$note->id]);
+                $note->pinnedByUsers()->syncWithoutDetaching($userIds);
             }
 
             return ResponseHelper::jsonResponse(true, $alreadyPinned ? 'Unpinned from Dashboard' : 'Pinned to Dashboard', ['is_pinned' => ! $alreadyPinned], 200);
@@ -266,8 +283,11 @@ class MeetingNoteController extends Controller implements HasMiddleware
         }
 
         try {
-            $notes = Auth::user()->pinnedMeetingNotes()
-                ->with(['creator'])
+            /** @var User $user */
+            $user = Auth::user();
+
+            $notes = $user->pinnedMeetingNotes()
+                ->with(self::RELATIONS)
                 ->orderByDesc('user_pinned_notes.created_at')
                 ->get()
                 ->each(fn ($note) => $note->is_pinned = true);
