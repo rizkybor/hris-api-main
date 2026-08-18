@@ -24,8 +24,12 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(string $meetingNoteId)
+    public function index(Request $request, string $meetingNoteId)
     {
+        if (! $request->user()->hasAnyRole(self::ALLOWED_ROLES)) {
+            return ResponseHelper::jsonResponse(false, 'You do not have access to Meeting Note.', null, 403);
+        }
+
         try {
             $note = MeetingNote::findOrFail($meetingNoteId);
 
@@ -69,9 +73,12 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
             }
 
             $mentionedIds = $validated['mentioned_employee_ids'] ?? [];
-            $invalidMentions = collect($mentionedIds)->reject(fn ($id) => $note->isEmployeeAttendee($id));
-            if ($invalidMentions->isNotEmpty()) {
-                return ResponseHelper::jsonResponse(false, 'You can only mention employees checked in as Internal Attendees', null, 422);
+            if (! empty($mentionedIds)) {
+                $attendeeIds = $note->attendees()->pluck('employee_profiles.id');
+                $invalidMentions = collect($mentionedIds)->diff($attendeeIds);
+                if ($invalidMentions->isNotEmpty()) {
+                    return ResponseHelper::jsonResponse(false, 'You can only mention employees checked in as Internal Attendees', null, 422);
+                }
             }
 
             $comment = $note->comments()->create([
