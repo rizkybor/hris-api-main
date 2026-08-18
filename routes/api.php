@@ -9,6 +9,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
 use App\Http\Controllers\DocumentLetterController;
+use App\Http\Controllers\MeetingNoteCommentController;
 use App\Http\Controllers\MeetingNoteController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateTemplateController;
@@ -336,6 +337,10 @@ Route::prefix('v1')
             Route::post('meeting-notes/{id}/heartbeat', [MeetingNoteController::class, 'heartbeat']);
             Route::get('meeting-notes/{id}/viewers', [MeetingNoteController::class, 'viewers']);
             Route::apiResource('meeting-notes', MeetingNoteController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+
+            Route::get('meeting-notes/{meetingNoteId}/comments', [MeetingNoteCommentController::class, 'index']);
+            Route::post('meeting-notes/{meetingNoteId}/comments', [MeetingNoteCommentController::class, 'store']);
+            Route::delete('meeting-note-comments/{id}', [MeetingNoteCommentController::class, 'destroy']);
 
             // Document Letters: Certificates
             Route::get('certificate-setting', [CertificateSettingController::class, 'show']);
