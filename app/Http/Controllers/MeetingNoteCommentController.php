@@ -4,13 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Resources\MeetingNoteCommentResource;
+use App\Models\EmployeeProfile;
 use App\Models\MeetingNote;
 use App\Models\MeetingNoteComment;
+use App\Models\User;
+use App\Notifications\MeetingNoteCommentMention;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class MeetingNoteCommentController extends Controller implements HasMiddleware
@@ -26,7 +30,10 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
 
     public function index(Request $request, string $meetingNoteId)
     {
-        if (! $request->user()->hasAnyRole(self::ALLOWED_ROLES)) {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $user->hasAnyRole(self::ALLOWED_ROLES)) {
             return ResponseHelper::jsonResponse(false, 'You do not have access to Meeting Note.', null, 403);
         }
 
@@ -54,6 +61,7 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
 
         try {
             $note = MeetingNote::findOrFail($meetingNoteId);
+            /** @var User $user */
             $user = $request->user();
 
             if (! $user->hasAnyRole(self::ALLOWED_ROLES)) {
@@ -88,6 +96,10 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
                 if ($invalidMentions->isNotEmpty()) {
                     return ResponseHelper::jsonResponse(false, 'You can only mention employees checked in as Internal Attendees, or the note\'s creator', null, 422);
                 }
+
+                if ($employeeId && in_array($employeeId, $mentionedIds, true)) {
+                    return ResponseHelper::jsonResponse(false, 'You can\'t mention yourself', null, 422);
+                }
             }
 
             $comment = $note->comments()->create([
@@ -98,6 +110,9 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
             ]);
 
             $comment->load(['user', 'parent.user']);
+
+            $this->notifyMentionedEmployees($comment, $mentionedIds);
+            $this->logCommentActivity($note, $comment, $user, $mentionedIds);
 
             return ResponseHelper::jsonResponse(true, 'Comment Added Successfully', new MeetingNoteCommentResource($comment), 201);
         } catch (ModelNotFoundException $e) {
@@ -111,6 +126,7 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
     {
         try {
             $comment = MeetingNoteComment::findOrFail($id);
+            /** @var User $user */
             $user = $request->user();
 
             if (! $user->hasRole('manager') && $comment->user_id !== $user->id) {
@@ -125,5 +141,54 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * @param  array<int>  $mentionedIds
+     */
+    private function notifyMentionedEmployees(MeetingNoteComment $comment, array $mentionedIds): void
+    {
+        if (empty($mentionedIds)) {
+            return;
+        }
+
+        $mentionedUsers = EmployeeProfile::with('user')
+            ->whereIn('id', $mentionedIds)
+            ->get()
+            ->pluck('user')
+            ->filter();
+
+        Notification::send($mentionedUsers, new MeetingNoteCommentMention($comment));
+    }
+
+    /**
+     * @param  array<int>  $mentionedIds
+     */
+    private function logCommentActivity(MeetingNote $note, MeetingNoteComment $comment, User $user, array $mentionedIds): void
+    {
+        $description = $comment->parent_id ? 'replied to a comment' : 'commented';
+
+        if (! empty($mentionedIds)) {
+            $mentionedNames = EmployeeProfile::with('user')
+                ->whereIn('id', $mentionedIds)
+                ->get()
+                ->pluck('user.name')
+                ->filter()
+                ->implode(', ');
+
+            if ($mentionedNames) {
+                $description .= " and mentioned {$mentionedNames}";
+            }
+        }
+
+        activity('Meeting Note')
+            ->causedBy($user)
+            ->performedOn($note)
+            ->event('commented')
+            ->withProperties([
+                'comment_id' => $comment->id,
+                'mentioned_employee_ids' => $mentionedIds,
+            ])
+            ->log("{$description} on \"{$note->title}\"");
     }
 }
