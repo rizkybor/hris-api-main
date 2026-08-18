@@ -267,7 +267,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
 
         try {
             $notes = Auth::user()->pinnedMeetingNotes()
-                ->with(['creator'])
+                ->with(self::RELATIONS)
                 ->orderByDesc('user_pinned_notes.created_at')
                 ->get()
                 ->each(fn ($note) => $note->is_pinned = true);
