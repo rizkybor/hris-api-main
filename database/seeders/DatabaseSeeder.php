@@ -24,6 +24,10 @@ class DatabaseSeeder extends Seeder
             FilesCompanySeeder::class,
             SdmFieldSeeder::class,
 
+            // Business Documents: reference data for Letters (Surat) numbering
+            LetterCodeSeeder::class,
+            DivisionCodeSeeder::class,
+
             // 3. Seed employee profiles with complete data (User, Profile, Job, Bank, Emergency Contacts)
             // EmployeeProfileSeeder::class,
 

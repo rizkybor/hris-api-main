@@ -213,6 +213,24 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
+        'document-letter' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'approve',
+        ],
+
+        'meeting-note' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'pin',
+        ],
+
         'certificate' => [
             'menu',
             'list',

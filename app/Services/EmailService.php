@@ -2,10 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\DocumentLetter;
 use App\Models\LeaveRequest;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\InfrastructureTool;
+use App\Models\User;
+use App\Notifications\DocumentLetterApproved;
+use App\Notifications\DocumentLetterRejected;
+use App\Notifications\DocumentLetterSubmitted;
 use App\Notifications\LeaveRequestApproved;
 use App\Notifications\LeaveRequestCreated;
 use App\Notifications\LeaveRequestRejected;
@@ -79,6 +84,49 @@ class EmailService
 
             $user->notify(new PayrollPaid($payrollDetail));
         }
+    }
+
+    /**
+     * Notify every Finance Manager account that an Official Memo is waiting
+     * for their approval.
+     */
+    public function sendDocumentLetterSubmittedNotification(DocumentLetter $documentLetter): void
+    {
+        $financeManagers = User::role('finance')->get();
+
+        if ($financeManagers->isEmpty()) {
+            return;
+        }
+
+        Notification::send($financeManagers, new DocumentLetterSubmitted($documentLetter));
+    }
+
+    /**
+     * Notify the document's author once a Finance Manager approves it.
+     */
+    public function sendDocumentLetterApprovedNotification(DocumentLetter $documentLetter): void
+    {
+        $user = $documentLetter->creator;
+
+        if (! $user || ! $user->email) {
+            return;
+        }
+
+        $user->notify(new DocumentLetterApproved($documentLetter));
+    }
+
+    /**
+     * Notify the document's author once a Finance Manager rejects it.
+     */
+    public function sendDocumentLetterRejectedNotification(DocumentLetter $documentLetter): void
+    {
+        $user = $documentLetter->creator;
+
+        if (! $user || ! $user->email) {
+            return;
+        }
+
+        $user->notify(new DocumentLetterRejected($documentLetter));
     }
 
     // ================= NEW METHOD =================
