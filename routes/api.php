@@ -325,6 +325,7 @@ Route::prefix('v1')
             Route::post('document-letters/{id}/submit', [DocumentLetterController::class, 'submit']);
             Route::post('document-letters/{id}/approve', [DocumentLetterController::class, 'approve']);
             Route::post('document-letters/{id}/reject', [DocumentLetterController::class, 'reject']);
+            Route::get('document-letters/{id}/export-pdf', [DocumentLetterController::class, 'exportPdf']);
             Route::apiResource('document-letters', DocumentLetterController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 
             // Document Letters: Meeting Note -- shared repository restricted to
