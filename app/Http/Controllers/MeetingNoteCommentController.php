@@ -61,7 +61,9 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
             }
 
             $employeeId = $user->employeeProfile?->id;
-            if (! $employeeId || ! $note->isEmployeeAttendee($employeeId)) {
+            $isAttendee = $employeeId && $note->isEmployeeAttendee($employeeId);
+            $isCreator = $note->created_by === $user->id;
+            if (! $isAttendee && ! $isCreator) {
                 return ResponseHelper::jsonResponse(false, 'Only employees checked in as Internal Attendees can comment on this note', null, 403);
             }
 

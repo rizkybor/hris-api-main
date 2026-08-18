@@ -44,12 +44,20 @@ class MeetingNoteResource extends JsonResource
                 'size_file' => $file->size_file,
             ])),
             'is_pinned' => $this->when(isset($this->is_pinned), fn () => (bool) $this->is_pinned),
-            // Only employees checked off in Internal Attendees may use the
-            // comment feature on this note.
+            // Employees checked off in Internal Attendees may use the comment
+            // feature, and so may the note's own creator even if they didn't
+            // check themselves in as an attendee.
             'can_comment' => $this->when($this->relationLoaded('attendees'), function () {
-                $employeeId = Auth::user()?->employeeProfile?->id;
+                $user = Auth::user();
+                if (! $user) {
+                    return false;
+                }
 
-                return $employeeId && $this->attendees->contains('id', $employeeId);
+                $employeeId = $user->employeeProfile?->id;
+                $isAttendee = $employeeId && $this->attendees->contains('id', $employeeId);
+                $isCreator = $this->created_by === $user->id;
+
+                return $isAttendee || $isCreator;
             }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
