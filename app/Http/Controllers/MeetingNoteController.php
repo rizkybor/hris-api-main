@@ -226,25 +226,35 @@ class MeetingNoteController extends Controller implements HasMiddleware
     }
 
     /**
-     * Toggle the current user's personal pin -- entirely independent of
-     * every other user's pin state, per spec.
+     * Pin/unpin is a shared, note-level toggle controlled solely by the
+     * note's creator -- pinning surfaces it on the Sticky Notes dashboard
+     * of every checked-off Internal Attendee too, not just the creator's
+     * own. Only the creator (not "any of the 4 allowed roles") may call
+     * this, per spec.
      */
     public function togglePin(string $id)
     {
-        if ($guardError = $this->assertAllowedRole()) {
-            return $guardError;
-        }
-
         try {
-            $note = MeetingNote::findOrFail($id);
+            $note = MeetingNote::with('attendees.user')->findOrFail($id);
             $user = Auth::user();
 
-            $alreadyPinned = $user->pinnedMeetingNotes()->where('document_id', $note->id)->exists();
+            if ($note->created_by !== $user->id) {
+                return ResponseHelper::jsonResponse(false, 'Only the note\'s creator can pin or unpin it.', null, 403);
+            }
+
+            $userIds = $note->attendees
+                ->pluck('user.id')
+                ->filter()
+                ->push($user->id)
+                ->unique()
+                ->values();
+
+            $alreadyPinned = $note->pinnedByUsers()->where('users.id', $user->id)->exists();
 
             if ($alreadyPinned) {
-                $user->pinnedMeetingNotes()->detach($note->id);
+                $note->pinnedByUsers()->detach($userIds);
             } else {
-                $user->pinnedMeetingNotes()->syncWithoutDetaching([$note->id]);
+                $note->pinnedByUsers()->syncWithoutDetaching($userIds);
             }
 
             return ResponseHelper::jsonResponse(true, $alreadyPinned ? 'Unpinned from Dashboard' : 'Pinned to Dashboard', ['is_pinned' => ! $alreadyPinned], 200);
