@@ -290,14 +290,18 @@ Route::prefix('v1')
             // =====================================================================
             // Document Letters (frontend "Document Letters" menu / DocumentsHub.vue)
             // Sub-modules below are ordered to match the hub's card order:
-            // Purchase Order, Invoice, Payment Receipt, Letters, Official Memo,
-            // Meeting Note, Certificates.
+            // Surat-Surat, Invoice, Payment Receipt, Purchase Order, Official
+            // Memo, Meeting Note, Sertifikat.
             // =====================================================================
 
-            // Document Letters: Purchase Orders
-            Route::get('purchase-orders/{id}/export-pdf', [PurchaseOrderController::class, 'exportPdf']);
-            Route::post('purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel']);
-            Route::apiResource('purchase-orders', PurchaseOrderController::class);
+            // Document Letters: Letters (Surat)
+            Route::get('letters/{id}/export-pdf', [LetterController::class, 'exportPdf']);
+            Route::post('letters/{id}/cancel', [LetterController::class, 'cancel']);
+            Route::apiResource('letters', LetterController::class);
+
+            // Document Letters: Letters reference tables (Letter Codes, Division Codes)
+            Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::apiResource('division-codes', DivisionCodeController::class)->only(['index', 'store', 'update', 'destroy']);
 
             // Document Letters: Invoices
             Route::get('invoices/{id}/export-pdf', [InvoiceController::class, 'exportPdf']);
@@ -310,14 +314,10 @@ Route::prefix('v1')
             Route::post('payment-receipts/{id}/cancel', [PaymentReceiptController::class, 'cancel']);
             Route::apiResource('payment-receipts', PaymentReceiptController::class);
 
-            // Document Letters: Letters (Surat)
-            Route::get('letters/{id}/export-pdf', [LetterController::class, 'exportPdf']);
-            Route::post('letters/{id}/cancel', [LetterController::class, 'cancel']);
-            Route::apiResource('letters', LetterController::class);
-
-            // Document Letters: Letters reference tables (Letter Codes, Division Codes)
-            Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);
-            Route::apiResource('division-codes', DivisionCodeController::class)->only(['index', 'store', 'update', 'destroy']);
+            // Document Letters: Purchase Orders
+            Route::get('purchase-orders/{id}/export-pdf', [PurchaseOrderController::class, 'exportPdf']);
+            Route::post('purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel']);
+            Route::apiResource('purchase-orders', PurchaseOrderController::class);
 
             // Document Letters: Official Memo (Nota Dinas) -- approval workflow,
             // recipient is always Finance Manager (the sole approver)
