@@ -22,7 +22,7 @@ class AuthRepository implements AuthRepositoryInterface
 
             /** @var User $user */
             $user = Auth::user();
-            $user->load('roles');
+            $user->load(['roles', 'permissions']);
             $user->token = $user->createToken('auth_token')->plainTextToken;
 
             DB::commit();
