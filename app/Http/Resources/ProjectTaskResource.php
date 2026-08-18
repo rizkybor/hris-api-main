@@ -33,8 +33,18 @@ class ProjectTaskResource extends JsonResource
                 }
 
                 $employeeId = $user->employeeProfile?->id;
+                if (! $employeeId) {
+                    return false;
+                }
 
-                return $employeeId && $this->project && $this->project->isEmployeeProjectParticipant($employeeId);
+                // assignee_id isn't restricted to the project's own team
+                // roster, so the assignee is checked separately from
+                // isEmployeeProjectParticipant -- otherwise someone assigned
+                // to a task outside their team couldn't comment on it.
+                $isAssignee = $this->assignee_id === $employeeId;
+                $isParticipant = $this->project && $this->project->isEmployeeProjectParticipant($employeeId);
+
+                return $isAssignee || $isParticipant;
             }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
