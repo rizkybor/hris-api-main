@@ -10,6 +10,9 @@ use App\Http\Requests\ProjectUpdateRequest;
 use App\Http\Resources\PaginateResource;
 use App\Http\Resources\ProjectResource;
 use App\Interfaces\ProjectRepositoryInterface;
+use App\Models\Project;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,7 +36,8 @@ class ProjectController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['project-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['project-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['project-delete']), only: ['destroy']),
-            new Middleware(EnsureProjectMembership::class, only: ['show']),
+            new Middleware(PermissionMiddleware::using(['project-export']), only: ['exportProgress']),
+            new Middleware(EnsureProjectMembership::class, only: ['show', 'exportProgress']),
         ];
     }
 
@@ -155,5 +159,89 @@ class ProjectController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * Stream a client-facing PDF report of a single project's progress:
+     * task breakdown by status, completion percentage, and timeline.
+     */
+    public function exportProgress(string $id)
+    {
+        $project = Project::with([
+            'projectLeader.user',
+            'projectLeader.jobInformation',
+            'teams',
+            'tasks.assignee.user',
+        ])->findOrFail($id);
+
+        $tasks = $project->tasks;
+        $totalTasks = $tasks->count();
+        $doneTasks = $tasks->where('status', 'done')->values();
+        $ongoingTasks = $tasks->whereIn('status', ['in_progress', 'review'])->values();
+        $pendingTasks = $tasks->where('status', 'todo')->values();
+        $cancelledTasks = $tasks->where('status', 'cancelled')->values();
+        $progress = $totalTasks > 0 ? round(($doneTasks->count() / $totalTasks) * 100) : 0;
+
+        $timeline = $this->buildTimeline($project, $progress);
+
+        $pdf = Pdf::loadView('pdf.project-progress', [
+            'project' => $project,
+            'totalTasks' => $totalTasks,
+            'doneTasks' => $doneTasks,
+            'ongoingTasks' => $ongoingTasks,
+            'pendingTasks' => $pendingTasks,
+            'cancelledTasks' => $cancelledTasks,
+            'progress' => $progress,
+            'timeline' => $timeline,
+            'generatedAt' => Carbon::now(),
+        ])->setPaper('a4');
+
+        $filename = str_replace(' ', '-', $project->name).'-progress-report.pdf';
+
+        return $pdf->stream($filename);
+    }
+
+    /**
+     * Elapsed/expected-vs-actual pace, mirroring the frontend's
+     * getProjectHealth() so the PDF and the in-app deadline banner agree.
+     */
+    private function buildTimeline(Project $project, int $actualProgress): array
+    {
+        if (! $project->start_date || ! $project->end_date) {
+            return [
+                'daysElapsed' => null,
+                'totalDurationDays' => null,
+                'daysRemaining' => null,
+                'expectedProgress' => null,
+                'status' => 'No timeline set',
+            ];
+        }
+
+        $start = Carbon::parse($project->start_date)->startOfDay();
+        $end = Carbon::parse($project->end_date)->startOfDay();
+        $today = Carbon::now()->startOfDay();
+
+        $totalDurationDays = max(1, $start->diffInDays($end));
+        $daysElapsed = min($totalDurationDays, max(0, $start->diffInDays($today, false)));
+        $daysRemaining = $today->diffInDays($end, false);
+        $expectedProgress = (int) round(($daysElapsed / $totalDurationDays) * 100);
+
+        if (in_array($project->status, ['completed', 'cancelled'])) {
+            $status = $project->status === 'completed' ? 'Completed' : 'Cancelled';
+        } elseif ($daysRemaining < 0 && $actualProgress < 100) {
+            $status = 'Overdue';
+        } elseif (($expectedProgress - $actualProgress) >= 10) {
+            $status = 'Behind Schedule';
+        } else {
+            $status = 'On Track';
+        }
+
+        return [
+            'daysElapsed' => $daysElapsed,
+            'totalDurationDays' => $totalDurationDays,
+            'daysRemaining' => $daysRemaining,
+            'expectedProgress' => $expectedProgress,
+            'status' => $status,
+        ];
     }
 }
