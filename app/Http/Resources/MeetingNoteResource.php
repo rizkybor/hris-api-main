@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 
 class MeetingNoteResource extends JsonResource
 {
@@ -43,6 +44,13 @@ class MeetingNoteResource extends JsonResource
                 'size_file' => $file->size_file,
             ])),
             'is_pinned' => $this->when(isset($this->is_pinned), fn () => (bool) $this->is_pinned),
+            // Only employees checked off in Internal Attendees may use the
+            // comment feature on this note.
+            'can_comment' => $this->when($this->relationLoaded('attendees'), function () {
+                $employeeId = Auth::user()?->employeeProfile?->id;
+
+                return $employeeId && $this->attendees->contains('id', $employeeId);
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

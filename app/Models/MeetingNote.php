@@ -63,6 +63,20 @@ class MeetingNote extends Model
         return $this->belongsToMany(EmployeeProfile::class, 'meeting_note_attendees', 'meeting_note_id', 'employee_id');
     }
 
+    public function comments()
+    {
+        return $this->hasMany(MeetingNoteComment::class);
+    }
+
+    /**
+     * Only employees checked off in "Internal Attendees" may comment on or
+     * be mentioned in this note -- mirrors Project::isEmployeeProjectParticipant.
+     */
+    public function isEmployeeAttendee(int $employeeId): bool
+    {
+        return $this->attendees()->where('employee_profiles.id', $employeeId)->exists();
+    }
+
     public function attachments()
     {
         return $this->hasMany(MeetingNoteAttachment::class);
