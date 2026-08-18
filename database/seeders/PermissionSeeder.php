@@ -42,6 +42,7 @@ class PermissionSeeder extends Seeder
             'create',
             'edit',
             'delete',
+            'export',
         ],
 
         'task' => [
