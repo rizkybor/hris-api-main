@@ -6,6 +6,7 @@ use App\Helpers\ResponseHelper;
 use App\Http\Requests\ProjectCalculationRequest;
 use App\Http\Resources\PaginateResource;
 use App\Http\Resources\ProjectCalculationResource;
+use App\Models\LandingPageRateSetting;
 use App\Models\ProjectCalculation;
 use App\Models\ProjectRateSetting;
 use App\Services\ProjectCalculator\ProjectCalculatorService;
@@ -42,6 +43,52 @@ class ProjectCalculationController extends Controller implements HasMiddleware
         ]);
     }
 
+    private function currentLandingPageRateSetting(): LandingPageRateSetting
+    {
+        return LandingPageRateSetting::first() ?? LandingPageRateSetting::create([
+            'server_dedicated_price' => 2000000,
+            'server_shared_price' => 1000000,
+            'design_dedicated_price' => 4000000,
+            'design_template_price' => 1500000,
+            'default_rate_developer' => 100000,
+            'margin_percent' => 30,
+        ]);
+    }
+
+    /**
+     * Landing Page uses a completely separate calculation method (fixed
+     * package pricing, not hourly items) -- this just picks which one to
+     * call so preview()/store()/update() don't each repeat the branch.
+     */
+    private function computeResult(array $data): array
+    {
+        if ($data['scenario'] === 'landing_page') {
+            return $this->calculatorService->calculateLandingPage(
+                $data,
+                $this->currentLandingPageRateSetting(),
+                $data['include_ppn'] ?? false,
+                $data['ppn_percent'] ?? 11,
+                $data['include_pph'] ?? false,
+                $data['pph_percent'] ?? 0,
+            );
+        }
+
+        $rateSetting = $this->currentRateSetting();
+
+        return $this->calculatorService->calculate(
+            $data['scenario'],
+            $data['items'],
+            $rateSetting->rate_sell_per_hour,
+            $data['pm_overhead_percent'] ?? null,
+            $data['infra_setup_cost'] ?? null,
+            (float) $rateSetting->total_productive_hours_per_month,
+            $data['include_ppn'] ?? false,
+            $data['ppn_percent'] ?? 11,
+            $data['include_pph'] ?? false,
+            $data['pph_percent'] ?? 0,
+        );
+    }
+
     public function index(Request $request)
     {
         try {
@@ -68,6 +115,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 COALESCE(AVG(grand_total), 0) as average_value,
                 COUNT(CASE WHEN scenario = "feature" THEN 1 END) as total_feature,
                 COUNT(CASE WHEN scenario = "build" THEN 1 END) as total_build,
+                COUNT(CASE WHEN scenario = "landing_page" THEN 1 END) as total_landing_page,
                 COUNT(CASE WHEN MONTH(created_at) = ? AND YEAR(created_at) = ? THEN 1 END) as this_month
             ', [now()->month, now()->year])->first();
 
@@ -77,6 +125,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'average_value' => (float) $stats->average_value,
                 'total_feature' => (int) $stats->total_feature,
                 'total_build' => (int) $stats->total_build,
+                'total_landing_page' => (int) $stats->total_landing_page,
                 'this_month' => (int) $stats->this_month,
             ], 200);
         } catch (\Throwable $e) {
@@ -93,20 +142,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
     {
         try {
             $data = $request->validated();
-            $rateSetting = $this->currentRateSetting();
-
-            $result = $this->calculatorService->calculate(
-                $data['scenario'],
-                $data['items'],
-                $rateSetting->rate_sell_per_hour,
-                $data['pm_overhead_percent'] ?? null,
-                $data['infra_setup_cost'] ?? null,
-                (float) $rateSetting->total_productive_hours_per_month,
-                $data['include_ppn'] ?? false,
-                $data['ppn_percent'] ?? 11,
-                $data['include_pph'] ?? false,
-                $data['pph_percent'] ?? 0,
-            );
+            $result = $this->computeResult($data);
 
             return ResponseHelper::jsonResponse(true, 'Preview Calculated Successfully', $result, 200);
         } catch (\Throwable $e) {
@@ -120,19 +156,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
 
         try {
             $rateSetting = $this->currentRateSetting();
-
-            $result = $this->calculatorService->calculate(
-                $data['scenario'],
-                $data['items'],
-                $rateSetting->rate_sell_per_hour,
-                $data['pm_overhead_percent'] ?? null,
-                $data['infra_setup_cost'] ?? null,
-                (float) $rateSetting->total_productive_hours_per_month,
-                $data['include_ppn'] ?? false,
-                $data['ppn_percent'] ?? 11,
-                $data['include_pph'] ?? false,
-                $data['pph_percent'] ?? 0,
-            );
+            $result = $this->computeResult($data);
 
             $calculation = ProjectCalculation::create([
                 'name' => $data['name'],
@@ -147,6 +171,8 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'subtotal' => $result['subtotal'],
                 'buffer_total' => $result['buffer_total'],
                 'pm_overhead_total' => $result['pm_overhead_total'],
+                'margin_percent' => $result['margin_percent'] ?? null,
+                'margin_total' => $result['margin_total'] ?? 0,
                 'grand_total' => $result['grand_total'],
                 'include_ppn' => $data['include_ppn'] ?? false,
                 'ppn_percent' => $data['ppn_percent'] ?? 11,
@@ -187,19 +213,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
         try {
             $calculation = ProjectCalculation::findOrFail($id);
             $rateSetting = $this->currentRateSetting();
-
-            $result = $this->calculatorService->calculate(
-                $data['scenario'],
-                $data['items'],
-                $rateSetting->rate_sell_per_hour,
-                $data['pm_overhead_percent'] ?? null,
-                $data['infra_setup_cost'] ?? null,
-                (float) $rateSetting->total_productive_hours_per_month,
-                $data['include_ppn'] ?? false,
-                $data['ppn_percent'] ?? 11,
-                $data['include_pph'] ?? false,
-                $data['pph_percent'] ?? 0,
-            );
+            $result = $this->computeResult($data);
 
             $calculation->update([
                 'name' => $data['name'],
@@ -214,6 +228,8 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'subtotal' => $result['subtotal'],
                 'buffer_total' => $result['buffer_total'],
                 'pm_overhead_total' => $result['pm_overhead_total'],
+                'margin_percent' => $result['margin_percent'] ?? null,
+                'margin_total' => $result['margin_total'] ?? 0,
                 'grand_total' => $result['grand_total'],
                 'include_ppn' => $data['include_ppn'] ?? false,
                 'ppn_percent' => $data['ppn_percent'] ?? 11,

@@ -23,6 +23,8 @@ class ProjectCalculationResource extends JsonResource
             'subtotal' => (float) $this->subtotal,
             'buffer_total' => (float) $this->buffer_total,
             'pm_overhead_total' => (float) $this->pm_overhead_total,
+            'margin_percent' => $this->margin_percent !== null ? (float) $this->margin_percent : null,
+            'margin_total' => (float) $this->margin_total,
             'grand_total' => (float) $this->grand_total,
             'include_ppn' => (bool) $this->include_ppn,
             'ppn_percent' => (float) $this->ppn_percent,
