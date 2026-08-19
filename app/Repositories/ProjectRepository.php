@@ -6,6 +6,7 @@ use App\Constants\CacheConstants;
 use App\DTOs\ProjectDto;
 use App\Interfaces\ProjectRepositoryInterface;
 use App\Models\Project;
+use App\Models\Team;
 use App\Models\TeamMember;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -104,6 +105,8 @@ class ProjectRepository implements ProjectRepositoryInterface
                 $query->withCount('members');
             },
             'teams.leader',
+            'members',
+            'members.user',
             'tasks',
         ])
             ->findOrFail($id);
@@ -120,7 +123,7 @@ class ProjectRepository implements ProjectRepositoryInterface
                 $project->update(['photo' => $photoPath]);
             }
 
-            $this->assignTeams($project->id, $data['teams'] ?? []);
+            $this->applyTeamAssignment($project, $data);
 
             $this->clearStatisticsCache();
 
@@ -145,12 +148,43 @@ class ProjectRepository implements ProjectRepositoryInterface
                 $project->update(['photo' => $photoPath]);
             }
 
-            $this->assignTeams($project->id, $data['teams'] ?? []);
+            if (array_key_exists('team_assignment_mode', $data) || array_key_exists('team_id', $data) || array_key_exists('member_employee_ids', $data)) {
+                $this->applyTeamAssignment($project, $data);
+            }
 
             $this->clearStatisticsCache();
 
             return $project;
         });
+    }
+
+    /**
+     * "team" mode: exactly one Team supplies both the project leader (its
+     * team_lead_id) and the member roster (its active TeamMembers) --
+     * individual picks are cleared. "employee" mode: the reverse -- an
+     * individually-picked member roster is stored directly and any Team
+     * assignment is cleared, leaving project_leader_id as whatever the
+     * request/DTO already set.
+     */
+    private function applyTeamAssignment(Project $project, array $data): void
+    {
+        $mode = $data['team_assignment_mode'] ?? $project->team_assignment_mode ?? 'employee';
+
+        if ($mode === 'team') {
+            $team = Team::with('leader.employeeProfile')->find($data['team_id'] ?? null);
+
+            $this->assignTeams($project->id, $team ? [$team->id] : []);
+            $this->assignMembers($project->id, []);
+
+            if ($team?->leader?->employeeProfile) {
+                $project->update(['project_leader_id' => $team->leader->employeeProfile->id]);
+            }
+
+            return;
+        }
+
+        $this->assignTeams($project->id, []);
+        $this->assignMembers($project->id, $data['member_employee_ids'] ?? []);
     }
 
     public function delete(string $id): Project
@@ -275,6 +309,11 @@ class ProjectRepository implements ProjectRepositoryInterface
         }
 
         $project->teams()->sync($syncPayload);
+    }
+
+    private function assignMembers(int $projectId, array $employeeIds): void
+    {
+        Project::findOrFail($projectId)->members()->sync($employeeIds);
     }
 
     private function clearStatisticsCache(): void
