@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,7 +20,7 @@ class TeamResource extends JsonResource
             'name' => $this->name,
             'expected_size' => $this->expected_size,
             'description' => $this->description,
-            'icon' => $this->icon ? asset('storage/'.$this->icon) : null,
+            'icon' => CloudinaryUrl::image($this->icon),
             'department' => $this->department,
             'status' => $this->status,
             'leader' => new UserResource($this->whenLoaded('leader')),

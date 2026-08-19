@@ -8,15 +8,18 @@ use App\Interfaces\ProjectRepositoryInterface;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\TeamMember;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class ProjectRepository implements ProjectRepositoryInterface
 {
+    public function __construct(private CloudinaryManager $cloudinary) {}
+
     public function getAll(
         ?string $search,
         ?string $status,
@@ -37,11 +40,15 @@ class ProjectRepository implements ProjectRepositoryInterface
             ->withCount('tasks')
             ->orderByDesc('created_at');
 
-        if (Auth::user()->hasRole('staff')) {
-            $employeeId = Auth::user()->employeeProfile->id;
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if ($user->hasRole('staff')) {
+            $user->loadMissing('employeeProfile.jobInformation');
+            $employeeId = $user->employeeProfile->id;
 
             // Get team ID from JobInformation
-            $jobInfoTeamId = Auth::user()->employeeProfile->jobInformation->team_id ?? null;
+            $jobInfoTeamId = $user->employeeProfile->jobInformation->team_id ?? null;
 
             // Get all team IDs that the employee is currently a member of (not left)
             $teamMemberIds = TeamMember::where('employee_id', $employeeId)
@@ -120,14 +127,9 @@ class ProjectRepository implements ProjectRepositoryInterface
 
     public function create(array $data): Project
     {
-        return DB::transaction(function () use ($data) {
+        $project = DB::transaction(function () use ($data) {
             $projectDto = ProjectDto::fromArray($data);
             $project = Project::create($projectDto->toArray());
-
-            if (isset($data['photo'])) {
-                $photoPath = $data['photo']->store('project-photos', 'public');
-                $project->update(['photo' => $photoPath]);
-            }
 
             $this->applyTeamAssignment($project, $data);
 
@@ -135,24 +137,29 @@ class ProjectRepository implements ProjectRepositoryInterface
 
             return $project;
         });
+
+        // Uploaded outside the transaction -- a slow/failed Cloudinary call
+        // must not hold DB row locks or force a rollback of an otherwise
+        // successful project creation.
+        if (isset($data['photo'])) {
+            $publicId = $this->cloudinary->uploadImage(
+                $data['photo'],
+                CloudinaryFolders::projectFiles(),
+                CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($project->name, $project->id).'-photo')
+            );
+            $project->update(['photo' => $publicId]);
+        }
+
+        return $project;
     }
 
     public function update(string $id, array $data): Project
     {
-        return DB::transaction(function () use ($id, $data) {
+        $project = DB::transaction(function () use ($id, $data) {
             $project = $this->getById($id);
 
             $projectDto = ProjectDto::fromArrayForUpdate($data, $project);
             $project->update($projectDto->toArray());
-
-            if (isset($data['photo'])) {
-                if ($project->photo && Storage::disk('public')->exists($project->photo)) {
-                    Storage::disk('public')->delete($project->photo);
-                }
-
-                $photoPath = $data['photo']->store('project-photos', 'public');
-                $project->update(['photo' => $photoPath]);
-            }
 
             if (array_key_exists('team_assignment_mode', $data) || array_key_exists('team_id', $data) || array_key_exists('member_employee_ids', $data)) {
                 $this->applyTeamAssignment($project, $data);
@@ -162,6 +169,24 @@ class ProjectRepository implements ProjectRepositoryInterface
 
             return $project;
         });
+
+        // Cloudinary calls stay outside the transaction (see create() above).
+        if (isset($data['photo'])) {
+            $oldPhoto = $project->photo;
+
+            $publicId = $this->cloudinary->uploadImage(
+                $data['photo'],
+                CloudinaryFolders::projectFiles(),
+                CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($project->name, $project->id).'-photo')
+            );
+            $project->update(['photo' => $publicId]);
+
+            if ($oldPhoto) {
+                $this->cloudinary->delete($oldPhoto);
+            }
+        }
+
+        return $project;
     }
 
     /**
@@ -195,12 +220,8 @@ class ProjectRepository implements ProjectRepositoryInterface
 
     public function delete(string $id): Project
     {
-        return DB::transaction(function () use ($id) {
+        $project = DB::transaction(function () use ($id) {
             $project = $this->getById($id);
-
-            if ($project->photo && Storage::disk('public')->exists($project->photo)) {
-                Storage::disk('public')->delete($project->photo);
-            }
 
             $project->delete();
 
@@ -208,6 +229,12 @@ class ProjectRepository implements ProjectRepositoryInterface
 
             return $project;
         });
+
+        if ($project->photo) {
+            $this->cloudinary->delete($project->photo);
+        }
+
+        return $project;
     }
 
     public function getStatistics(): array

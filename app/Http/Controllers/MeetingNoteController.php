@@ -11,6 +11,9 @@ use App\Models\MeetingNote;
 use App\Models\MeetingNoteAttachment;
 use App\Models\MeetingNoteViewer;
 use App\Models\User;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryResourceType;
 use App\Services\DocumentNumberService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -19,7 +22,6 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class MeetingNoteController extends Controller implements HasMiddleware
@@ -34,7 +36,10 @@ class MeetingNoteController extends Controller implements HasMiddleware
 
     private const RELATIONS = ['creator.employeeProfile', 'updater', 'attendees.user', 'attachments'];
 
-    public function __construct(private DocumentNumberService $numberService) {}
+    public function __construct(
+        private DocumentNumberService $numberService,
+        private CloudinaryManager $cloudinary
+    ) {}
 
     public static function middleware()
     {
@@ -104,7 +109,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
         $user = Auth::user();
 
         try {
-            $note = DB::transaction(function () use ($validated, $user, $request) {
+            $note = DB::transaction(function () use ($validated, $user) {
                 $date = Carbon::parse($validated['meeting_date']);
                 $documentNumber = $validated['document_number']
                     ?? $this->numberService->generateMeetingNoteNumber($date)['number'];
@@ -125,10 +130,13 @@ class MeetingNoteController extends Controller implements HasMiddleware
                     $note->attendees()->sync($validated['attendee_employee_ids']);
                 }
 
-                $this->storeAttachments($note, $request->file('attachments', []));
-
                 return $note;
             });
+
+            // Cloudinary uploads happen outside the transaction -- a slow or
+            // failed upload must not hold DB locks open or roll back an
+            // otherwise successful note creation.
+            $this->storeAttachments($note, $request->file('attachments', []));
 
             return ResponseHelper::jsonResponse(true, 'Meeting Note Created Successfully', new MeetingNoteResource($note->load(self::RELATIONS)), 201);
         } catch (\Throwable $e) {
@@ -173,7 +181,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
         try {
             $note = MeetingNote::findOrFail($id);
 
-            $note = DB::transaction(function () use ($note, $validated, $user, $request) {
+            $note = DB::transaction(function () use ($note, $validated, $user) {
                 $note->update([
                     ...collect($validated)->only(['document_number', 'title', 'meeting_type', 'meeting_date', 'body'])->toArray(),
                     'updated_by' => $user->id,
@@ -191,14 +199,15 @@ class MeetingNoteController extends Controller implements HasMiddleware
                     $note->attendees()->sync($validated['attendee_employee_ids']);
                 }
 
-                foreach ($validated['remove_attachment_ids'] ?? [] as $attachmentId) {
-                    $this->deleteAttachment($note, $attachmentId);
-                }
-
-                $this->storeAttachments($note, $request->file('attachments', []));
-
                 return $note;
             });
+
+            // Cloudinary calls stay outside the transaction (see store()).
+            foreach ($validated['remove_attachment_ids'] ?? [] as $attachmentId) {
+                $this->deleteAttachment($note, $attachmentId);
+            }
+
+            $this->storeAttachments($note, $request->file('attachments', []));
 
             return ResponseHelper::jsonResponse(true, 'Meeting Note Updated Successfully', new MeetingNoteResource($note->load(self::RELATIONS)), 200);
         } catch (ModelNotFoundException $e) {
@@ -352,11 +361,15 @@ class MeetingNoteController extends Controller implements HasMiddleware
     private function storeAttachments(MeetingNote $note, array $files): void
     {
         foreach ($files as $file) {
-            $storedPath = $file->store('meeting-notes', 'public');
+            $publicId = $this->cloudinary->uploadAuto(
+                $file,
+                CloudinaryFolders::companyFiles('meeting-notes'),
+                CloudinaryFolders::filename('meeting-note-'.$note->id.'-attachment')
+            );
 
             $note->attachments()->create([
                 'original_name' => $file->getClientOriginalName(),
-                'file_path' => $storedPath,
+                'file_path' => $publicId,
                 'mime_type' => $file->getClientMimeType(),
                 'size_file' => $this->formatBytes($file->getSize()),
                 'uploaded_by' => Auth::id(),
@@ -372,9 +385,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
             return;
         }
 
-        if ($attachment->file_path && Storage::disk('public')->exists($attachment->file_path)) {
-            Storage::disk('public')->delete($attachment->file_path);
-        }
+        $this->cloudinary->delete($attachment->file_path, CloudinaryResourceType::fromMime($attachment->mime_type));
 
         $attachment->delete();
     }

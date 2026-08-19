@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ResponseHelper;
 use App\Http\Resources\StaffAccountResource;
 use App\Models\EmployeeProfile;
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -68,7 +69,7 @@ class StaffPermissionController extends Controller implements HasMiddleware
                 'user_id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'profile_photo' => $user->profile_photo ? asset('storage/'.$user->profile_photo) : null,
+                'profile_photo' => CloudinaryUrl::image($user->profile_photo),
                 'role_permissions' => $user->getPermissionsViaRoles()->pluck('name')->values(),
                 'direct_permissions' => $user->getDirectPermissions()->pluck('name')->values(),
             ], 200);

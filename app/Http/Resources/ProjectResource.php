@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -30,7 +31,7 @@ class ProjectResource extends JsonResource
             'start_date' => $this->start_date,
             'end_date' => $this->end_date,
             'description' => $this->description,
-            'photo' => $this->photo ? asset('storage/'.$this->photo) : null,
+            'photo' => CloudinaryUrl::image($this->photo),
             'budget' => (float) (string) $this->budget,
             'progress' => $progress,
             'leader' => new EmployeeProfileResource($this->projectLeader),

@@ -15,10 +15,12 @@ class Backup extends Model
         'disk_path',
         'size_bytes',
         'created_by',
+        'is_automatic',
     ];
 
     protected $casts = [
         'size_bytes' => 'integer',
+        'is_automatic' => 'boolean',
     ];
 
     public function creator(): BelongsTo

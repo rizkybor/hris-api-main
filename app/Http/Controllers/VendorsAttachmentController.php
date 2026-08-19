@@ -8,6 +8,9 @@ use App\Http\Requests\VendorsAttachmentUpdateRequest;
 use App\Http\Resources\VendorsAttachmentResource;
 use App\Http\Resources\PaginateResource;
 use App\Interfaces\VendorsAttachmentRepositoryInterface;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryResourceType;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -18,8 +21,10 @@ class VendorsAttachmentController extends Controller implements HasMiddleware
 {
     private VendorsAttachmentRepositoryInterface $vendorsAttachmentRepository;
 
-    public function __construct(VendorsAttachmentRepositoryInterface $vendorsAttachmentRepository)
-    {
+    public function __construct(
+        VendorsAttachmentRepositoryInterface $vendorsAttachmentRepository,
+        private CloudinaryManager $cloudinary
+    ) {
         $this->vendorsAttachmentRepository = $vendorsAttachmentRepository;
     }
 
@@ -83,10 +88,12 @@ class VendorsAttachmentController extends Controller implements HasMiddleware
             if ($request->hasFile('file')) {
                 $file = $request->file('file');
 
-                // Simpan file di storage/app/public/vendors-attachments
-                $path = $file->store('vendors-attachments', 'public');
+                $publicId = $this->cloudinary->uploadAuto(
+                    $file,
+                    CloudinaryFolders::companyFiles('vendors'),
+                    CloudinaryFolders::filename('vendor-'.($validated['vendor_id'] ?? 'unassigned').'-attachment')
+                );
 
-                // Ambil extension dan ukuran file
                 $extension = $file->getClientOriginalExtension();
                 $size = $file->getSize(); // dalam bytes
 
@@ -94,7 +101,7 @@ class VendorsAttachmentController extends Controller implements HasMiddleware
                 $sizeFormatted = $this->formatBytes($size);
 
                 // Merge info file ke validated data
-                $validated['document_path'] = $path;
+                $validated['document_path'] = $publicId;
                 $validated['type_file'] = $extension;
                 $validated['size_file'] = $sizeFormatted;
             }
@@ -171,11 +178,16 @@ class VendorsAttachmentController extends Controller implements HasMiddleware
             if ($request->hasFile('file')) {
                 $file = $request->file('file');
 
-                // Simpan file baru ke storage/app/public/vendors-attachments
-                $path = $file->store('vendors-attachments', 'public');
+                $this->cloudinary->delete($attachment->document_path, CloudinaryResourceType::fromExtension($attachment->type_file));
+
+                $publicId = $this->cloudinary->uploadAuto(
+                    $file,
+                    CloudinaryFolders::companyFiles('vendors'),
+                    CloudinaryFolders::filename('vendor-'.($validated['vendor_id'] ?? $attachment->vendor_id).'-attachment')
+                );
 
                 // Update validated dengan info file baru
-                $validated['document_path'] = $path;
+                $validated['document_path'] = $publicId;
                 $validated['type_file'] = $file->getClientOriginalExtension();
                 $validated['size_file'] = $this->formatBytes($file->getSize());
             }
@@ -207,6 +219,9 @@ class VendorsAttachmentController extends Controller implements HasMiddleware
     public function destroy(string $id)
     {
         try {
+            $attachment = $this->vendorsAttachmentRepository->getById($id);
+            $this->cloudinary->delete($attachment->document_path, CloudinaryResourceType::fromExtension($attachment->type_file));
+
             $this->vendorsAttachmentRepository->delete($id);
 
             return ResponseHelper::jsonResponse(true, 'Vendors Attachment Deleted Successfully', null, 200);
