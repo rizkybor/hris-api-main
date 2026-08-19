@@ -19,6 +19,12 @@ use Illuminate\Support\Facades\Log;
  * Image public_ids never include an extension (Cloudinary infers format on
  * delivery); raw public_ids (PDFs, docs, etc.) always do, since Cloudinary
  * can't infer format for the "raw" resource type.
+ *
+ * This account uses Cloudinary's Dynamic Folder Mode, where a slash in the
+ * public_id alone does NOT place the asset in that folder in the Media
+ * Library UI (it stays under Home) -- `asset_folder` must be passed
+ * explicitly on every upload for the Console folder tree to match the
+ * public_id path.
  */
 class CloudinaryManager
 {
@@ -47,6 +53,7 @@ class CloudinaryManager
 
         $this->upload($file->getRealPath(), [
             'public_id' => $publicId,
+            'asset_folder' => $folder,
             'resource_type' => 'image',
             'overwrite' => true,
         ]);
@@ -67,6 +74,7 @@ class CloudinaryManager
 
         $this->upload($file->getRealPath(), [
             'public_id' => $publicId,
+            'asset_folder' => $folder,
             'resource_type' => 'raw',
             'overwrite' => true,
         ]);
@@ -97,6 +105,7 @@ class CloudinaryManager
             'data:application/octet-stream;base64,'.base64_encode($content),
             [
                 'public_id' => $publicId,
+                'asset_folder' => $folder,
                 'resource_type' => 'raw',
                 'overwrite' => true,
             ]
