@@ -94,4 +94,43 @@ class ProjectRateSetting extends Model
     {
         return round($this->rate_cost_per_hour * (float) $this->margin_multiplier, 2);
     }
+
+    /**
+     * Full breakdown of this rate setting, with the selected Fixed Cost /
+     * SDM Resource / Infrastructure Tool ids resolved to their actual
+     * name+amount at this moment -- meant to be frozen onto a
+     * ProjectCalculation at save time, since those source records (and this
+     * setting itself) can change or be deleted later.
+     */
+    public function toSnapshotArray(): array
+    {
+        return [
+            'margin_multiplier' => (float) $this->margin_multiplier,
+            'pm_overhead_percent' => (float) $this->pm_overhead_percent,
+            'default_infra_setup_cost' => (float) $this->default_infra_setup_cost,
+            'team_size' => $this->team_size,
+            'team_monthly_cost' => $this->team_monthly_cost,
+            'total_productive_hours_per_month' => $this->total_productive_hours_per_month,
+            'rate_cost_per_hour' => $this->rate_cost_per_hour,
+            'rate_sell_per_hour' => $this->rate_sell_per_hour,
+            'fixed_costs' => $this->selectedFixedCosts()->map(fn ($item) => [
+                'id' => $item->id,
+                'name' => $item->financial_items,
+                'actual' => (float) $item->actual,
+            ])->values()->all(),
+            'sdm_resources' => $this->selectedSdmResources()->map(fn ($item) => [
+                'id' => $item->id,
+                'name' => $item->sdm_component,
+                'field' => $item->field?->name,
+                'actual' => (float) $item->actual,
+                'productive_hours_per_month' => (float) $item->productive_hours_per_month,
+            ])->values()->all(),
+            'infrastructure_tools' => $this->selectedInfrastructureTools()->map(fn ($item) => [
+                'id' => $item->id,
+                'name' => $item->tech_stack_component,
+                'vendor' => $item->vendor,
+                'monthly_fee' => (float) $item->monthly_fee,
+            ])->values()->all(),
+        ];
+    }
 }
