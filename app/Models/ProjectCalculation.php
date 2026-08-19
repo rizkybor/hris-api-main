@@ -38,6 +38,11 @@ class ProjectCalculation extends Model
         'include_ppn',
         'ppn_percent',
         'total_with_ppn',
+        'include_pph',
+        'pph_type',
+        'pph_percent',
+        'pph_amount',
+        'net_received',
         'estimated_duration_weeks',
         'notes',
         'created_by',
@@ -57,6 +62,10 @@ class ProjectCalculation extends Model
         'include_ppn' => 'boolean',
         'ppn_percent' => 'decimal:2',
         'total_with_ppn' => 'decimal:2',
+        'include_pph' => 'boolean',
+        'pph_percent' => 'decimal:2',
+        'pph_amount' => 'decimal:2',
+        'net_received' => 'decimal:2',
         'estimated_duration_weeks' => 'integer',
     ];
 

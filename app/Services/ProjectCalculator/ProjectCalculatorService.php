@@ -21,6 +21,10 @@ class ProjectCalculatorService
      * @param  float  $productiveHoursPerMonth  team_size * productive_hours_per_person, for duration estimate
      * @param  bool  $includePpn
      * @param  float  $ppnPercent
+     * @param  bool  $includePph  PPh is withheld by the client from the
+     *   payment, not added like PPN -- it reduces what the vendor actually
+     *   receives in cash, it does not change what the client is invoiced.
+     * @param  float  $pphPercent
      * @return array
      */
     public function calculate(
@@ -32,6 +36,8 @@ class ProjectCalculatorService
         float $productiveHoursPerMonth,
         bool $includePpn,
         float $ppnPercent,
+        bool $includePph = false,
+        float $pphPercent = 0,
     ): array {
         $computedItems = $scenario === 'feature'
             ? $this->calculateFeatureItems($items, $rateSellPerHour)
@@ -59,6 +65,12 @@ class ProjectCalculatorService
         $ppnAmount = $includePpn ? round($grandTotal * ($ppnPercent / 100), 2) : 0;
         $totalWithPpn = $includePpn ? round($grandTotal + $ppnAmount, 2) : null;
 
+        // PPh's DPP (tax base) is the service fee itself (grand_total),
+        // never the PPN on top of it -- PPN isn't the vendor's income, so
+        // it isn't part of what PPh is withheld against.
+        $pphAmount = $includePph ? round($grandTotal * ($pphPercent / 100), 2) : 0;
+        $netReceived = $includePph ? round(($includePpn ? $totalWithPpn : $grandTotal) - $pphAmount, 2) : null;
+
         return [
             'items' => $computedItems,
             'subtotal' => $subtotal,
@@ -70,6 +82,8 @@ class ProjectCalculatorService
             'estimated_duration_weeks' => $estimatedDurationWeeks,
             'ppn_amount' => $ppnAmount,
             'total_with_ppn' => $totalWithPpn,
+            'pph_amount' => $pphAmount,
+            'net_received' => $netReceived,
         ];
     }
 
