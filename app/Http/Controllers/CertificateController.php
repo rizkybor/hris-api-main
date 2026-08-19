@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use ZipArchive;
@@ -121,7 +122,7 @@ class CertificateController extends Controller implements HasMiddleware
                     $recipient['name'],
                     $template,
                     $settings,
-                    auth()->id(),
+                    Auth::id(),
                     $batchId
                 );
             }

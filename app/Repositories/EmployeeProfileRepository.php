@@ -20,6 +20,7 @@ use App\Services\EmployeeCodeGenerator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
@@ -171,7 +172,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
     public function getMyProfile(): EmployeeProfile
     {
-        $userId = auth()->user()->id;
+        $userId = Auth::id();
 
         return EmployeeProfile::with([
             'user',
@@ -635,7 +636,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
     public function getMyTeam(): ?Team
     {
-        $userId = auth()->user()->id;
+        $userId = Auth::id();
 
         $employee = EmployeeProfile::with([
             'jobInformation.team.leader',
@@ -655,7 +656,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
     public function getMyTeamMembers(): Collection
     {
-        $userId = auth()->user()->id;
+        $userId = Auth::id();
 
         $employee = EmployeeProfile::with('jobInformation.team')
             ->where('user_id', $userId)
@@ -677,7 +678,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
     public function getMyTeamProjects(): Collection
     {
-        $userId = auth()->user()->id;
+        $userId = Auth::id();
 
         $employee = EmployeeProfile::with('jobInformation.team')
             ->where('user_id', $userId)

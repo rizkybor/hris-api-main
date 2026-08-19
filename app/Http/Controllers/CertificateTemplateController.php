@@ -10,6 +10,7 @@ use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class CertificateTemplateController extends Controller implements HasMiddleware
@@ -49,7 +50,7 @@ class CertificateTemplateController extends Controller implements HasMiddleware
             $template = CertificateTemplate::create([
                 'name' => $validated['name'],
                 'background_path' => $publicId,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
             return ResponseHelper::jsonResponse(true, 'Certificate Template Uploaded Successfully', new CertificateTemplateResource($template), 201);

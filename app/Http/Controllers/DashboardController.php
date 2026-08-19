@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Interfaces\DashboardRepositoryInterface;
+use App\Models\User;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class DashboardController extends Controller implements HasMiddleware
@@ -41,7 +43,9 @@ class DashboardController extends Controller implements HasMiddleware
     public function getEmployeeStatistics()
     {
         try {
-            $employeeId = auth()->user()->employeeProfile?->id;
+            /** @var User $user */
+            $user = Auth::user();
+            $employeeId = $user->employeeProfile?->id;
 
             if (! $employeeId) {
                 return ResponseHelper::jsonResponse(false, 'This account has no employee profile', null, 404);
