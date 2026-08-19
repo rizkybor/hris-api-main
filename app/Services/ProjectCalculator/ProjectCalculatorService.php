@@ -7,6 +7,17 @@ use App\Models\LandingPageRateSetting;
 class ProjectCalculatorService
 {
     /**
+     * Landing Page's Development rate and Margin Jual are not
+     * company-wide-configurable (only Server/Design pricing is, via
+     * LandingPageRateSetting) -- these are just the pre-filled defaults for
+     * a new calculation, freely overridable per calculation in the
+     * Create/Edit form.
+     */
+    private const DEFAULT_RATE_DEVELOPER = 100000;
+
+    private const DEFAULT_MARGIN_PERCENT = 30;
+
+    /**
      * Recompute every derived number for a calculation server-side, rather
      * than trusting whatever totals the client sent. Mirrors the formulas
      * from the source spreadsheet (Rate Setup / Scenario A / Scenario B),
@@ -87,9 +98,9 @@ class ProjectCalculatorService
      *
      * @param  array  $data  'server_type' (dedicated|shared), 'design_type'
      *   (dedicated|template), 'estimated_hours', optional 'rate_developer'
-     *   (falls back to the config default), optional 'developer_count'
-     *   (falls back to 1), optional 'margin_percent' (falls back to the
-     *   config default)
+     *   (falls back to DEFAULT_RATE_DEVELOPER), optional 'developer_count'
+     *   (falls back to 1), optional 'margin_percent' (falls back to
+     *   DEFAULT_MARGIN_PERCENT)
      */
     public function calculateLandingPage(
         array $data,
@@ -110,7 +121,7 @@ class ProjectCalculatorService
             : (float) $settings->design_template_price;
 
         $estimatedHours = (float) ($data['estimated_hours'] ?? 0);
-        $rateDeveloper = (float) ($data['rate_developer'] ?? $settings->default_rate_developer);
+        $rateDeveloper = (float) ($data['rate_developer'] ?? self::DEFAULT_RATE_DEVELOPER);
         $developerCount = max(1, (int) ($data['developer_count'] ?? 1));
         $developmentCost = round($estimatedHours * $rateDeveloper * $developerCount, 2);
 
@@ -133,7 +144,7 @@ class ProjectCalculatorService
 
         $subtotal = round($serverCost + $designCost + $developmentCost + $additionalItemsTotal, 2);
 
-        $marginPercent = (float) ($data['margin_percent'] ?? $settings->margin_percent);
+        $marginPercent = (float) ($data['margin_percent'] ?? self::DEFAULT_MARGIN_PERCENT);
         $marginTotal = round($subtotal * ($marginPercent / 100), 2);
         $grandTotal = round($subtotal + $marginTotal, 2);
 

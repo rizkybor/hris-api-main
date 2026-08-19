@@ -24,8 +24,6 @@ class LandingPageRateSetting extends Model
         'server_shared_price',
         'design_dedicated_price',
         'design_template_price',
-        'default_rate_developer',
-        'margin_percent',
     ];
 
     protected $casts = [
@@ -33,7 +31,5 @@ class LandingPageRateSetting extends Model
         'server_shared_price' => 'decimal:2',
         'design_dedicated_price' => 'decimal:2',
         'design_template_price' => 'decimal:2',
-        'default_rate_developer' => 'decimal:2',
-        'margin_percent' => 'decimal:2',
     ];
 }

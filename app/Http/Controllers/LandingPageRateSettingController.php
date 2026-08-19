@@ -31,8 +31,6 @@ class LandingPageRateSettingController extends Controller implements HasMiddlewa
             'server_shared_price' => 1000000,
             'design_dedicated_price' => 4000000,
             'design_template_price' => 1500000,
-            'default_rate_developer' => 100000,
-            'margin_percent' => 30,
         ]);
     }
 

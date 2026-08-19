@@ -15,8 +15,6 @@ class LandingPageRateSettingResource extends JsonResource
             'server_shared_price' => (float) $this->server_shared_price,
             'design_dedicated_price' => (float) $this->design_dedicated_price,
             'design_template_price' => (float) $this->design_template_price,
-            'default_rate_developer' => (float) $this->default_rate_developer,
-            'margin_percent' => (float) $this->margin_percent,
             'updated_at' => $this->updated_at,
         ];
     }
