@@ -23,7 +23,7 @@ class ProjectRepository implements ProjectRepositoryInterface
         ?int $limit,
         bool $execute
     ): Builder|Collection {
-        $query = Project::with(['projectLeader', 'projectLeader.user', 'projectLeader.jobInformation', 'teams', 'tasks'])
+        $query = Project::with(['projectLeader', 'projectLeader.user', 'projectLeader.jobInformation', 'teams', 'members', 'members.user', 'tasks'])
             ->where(function ($query) use ($search, $status) {
                 if ($search) {
                     $query->search($search);
@@ -65,6 +65,12 @@ class ProjectRepository implements ProjectRepositoryInterface
                         $teamQuery->whereIn('teams.id', $teamIds);
                     });
                 }
+
+                // OR show projects where the employee was individually
+                // picked as a member ("employee" assignment mode)
+                $q->orWhereHas('members', function ($memberQuery) use ($employeeId) {
+                    $memberQuery->where('employee_profiles.id', $employeeId);
+                });
             });
         }
 
