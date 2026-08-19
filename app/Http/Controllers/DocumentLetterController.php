@@ -94,12 +94,12 @@ class DocumentLetterController extends Controller implements HasMiddleware
         $validated = $request->validated();
 
         try {
-            $documentLetter = DB::transaction(function () use ($validated, $user, $request) {
+            $documentLetter = DB::transaction(function () use ($validated, $user) {
                 $date = Carbon::parse($validated['document_date']);
                 $documentNumber = $validated['document_number']
                     ?? $this->numberService->generateNotaDinasNumber($date)['number'];
 
-                $documentLetter = DocumentLetter::create([
+                return DocumentLetter::create([
                     'document_number' => $documentNumber,
                     'subject' => $validated['subject'],
                     'document_date' => $validated['document_date'],
@@ -108,11 +108,12 @@ class DocumentLetterController extends Controller implements HasMiddleware
                     'status' => 'draft',
                     'created_by' => $user->id,
                 ]);
-
-                $this->storeAttachments($documentLetter, $request->file('attachments', []));
-
-                return $documentLetter;
             });
+
+            // Cloudinary uploads happen outside the transaction -- a slow or
+            // failed upload must not hold DB locks open or roll back an
+            // otherwise successful document creation.
+            $this->storeAttachments($documentLetter, $request->file('attachments', []));
 
             return ResponseHelper::jsonResponse(true, 'Official Memo Created Successfully', new DocumentLetterResource($documentLetter->load(self::RELATIONS)), 201);
         } catch (\Throwable $e) {
@@ -156,17 +157,18 @@ class DocumentLetterController extends Controller implements HasMiddleware
 
             $validated = $request->validated();
 
-            $documentLetter = DB::transaction(function () use ($documentLetter, $validated, $request) {
+            $documentLetter = DB::transaction(function () use ($documentLetter, $validated) {
                 $documentLetter->update(collect($validated)->only(['document_number', 'subject', 'document_date', 'body'])->toArray());
-
-                foreach ($validated['remove_attachment_ids'] ?? [] as $attachmentId) {
-                    $this->deleteAttachment($documentLetter, $attachmentId);
-                }
-
-                $this->storeAttachments($documentLetter, $request->file('attachments', []));
 
                 return $documentLetter;
             });
+
+            // Cloudinary calls stay outside the transaction (see store()).
+            foreach ($validated['remove_attachment_ids'] ?? [] as $attachmentId) {
+                $this->deleteAttachment($documentLetter, $attachmentId);
+            }
+
+            $this->storeAttachments($documentLetter, $request->file('attachments', []));
 
             return ResponseHelper::jsonResponse(true, 'Official Memo Updated Successfully', new DocumentLetterResource($documentLetter->load(self::RELATIONS)), 200);
         } catch (ModelNotFoundException $e) {

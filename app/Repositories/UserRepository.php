@@ -21,18 +21,9 @@ class UserRepository implements UserRepositoryInterface
 
     public function create(array $data): User
     {
-        return DB::transaction(function () use ($data) {
+        $user = DB::transaction(function () use ($data) {
             $userDto = UserDto::fromArray($data);
             $user = User::create($userDto->toArray());
-
-            if (isset($data['profile_photo'])) {
-                $publicId = $this->cloudinary->uploadImage(
-                    $data['profile_photo'],
-                    CloudinaryFolders::companyFiles('employees'),
-                    CloudinaryFolders::filename('user-'.$user->id.'-photo')
-                );
-                $user->update(['profile_photo' => $publicId]);
-            }
 
             if (isset($data['roles'])) {
                 $roles = collect($data['roles'])
@@ -50,27 +41,30 @@ class UserRepository implements UserRepositoryInterface
 
             return $user;
         });
+
+        // Uploaded outside the transaction (see ProjectRepository::create()
+        // for the same reasoning) so a slow/failed Cloudinary call can't
+        // hold DB locks open or force a rollback of the user creation.
+        if (isset($data['profile_photo'])) {
+            $publicId = $this->cloudinary->uploadImage(
+                $data['profile_photo'],
+                CloudinaryFolders::companyFiles('employees'),
+                CloudinaryFolders::filename('user-'.$user->id.'-photo')
+            );
+            $user->update(['profile_photo' => $publicId]);
+        }
+
+        return $user;
     }
 
     public function update(string $id, array $data): User
     {
-        return DB::transaction(function () use ($id, $data) {
+        $user = DB::transaction(function () use ($id, $data) {
             $user = $this->getById($id);
 
             $userDto = UserDto::fromArrayForUpdate($data, $user);
             $user->update($userDto->toArray());
 
-            if (isset($data['profile_photo'])) {
-                $this->cloudinary->delete($user->profile_photo);
-
-                $publicId = $this->cloudinary->uploadImage(
-                    $data['profile_photo'],
-                    CloudinaryFolders::companyFiles('employees'),
-                    CloudinaryFolders::filename('user-'.$user->id.'-photo')
-                );
-                $user->update(['profile_photo' => $publicId]);
-            }
-
             if (isset($data['roles'])) {
                 $roles = collect($data['roles'])
                     ->map(function ($role) {
@@ -87,5 +81,22 @@ class UserRepository implements UserRepositoryInterface
 
             return $user;
         });
+
+        if (isset($data['profile_photo'])) {
+            $oldPhoto = $user->profile_photo;
+
+            $publicId = $this->cloudinary->uploadImage(
+                $data['profile_photo'],
+                CloudinaryFolders::companyFiles('employees'),
+                CloudinaryFolders::filename('user-'.$user->id.'-photo')
+            );
+            $user->update(['profile_photo' => $publicId]);
+
+            if ($oldPhoto) {
+                $this->cloudinary->delete($oldPhoto);
+            }
+        }
+
+        return $user;
     }
 }

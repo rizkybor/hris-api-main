@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,6 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withSchedule(function (Schedule $schedule): void {
+        // Nightly automatic backup, retaining the last 14 days -- keeps a
+        // rolling safety net without needing anyone to remember to click
+        // "Create Backup" manually.
+        $schedule->command('backup:run')->dailyAt('01:00')->onOneServer();
+        $schedule->command('backup:prune')->dailyAt('01:30')->onOneServer();
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'project.member' => \App\Http\Middleware\EnsureProjectMembership::class,

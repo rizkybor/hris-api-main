@@ -97,18 +97,9 @@ class TeamRepository implements TeamRepositoryInterface
 
     public function create(array $data): Team
     {
-        return DB::transaction(function () use ($data) {
+        $team = DB::transaction(function () use ($data) {
             $teamDto = TeamDto::fromArray($data);
             $team = Team::create($teamDto->toArray());
-
-            if (isset($data['icon'])) {
-                $publicId = $this->cloudinary->uploadImage(
-                    $data['icon'],
-                    CloudinaryFolders::companyFiles('teams'),
-                    CloudinaryFolders::filename('team-'.$team->id.'-icon')
-                );
-                $team->update(['icon' => $publicId]);
-            }
 
             if ($team->team_lead_id) {
                 $leader = User::with('employeeProfile')->find($team->team_lead_id);
@@ -144,27 +135,30 @@ class TeamRepository implements TeamRepositoryInterface
 
             return $team->load(['leader', 'members']);
         });
+
+        // Uploaded outside the transaction (see ProjectRepository::create()
+        // for the same reasoning) so a slow/failed Cloudinary call can't
+        // hold DB locks open or force a rollback of the team creation.
+        if (isset($data['icon'])) {
+            $publicId = $this->cloudinary->uploadImage(
+                $data['icon'],
+                CloudinaryFolders::companyFiles('teams'),
+                CloudinaryFolders::filename('team-'.$team->id.'-icon')
+            );
+            $team->update(['icon' => $publicId]);
+        }
+
+        return $team;
     }
 
     public function update(string $id, array $data): Team
     {
-        return DB::transaction(function () use ($id, $data) {
+        $team = DB::transaction(function () use ($id, $data) {
             $team = $this->getById($id);
             $oldLeaderId = $team->team_lead_id;
 
             $teamDto = TeamDto::fromArrayForUpdate($data, $team);
             $team->update($teamDto->toArray());
-
-            if (isset($data['icon'])) {
-                $this->cloudinary->delete($team->icon);
-
-                $publicId = $this->cloudinary->uploadImage(
-                    $data['icon'],
-                    CloudinaryFolders::companyFiles('teams'),
-                    CloudinaryFolders::filename('team-'.$team->id.'-icon')
-                );
-                $team->update(['icon' => $publicId]);
-            }
 
             if ($team->team_lead_id && $team->team_lead_id !== $oldLeaderId) {
                 if ($oldLeaderId) {
@@ -197,14 +191,29 @@ class TeamRepository implements TeamRepositoryInterface
 
             return $team;
         });
+
+        if (isset($data['icon'])) {
+            $oldIcon = $team->icon;
+
+            $publicId = $this->cloudinary->uploadImage(
+                $data['icon'],
+                CloudinaryFolders::companyFiles('teams'),
+                CloudinaryFolders::filename('team-'.$team->id.'-icon')
+            );
+            $team->update(['icon' => $publicId]);
+
+            if ($oldIcon) {
+                $this->cloudinary->delete($oldIcon);
+            }
+        }
+
+        return $team;
     }
 
     public function delete(string $id): Team
     {
-        return DB::transaction(function () use ($id) {
+        $team = DB::transaction(function () use ($id) {
             $team = $this->getById($id);
-
-            $this->cloudinary->delete($team->icon);
 
             // Clear caches before deleting
             $this->clearTeamCaches($team->id);
@@ -213,6 +222,12 @@ class TeamRepository implements TeamRepositoryInterface
 
             return $team;
         });
+
+        if ($team->icon) {
+            $this->cloudinary->delete($team->icon);
+        }
+
+        return $team;
     }
 
     public function getStatistics(): array

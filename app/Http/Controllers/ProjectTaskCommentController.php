@@ -77,8 +77,9 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
             }
 
             $mentionedIds = $validated['mentioned_employee_ids'] ?? [];
+            $participantIds = $task->project->getParticipantEmployeeIds();
             $invalidMentions = collect($mentionedIds)->reject(
-                fn ($id) => $task->assignee_id === $id || $task->project->isEmployeeProjectParticipant($id)
+                fn ($id) => $task->assignee_id === $id || $participantIds->contains($id)
             );
             if ($invalidMentions->isNotEmpty()) {
                 return ResponseHelper::jsonResponse(false, 'You can only mention the project leader, the task\'s assignee, or employees assigned to this project\'s teams', null, 422);
@@ -97,8 +98,12 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
 
             $comment->load(['user', 'parent.user', 'task.project']);
 
-            $this->notifyMentionedEmployees($comment, $mentionedIds);
-            $this->logCommentActivity($task, $comment, $user, $mentionedIds);
+            $mentionedEmployees = empty($mentionedIds)
+                ? collect()
+                : EmployeeProfile::with('user')->whereIn('id', $mentionedIds)->get();
+
+            $this->notifyMentionedEmployees($comment, $mentionedEmployees);
+            $this->logCommentActivity($task, $comment, $user, $mentionedIds, $mentionedEmployees);
 
             return ResponseHelper::jsonResponse(true, 'Comment Added Successfully', new ProjectTaskCommentResource($comment), 201);
         } catch (ModelNotFoundException $e) {
@@ -134,37 +139,29 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
     }
 
     /**
-     * @param  array<int>  $mentionedIds
+     * @param  \Illuminate\Support\Collection<int, EmployeeProfile>  $mentionedEmployees
      */
-    private function notifyMentionedEmployees(ProjectTaskComment $comment, array $mentionedIds): void
+    private function notifyMentionedEmployees(ProjectTaskComment $comment, $mentionedEmployees): void
     {
-        if (empty($mentionedIds)) {
+        if ($mentionedEmployees->isEmpty()) {
             return;
         }
 
-        $mentionedUsers = EmployeeProfile::with('user')
-            ->whereIn('id', $mentionedIds)
-            ->get()
-            ->pluck('user')
-            ->filter();
+        $mentionedUsers = $mentionedEmployees->pluck('user')->filter();
 
         Notification::send($mentionedUsers, new ProjectTaskCommentMention($comment));
     }
 
     /**
      * @param  array<int>  $mentionedIds
+     * @param  \Illuminate\Support\Collection<int, EmployeeProfile>  $mentionedEmployees
      */
-    private function logCommentActivity(ProjectTask $task, ProjectTaskComment $comment, User $user, array $mentionedIds): void
+    private function logCommentActivity(ProjectTask $task, ProjectTaskComment $comment, User $user, array $mentionedIds, $mentionedEmployees): void
     {
         $description = $comment->parent_id ? 'replied to a comment' : 'commented';
 
         if (! empty($mentionedIds)) {
-            $mentionedNames = EmployeeProfile::with('user')
-                ->whereIn('id', $mentionedIds)
-                ->get()
-                ->pluck('user.name')
-                ->filter()
-                ->implode(', ');
+            $mentionedNames = $mentionedEmployees->pluck('user.name')->filter()->implode(', ');
 
             if ($mentionedNames) {
                 $description .= " and mentioned {$mentionedNames}";

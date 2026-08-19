@@ -45,8 +45,8 @@ class ProjectCalculationController extends Controller implements HasMiddleware
     {
         try {
             $query = ProjectCalculation::with('creator')
-                ->when($request->search, fn ($q) => $q->where('name', 'like', '%'.$request->search.'%')
-                    ->orWhere('client_name', 'like', '%'.$request->search.'%'))
+                ->when($request->search, fn ($q) => $q->where(fn ($qq) => $qq->where('name', 'like', '%'.$request->search.'%')
+                    ->orWhere('client_name', 'like', '%'.$request->search.'%')))
                 ->when($request->scenario, fn ($q) => $q->where('scenario', $request->scenario))
                 ->latest();
 
@@ -226,7 +226,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            return ResponseHelper::jsonResponse(true, 'Project Calculation Updated Successfully', new ProjectCalculationResource($calculation->fresh('creator')), 200);
+            return ResponseHelper::jsonResponse(true, 'Project Calculation Updated Successfully', new ProjectCalculationResource($calculation->load('creator')), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Project Calculation Not Found', null, 404);
         } catch (\Throwable $e) {

@@ -4,6 +4,7 @@ namespace App\Services\Cloudinary;
 
 use Cloudinary\Cloudinary;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Thin wrapper around the Cloudinary SDK for this app's two folders
@@ -44,7 +45,7 @@ class CloudinaryManager
     {
         $publicId = $this->buildPublicId($folder, $filename);
 
-        $this->client->uploadApi()->upload($file->getRealPath(), [
+        $this->upload($file->getRealPath(), [
             'public_id' => $publicId,
             'resource_type' => 'image',
             'overwrite' => true,
@@ -64,7 +65,7 @@ class CloudinaryManager
         $extension = $file->getClientOriginalExtension() ?: $file->extension() ?: 'bin';
         $publicId = $this->buildPublicId($folder, "{$filename}.{$extension}");
 
-        $this->client->uploadApi()->upload($file->getRealPath(), [
+        $this->upload($file->getRealPath(), [
             'public_id' => $publicId,
             'resource_type' => 'raw',
             'overwrite' => true,
@@ -92,7 +93,7 @@ class CloudinaryManager
     {
         $publicId = $this->buildPublicId($folder, "{$filename}.{$extension}");
 
-        $this->client->uploadApi()->upload(
+        $this->upload(
             'data:application/octet-stream;base64,'.base64_encode($content),
             [
                 'public_id' => $publicId,
@@ -104,13 +105,50 @@ class CloudinaryManager
         return $publicId;
     }
 
+    /**
+     * Best-effort: failing to delete an old/orphaned asset is logged but
+     * never thrown, since by the time delete() runs the DB write it's
+     * cleaning up after has already committed successfully -- surfacing a
+     * 500 here would tell the user an update failed when it actually
+     * succeeded, it just left one stray file behind in Cloudinary.
+     */
     public function delete(?string $publicId, string $resourceType = 'image'): void
     {
         if (! $publicId) {
             return;
         }
 
-        $this->client->uploadApi()->destroy($publicId, ['resource_type' => $resourceType]);
+        try {
+            $this->client->uploadApi()->destroy($publicId, ['resource_type' => $resourceType]);
+        } catch (\Throwable $e) {
+            Log::error('Cloudinary delete failed', [
+                'public_id' => $publicId,
+                'resource_type' => $resourceType,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     *
+     * @throws \RuntimeException a user-safe message; the real SDK/cURL
+     *   error (which can leak transport details like hostnames or timeouts)
+     *   is logged instead of being allowed to reach the API response.
+     */
+    private function upload(string $source, array $options): void
+    {
+        try {
+            $this->client->uploadApi()->upload($source, $options);
+        } catch (\Throwable $e) {
+            Log::error('Cloudinary upload failed', [
+                'public_id' => $options['public_id'] ?? null,
+                'resource_type' => $options['resource_type'] ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new \RuntimeException('File upload failed, please try again.', 0, $e);
+        }
     }
 
     private function buildPublicId(string $folder, string $filename): string

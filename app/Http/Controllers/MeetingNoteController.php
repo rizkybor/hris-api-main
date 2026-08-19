@@ -109,7 +109,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
         $user = Auth::user();
 
         try {
-            $note = DB::transaction(function () use ($validated, $user, $request) {
+            $note = DB::transaction(function () use ($validated, $user) {
                 $date = Carbon::parse($validated['meeting_date']);
                 $documentNumber = $validated['document_number']
                     ?? $this->numberService->generateMeetingNoteNumber($date)['number'];
@@ -130,10 +130,13 @@ class MeetingNoteController extends Controller implements HasMiddleware
                     $note->attendees()->sync($validated['attendee_employee_ids']);
                 }
 
-                $this->storeAttachments($note, $request->file('attachments', []));
-
                 return $note;
             });
+
+            // Cloudinary uploads happen outside the transaction -- a slow or
+            // failed upload must not hold DB locks open or roll back an
+            // otherwise successful note creation.
+            $this->storeAttachments($note, $request->file('attachments', []));
 
             return ResponseHelper::jsonResponse(true, 'Meeting Note Created Successfully', new MeetingNoteResource($note->load(self::RELATIONS)), 201);
         } catch (\Throwable $e) {
@@ -178,7 +181,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
         try {
             $note = MeetingNote::findOrFail($id);
 
-            $note = DB::transaction(function () use ($note, $validated, $user, $request) {
+            $note = DB::transaction(function () use ($note, $validated, $user) {
                 $note->update([
                     ...collect($validated)->only(['document_number', 'title', 'meeting_type', 'meeting_date', 'body'])->toArray(),
                     'updated_by' => $user->id,
@@ -196,14 +199,15 @@ class MeetingNoteController extends Controller implements HasMiddleware
                     $note->attendees()->sync($validated['attendee_employee_ids']);
                 }
 
-                foreach ($validated['remove_attachment_ids'] ?? [] as $attachmentId) {
-                    $this->deleteAttachment($note, $attachmentId);
-                }
-
-                $this->storeAttachments($note, $request->file('attachments', []));
-
                 return $note;
             });
+
+            // Cloudinary calls stay outside the transaction (see store()).
+            foreach ($validated['remove_attachment_ids'] ?? [] as $attachmentId) {
+                $this->deleteAttachment($note, $attachmentId);
+            }
+
+            $this->storeAttachments($note, $request->file('attachments', []));
 
             return ResponseHelper::jsonResponse(true, 'Meeting Note Updated Successfully', new MeetingNoteResource($note->load(self::RELATIONS)), 200);
         } catch (ModelNotFoundException $e) {
