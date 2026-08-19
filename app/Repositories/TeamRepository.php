@@ -119,6 +119,19 @@ class TeamRepository implements TeamRepositoryInterface
                 }
             }
 
+            foreach ($data['member_employee_ids'] ?? [] as $employeeId) {
+                TeamMember::updateOrCreate(
+                    [
+                        'team_id' => $team->id,
+                        'employee_id' => $employeeId,
+                    ],
+                    [
+                        'joined_at' => now(),
+                        'left_at' => null,
+                    ]
+                );
+            }
+
             // Clear caches
             $this->clearTeamCaches($team->id);
 
