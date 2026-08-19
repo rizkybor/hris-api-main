@@ -54,6 +54,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
+            /** @var User $user */
             $user = Auth::user();
             $query = DocumentLetter::query()->with(self::RELATIONS)->orderByDesc('created_at');
 
@@ -85,6 +86,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     public function store(DocumentLetterStoreRequest $request)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         if ($user->hasRole('staff')) {
@@ -124,6 +126,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
     public function show(string $id)
     {
         try {
+            /** @var User $user */
             $user = Auth::user();
             $query = DocumentLetter::with(self::RELATIONS);
 
@@ -237,6 +240,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     public function approve(string $id)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         if (! $user->hasRole('finance')) {
@@ -272,6 +276,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     public function reject(DocumentLetterRejectRequest $request, string $id)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         if (! $user->hasRole('finance')) {
@@ -308,6 +313,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     public function exportPdf(string $id)
     {
+        /** @var User $user */
         $user = Auth::user();
         $query = DocumentLetter::with(['sender.user', 'sender.jobInformation', 'approver']);
 
@@ -343,6 +349,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     private function guardEditable(DocumentLetter $documentLetter)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         if ($documentLetter->created_by !== $user->id && ! $user->hasRole('superadmin')) {
