@@ -107,6 +107,16 @@ class EmployeeProfile extends Model
         return $this->hasMany(Project::class, 'project_leader_id');
     }
 
+    /**
+     * Projects this employee was individually picked onto (Team
+     * Assignment's "employee" mode -- see Project::members()), as opposed
+     * to via a Team.
+     */
+    public function memberProjects()
+    {
+        return $this->belongsToMany(Project::class, 'project_members', 'employee_id', 'project_id');
+    }
+
     public function assignedTasks()
     {
         return $this->hasMany(ProjectTask::class, 'assignee_id');

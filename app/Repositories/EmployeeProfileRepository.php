@@ -44,10 +44,23 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
         // If search is provided, use Scout for full-text search
         if ($search) {
             // Get IDs from Scout search first
-            $scoutQuery = EmployeeProfile::search($search);
+            $searchResults = EmployeeProfile::search($search)->keys();
 
-            // Get the IDs from search results
-            $searchResults = $scoutQuery->keys();
+            // Scout is an optional dependency here (no driver configured,
+            // or the search service is down) -- when it comes back empty,
+            // fall back to a plain DB match instead of silently returning
+            // nothing. This is also what makes every name-typed @mention
+            // lookup (Meeting Note / Project Task comments) actually find
+            // people when Scout isn't wired up.
+            if ($searchResults->isEmpty()) {
+                $searchResults = EmployeeProfile::where('code', 'like', "%{$search}%")
+                    ->orWhere('identity_number', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    })
+                    ->pluck('id');
+            }
 
             // Build query with IDs and eager loading
             $query = EmployeeProfile::with(['user', 'jobInformation', 'bankInformation', 'emergencyContacts'])
@@ -107,6 +120,12 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
                         ->whereHas('team.projects', function ($projQ) use ($projectId) {
                             $projQ->where('projects.id', $projectId);
                         });
+                });
+
+                // "employee" assignment mode: individually-picked members
+                // aren't on any Team, so the clause above misses them.
+                $q->orWhereHas('memberProjects', function ($memberQ) use ($projectId) {
+                    $memberQ->where('projects.id', $projectId);
                 });
             });
         }
