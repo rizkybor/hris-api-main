@@ -162,6 +162,7 @@ Route::prefix('v1')
             Route::get('options/ptkp-statuses', [OptionController::class, 'getPtkpStatuses']);
             Route::get('options/bank-names', [OptionController::class, 'getBankNames']);
             Route::get('options/preferred-languages', [OptionController::class, 'getPreferredLanguages']);
+            Route::get('options/pph-types', [OptionController::class, 'getPphTypes']);
 
             // Dashboard routes
             Route::get('dashboard/statistics', [DashboardController::class, 'getStatistics']);

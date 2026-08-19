@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PphType;
 use App\Helpers\ResponseHelper;
 use App\Interfaces\OptionRepositoryInterface;
 
@@ -75,6 +76,11 @@ class OptionController extends Controller
                 500
             );
         }
+    }
+
+    public function getPphTypes()
+    {
+        return ResponseHelper::jsonResponse(true, 'PPh type options retrieved successfully', PphType::options(), 200);
     }
 
     public function getTaskPriorities()
