@@ -55,6 +55,13 @@ class ProjectCalculationRequest extends FormRequest
             'developer_count' => ['nullable', 'integer', 'min:1'],
             'margin_percent' => ['nullable', 'numeric', 'min:0', 'max:1000'],
 
+            // Optional extra line items -- free-form, so the array itself is
+            // never required, but a row that does exist must be complete.
+            'additional_items' => ['nullable', 'array'],
+            'additional_items.*.description' => ['required', 'string', 'max:255'],
+            'additional_items.*.amount' => ['required', 'numeric', 'min:0'],
+            'additional_items.*.price' => ['required', 'numeric', 'min:0'],
+
             'include_ppn' => ['nullable', 'boolean'],
             'ppn_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
 
@@ -79,6 +86,7 @@ class ProjectCalculationRequest extends FormRequest
             'rate_developer' => 'Rate Developer',
             'developer_count' => 'Jumlah Developer',
             'margin_percent' => 'Margin Jual',
+            'additional_items' => 'Item Tambahan',
         ];
     }
 }

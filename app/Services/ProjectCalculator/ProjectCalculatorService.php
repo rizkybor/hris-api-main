@@ -114,7 +114,24 @@ class ProjectCalculatorService
         $developerCount = max(1, (int) ($data['developer_count'] ?? 1));
         $developmentCost = round($estimatedHours * $rateDeveloper * $developerCount, 2);
 
-        $subtotal = round($serverCost + $designCost + $developmentCost, 2);
+        // Optional extra line items (e.g. domain, third-party integration,
+        // extra revisions) -- free-form Description x Amount x Price, added
+        // to the cost base the same way Server/Design/Development are, so
+        // the margin below applies to them too.
+        $additionalItems = array_map(function ($item) {
+            $amount = (float) ($item['amount'] ?? 0);
+            $price = (float) ($item['price'] ?? 0);
+
+            return [
+                'description' => $item['description'] ?? '',
+                'amount' => $amount,
+                'price' => $price,
+                'subtotal' => round($amount * $price, 2),
+            ];
+        }, $data['additional_items'] ?? []);
+        $additionalItemsTotal = round(array_sum(array_column($additionalItems, 'subtotal')), 2);
+
+        $subtotal = round($serverCost + $designCost + $developmentCost + $additionalItemsTotal, 2);
 
         $marginPercent = (float) ($data['margin_percent'] ?? $settings->margin_percent);
         $marginTotal = round($subtotal * ($marginPercent / 100), 2);
@@ -138,6 +155,8 @@ class ProjectCalculatorService
                 'rate_developer' => $rateDeveloper,
                 'developer_count' => $developerCount,
                 'development_cost' => $developmentCost,
+                'additional_items' => $additionalItems,
+                'additional_items_total' => $additionalItemsTotal,
             ]],
             'subtotal' => $subtotal,
             'buffer_total' => 0,

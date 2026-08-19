@@ -15,8 +15,7 @@ class LandingPageRateSettingController extends Controller implements HasMiddlewa
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['project-calculator-menu']), only: ['show']),
-            new Middleware(PermissionMiddleware::using(['project-calculator-landing-settings']), only: ['update']),
+            new Middleware(PermissionMiddleware::using(['project-calculator-menu']), only: ['show', 'update']),
         ];
     }
 
