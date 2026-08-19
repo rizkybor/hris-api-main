@@ -116,6 +116,7 @@ class PermissionSeeder extends Seeder
             'edit',
             'delete',
             'settings',
+            'landing-settings',
         ],
 
         'fixed-cost' => [

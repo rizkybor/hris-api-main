@@ -248,6 +248,7 @@ class RolePermissionSeeder extends Seeder
                     'project-calculator-edit',
                     'project-calculator-delete',
                     'project-calculator-settings',
+                    'project-calculator-landing-settings',
                     'fixed-cost-list',
                     'fixed-cost-create',
                     'fixed-cost-edit',

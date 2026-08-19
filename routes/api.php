@@ -25,6 +25,7 @@ use App\Http\Controllers\OptionController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PayslipController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\LandingPageRateSettingController;
 use App\Http\Controllers\ProjectCalculationController;
 use App\Http\Controllers\ProjectRateSettingController;
 use App\Http\Controllers\ProjectDocumentController;
@@ -111,6 +112,8 @@ Route::prefix('v1')
             // Project Calculator
             Route::get('project-calculator/rate-setting', [ProjectRateSettingController::class, 'show']);
             Route::put('project-calculator/rate-setting', [ProjectRateSettingController::class, 'update']);
+            Route::get('project-calculator/landing-page-setting', [LandingPageRateSettingController::class, 'show']);
+            Route::put('project-calculator/landing-page-setting', [LandingPageRateSettingController::class, 'update']);
             Route::get('project-calculations/statistics', [ProjectCalculationController::class, 'getStatistics']);
             Route::post('project-calculations/preview', [ProjectCalculationController::class, 'preview']);
             Route::apiResource('project-calculations', ProjectCalculationController::class);

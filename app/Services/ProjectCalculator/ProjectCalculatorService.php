@@ -2,6 +2,8 @@
 
 namespace App\Services\ProjectCalculator;
 
+use App\Models\LandingPageRateSetting;
+
 class ProjectCalculatorService
 {
     /**
@@ -62,6 +64,100 @@ class ProjectCalculatorService
             ? (int) ceil($totalHours / ($productiveHoursPerMonth / 4.33))
             : null;
 
+        return [
+            'items' => $computedItems,
+            'subtotal' => $subtotal,
+            'buffer_total' => $bufferTotal,
+            'pm_overhead_total' => $pmOverheadTotal,
+            'infra_setup_cost' => $scenario === 'build' ? $infraCost : null,
+            'grand_total' => $grandTotal,
+            'total_hours' => $totalHours,
+            'estimated_duration_weeks' => $estimatedDurationWeeks,
+            ...$this->applyTax($grandTotal, $includePpn, $ppnPercent, $includePph, $pphPercent),
+        ];
+    }
+
+    /**
+     * Landing Page is a fixed-shape package (not a repeatable items list
+     * like Feature/Build): one Server choice, one Design choice, and a
+     * Development cost (hours x rate x developer count), marked up by its
+     * own sell margin -- kept as a separate method rather than folded into
+     * calculate() since none of that method's per-item/hourly-rate math
+     * applies here.
+     *
+     * @param  array  $data  'server_type' (dedicated|shared), 'design_type'
+     *   (dedicated|template), 'estimated_hours', optional 'rate_developer'
+     *   (falls back to the config default), optional 'developer_count'
+     *   (falls back to 1), optional 'margin_percent' (falls back to the
+     *   config default)
+     */
+    public function calculateLandingPage(
+        array $data,
+        LandingPageRateSetting $settings,
+        bool $includePpn,
+        float $ppnPercent,
+        bool $includePph = false,
+        float $pphPercent = 0,
+    ): array {
+        $serverType = $data['server_type'];
+        $serverCost = $serverType === 'dedicated'
+            ? (float) $settings->server_dedicated_price
+            : (float) $settings->server_shared_price;
+
+        $designType = $data['design_type'];
+        $designCost = $designType === 'dedicated'
+            ? (float) $settings->design_dedicated_price
+            : (float) $settings->design_template_price;
+
+        $estimatedHours = (float) ($data['estimated_hours'] ?? 0);
+        $rateDeveloper = (float) ($data['rate_developer'] ?? $settings->default_rate_developer);
+        $developerCount = max(1, (int) ($data['developer_count'] ?? 1));
+        $developmentCost = round($estimatedHours * $rateDeveloper * $developerCount, 2);
+
+        $subtotal = round($serverCost + $designCost + $developmentCost, 2);
+
+        $marginPercent = (float) ($data['margin_percent'] ?? $settings->margin_percent);
+        $marginTotal = round($subtotal * ($marginPercent / 100), 2);
+        $grandTotal = round($subtotal + $marginTotal, 2);
+
+        // Simple capacity estimate: total dev-hours split evenly across the
+        // developer count, at a standard 40-hour work week -- there's no
+        // team-wide productive-hours setting for this scenario to anchor to
+        // (unlike Feature/Build, which derive it from the Rate Setup team).
+        $estimatedDurationWeeks = $developerCount > 0 && $estimatedHours > 0
+            ? (int) ceil($estimatedHours / $developerCount / 40)
+            : null;
+
+        return [
+            'items' => [[
+                'server_type' => $serverType,
+                'server_cost' => $serverCost,
+                'design_type' => $designType,
+                'design_cost' => $designCost,
+                'estimated_hours' => $estimatedHours,
+                'rate_developer' => $rateDeveloper,
+                'developer_count' => $developerCount,
+                'development_cost' => $developmentCost,
+            ]],
+            'subtotal' => $subtotal,
+            'buffer_total' => 0,
+            'pm_overhead_total' => 0,
+            'infra_setup_cost' => null,
+            'margin_percent' => $marginPercent,
+            'margin_total' => $marginTotal,
+            'grand_total' => $grandTotal,
+            'total_hours' => $estimatedHours,
+            'estimated_duration_weeks' => $estimatedDurationWeeks,
+            ...$this->applyTax($grandTotal, $includePpn, $ppnPercent, $includePph, $pphPercent),
+        ];
+    }
+
+    /**
+     * Shared by calculate() and calculateLandingPage() so both scenarios'
+     * PPN/PPh math can never drift apart.
+     */
+    private function applyTax(float $grandTotal, bool $includePpn, float $ppnPercent, bool $includePph, float $pphPercent): array
+    {
         $ppnAmount = $includePpn ? round($grandTotal * ($ppnPercent / 100), 2) : 0;
         $totalWithPpn = $includePpn ? round($grandTotal + $ppnAmount, 2) : null;
 
@@ -72,14 +168,6 @@ class ProjectCalculatorService
         $netReceived = $includePph ? round(($includePpn ? $totalWithPpn : $grandTotal) - $pphAmount, 2) : null;
 
         return [
-            'items' => $computedItems,
-            'subtotal' => $subtotal,
-            'buffer_total' => $bufferTotal,
-            'pm_overhead_total' => $pmOverheadTotal,
-            'infra_setup_cost' => $scenario === 'build' ? $infraCost : null,
-            'grand_total' => $grandTotal,
-            'total_hours' => $totalHours,
-            'estimated_duration_weeks' => $estimatedDurationWeeks,
             'ppn_amount' => $ppnAmount,
             'total_with_ppn' => $totalWithPpn,
             'pph_amount' => $pphAmount,
