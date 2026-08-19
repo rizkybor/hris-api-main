@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProjectCalculationController extends Controller implements HasMiddleware
@@ -45,8 +46,8 @@ class ProjectCalculationController extends Controller implements HasMiddleware
     {
         try {
             $query = ProjectCalculation::with('creator')
-                ->when($request->search, fn ($q) => $q->where('name', 'like', '%'.$request->search.'%')
-                    ->orWhere('client_name', 'like', '%'.$request->search.'%'))
+                ->when($request->search, fn ($q) => $q->where(fn ($qq) => $qq->where('name', 'like', '%'.$request->search.'%')
+                    ->orWhere('client_name', 'like', '%'.$request->search.'%')))
                 ->when($request->scenario, fn ($q) => $q->where('scenario', $request->scenario))
                 ->latest();
 
@@ -157,7 +158,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'net_received' => $result['net_received'],
                 'estimated_duration_weeks' => $result['estimated_duration_weeks'],
                 'notes' => $data['notes'] ?? null,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
             return ResponseHelper::jsonResponse(true, 'Project Calculation Saved Successfully', new ProjectCalculationResource($calculation->load('creator')), 201);
@@ -226,7 +227,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            return ResponseHelper::jsonResponse(true, 'Project Calculation Updated Successfully', new ProjectCalculationResource($calculation->fresh('creator')), 200);
+            return ResponseHelper::jsonResponse(true, 'Project Calculation Updated Successfully', new ProjectCalculationResource($calculation->load('creator')), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Project Calculation Not Found', null, 404);
         } catch (\Throwable $e) {

@@ -5,14 +5,18 @@ namespace App\Http\Controllers;
 use App\Helpers\ResponseHelper;
 use App\Http\Resources\CertificateTemplateResource;
 use App\Models\CertificateTemplate;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class CertificateTemplateController extends Controller implements HasMiddleware
 {
+    public function __construct(private CloudinaryManager $cloudinary) {}
+
     public static function middleware()
     {
         return [
@@ -37,12 +41,16 @@ class CertificateTemplateController extends Controller implements HasMiddleware
         ]);
 
         try {
-            $path = $request->file('background')->store('certificate-templates', 'public');
+            $publicId = $this->cloudinary->uploadImage(
+                $request->file('background'),
+                CloudinaryFolders::companyFiles('certificate-templates'),
+                CloudinaryFolders::filename('certificate-template')
+            );
 
             $template = CertificateTemplate::create([
                 'name' => $validated['name'],
-                'background_path' => $path,
-                'created_by' => auth()->id(),
+                'background_path' => $publicId,
+                'created_by' => Auth::id(),
             ]);
 
             return ResponseHelper::jsonResponse(true, 'Certificate Template Uploaded Successfully', new CertificateTemplateResource($template), 201);
@@ -56,9 +64,7 @@ class CertificateTemplateController extends Controller implements HasMiddleware
         try {
             $template = CertificateTemplate::findOrFail($id);
 
-            if ($template->background_path && Storage::disk('public')->exists($template->background_path)) {
-                Storage::disk('public')->delete($template->background_path);
-            }
+            $this->cloudinary->delete($template->background_path);
 
             $template->delete();
 

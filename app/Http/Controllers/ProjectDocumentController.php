@@ -7,19 +7,23 @@ use App\Http\Requests\ProjectDocumentStoreRequest;
 use App\Http\Requests\ProjectDocumentUpdateRequest;
 use App\Http\Resources\ProjectDocumentResource;
 use App\Interfaces\ProjectDocumentRepositoryInterface;
+use App\Models\Project;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProjectDocumentController extends Controller implements HasMiddleware
 {
     private ProjectDocumentRepositoryInterface $projectDocumentRepository;
 
-    public function __construct(ProjectDocumentRepositoryInterface $projectDocumentRepository)
-    {
+    public function __construct(
+        ProjectDocumentRepositoryInterface $projectDocumentRepository,
+        private CloudinaryManager $cloudinary
+    ) {
         $this->projectDocumentRepository = $projectDocumentRepository;
     }
 
@@ -56,9 +60,15 @@ class ProjectDocumentController extends Controller implements HasMiddleware
 
         try {
             $file = $request->file('document_path');
-            $storedPath = $file->store('project-documents', 'public');
+            $project = Project::findOrFail($validated['project_id']);
 
-            $validated['document_path'] = $storedPath;
+            $publicId = $this->cloudinary->uploadRaw(
+                $file,
+                CloudinaryFolders::projectFiles(),
+                CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($project->name, $project->id).'-doc')
+            );
+
+            $validated['document_path'] = $publicId;
             $validated['type_file'] = $file->getClientOriginalExtension();
             $validated['size_file'] = $this->formatBytes($file->getSize());
 
@@ -92,13 +102,17 @@ class ProjectDocumentController extends Controller implements HasMiddleware
 
             if ($request->hasFile('document_path')) {
                 $file = $request->file('document_path');
-                $storedPath = $file->store('project-documents', 'public');
+                $project = $document->project;
 
-                if ($document->document_path) {
-                    Storage::disk('public')->delete($document->document_path);
-                }
+                $publicId = $this->cloudinary->uploadRaw(
+                    $file,
+                    CloudinaryFolders::projectFiles(),
+                    CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($project->name, $project->id).'-doc')
+                );
 
-                $validated['document_path'] = $storedPath;
+                $this->cloudinary->delete($document->document_path, 'raw');
+
+                $validated['document_path'] = $publicId;
                 $validated['type_file'] = $file->getClientOriginalExtension();
                 $validated['size_file'] = $this->formatBytes($file->getSize());
             }
@@ -118,9 +132,7 @@ class ProjectDocumentController extends Controller implements HasMiddleware
         try {
             $document = $this->projectDocumentRepository->getById($id);
 
-            if ($document->document_path) {
-                Storage::disk('public')->delete($document->document_path);
-            }
+            $this->cloudinary->delete($document->document_path, 'raw');
 
             $this->projectDocumentRepository->delete($id);
 

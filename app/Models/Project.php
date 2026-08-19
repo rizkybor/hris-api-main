@@ -123,6 +123,29 @@ class Project extends Model
             || $this->hasDirectMember($employeeId);
     }
 
+    /**
+     * Batched equivalent of isEmployeeProjectParticipant() -- every employee
+     * id eligible to comment on / be mentioned in this project's tasks, in a
+     * fixed small number of queries regardless of how many ids are checked
+     * against it (unlike calling isEmployeeProjectParticipant() in a loop).
+     *
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    public function getParticipantEmployeeIds(): \Illuminate\Support\Collection
+    {
+        $teamMemberIds = TeamMember::whereNull('left_at')
+            ->whereHas('team.projects', fn ($query) => $query->where('projects.id', $this->id))
+            ->pluck('employee_id');
+
+        $directMemberIds = $this->members()->pluck('employee_profiles.id');
+
+        return $teamMemberIds->merge($directMemberIds)
+            ->push($this->project_leader_id)
+            ->filter()
+            ->unique()
+            ->values();
+    }
+
     public function tasks()
     {
         return $this->hasMany(ProjectTask::class);

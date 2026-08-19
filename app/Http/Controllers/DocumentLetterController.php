@@ -11,6 +11,9 @@ use App\Http\Resources\PaginateResource;
 use App\Models\DocumentLetter;
 use App\Models\DocumentLetterAttachment;
 use App\Models\User;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryResourceType;
 use App\Services\DocumentNumberService;
 use App\Services\EmailService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -21,7 +24,6 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class DocumentLetterController extends Controller implements HasMiddleware
@@ -30,7 +32,8 @@ class DocumentLetterController extends Controller implements HasMiddleware
 
     public function __construct(
         private DocumentNumberService $numberService,
-        private EmailService $emailService
+        private EmailService $emailService,
+        private CloudinaryManager $cloudinary
     ) {}
 
     public static function middleware()
@@ -51,6 +54,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
+            /** @var User $user */
             $user = Auth::user();
             $query = DocumentLetter::query()->with(self::RELATIONS)->orderByDesc('created_at');
 
@@ -82,6 +86,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     public function store(DocumentLetterStoreRequest $request)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         if ($user->hasRole('staff')) {
@@ -91,12 +96,12 @@ class DocumentLetterController extends Controller implements HasMiddleware
         $validated = $request->validated();
 
         try {
-            $documentLetter = DB::transaction(function () use ($validated, $user, $request) {
+            $documentLetter = DB::transaction(function () use ($validated, $user) {
                 $date = Carbon::parse($validated['document_date']);
                 $documentNumber = $validated['document_number']
                     ?? $this->numberService->generateNotaDinasNumber($date)['number'];
 
-                $documentLetter = DocumentLetter::create([
+                return DocumentLetter::create([
                     'document_number' => $documentNumber,
                     'subject' => $validated['subject'],
                     'document_date' => $validated['document_date'],
@@ -105,11 +110,12 @@ class DocumentLetterController extends Controller implements HasMiddleware
                     'status' => 'draft',
                     'created_by' => $user->id,
                 ]);
-
-                $this->storeAttachments($documentLetter, $request->file('attachments', []));
-
-                return $documentLetter;
             });
+
+            // Cloudinary uploads happen outside the transaction -- a slow or
+            // failed upload must not hold DB locks open or roll back an
+            // otherwise successful document creation.
+            $this->storeAttachments($documentLetter, $request->file('attachments', []));
 
             return ResponseHelper::jsonResponse(true, 'Official Memo Created Successfully', new DocumentLetterResource($documentLetter->load(self::RELATIONS)), 201);
         } catch (\Throwable $e) {
@@ -120,6 +126,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
     public function show(string $id)
     {
         try {
+            /** @var User $user */
             $user = Auth::user();
             $query = DocumentLetter::with(self::RELATIONS);
 
@@ -153,17 +160,18 @@ class DocumentLetterController extends Controller implements HasMiddleware
 
             $validated = $request->validated();
 
-            $documentLetter = DB::transaction(function () use ($documentLetter, $validated, $request) {
+            $documentLetter = DB::transaction(function () use ($documentLetter, $validated) {
                 $documentLetter->update(collect($validated)->only(['document_number', 'subject', 'document_date', 'body'])->toArray());
-
-                foreach ($validated['remove_attachment_ids'] ?? [] as $attachmentId) {
-                    $this->deleteAttachment($documentLetter, $attachmentId);
-                }
-
-                $this->storeAttachments($documentLetter, $request->file('attachments', []));
 
                 return $documentLetter;
             });
+
+            // Cloudinary calls stay outside the transaction (see store()).
+            foreach ($validated['remove_attachment_ids'] ?? [] as $attachmentId) {
+                $this->deleteAttachment($documentLetter, $attachmentId);
+            }
+
+            $this->storeAttachments($documentLetter, $request->file('attachments', []));
 
             return ResponseHelper::jsonResponse(true, 'Official Memo Updated Successfully', new DocumentLetterResource($documentLetter->load(self::RELATIONS)), 200);
         } catch (ModelNotFoundException $e) {
@@ -232,6 +240,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     public function approve(string $id)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         if (! $user->hasRole('finance')) {
@@ -267,6 +276,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     public function reject(DocumentLetterRejectRequest $request, string $id)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         if (! $user->hasRole('finance')) {
@@ -303,6 +313,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     public function exportPdf(string $id)
     {
+        /** @var User $user */
         $user = Auth::user();
         $query = DocumentLetter::with(['sender.user', 'sender.jobInformation', 'approver']);
 
@@ -338,6 +349,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
      */
     private function guardEditable(DocumentLetter $documentLetter)
     {
+        /** @var User $user */
         $user = Auth::user();
 
         if ($documentLetter->created_by !== $user->id && ! $user->hasRole('superadmin')) {
@@ -354,11 +366,15 @@ class DocumentLetterController extends Controller implements HasMiddleware
     private function storeAttachments(DocumentLetter $documentLetter, array $files): void
     {
         foreach ($files as $file) {
-            $storedPath = $file->store('document-letters', 'public');
+            $publicId = $this->cloudinary->uploadAuto(
+                $file,
+                CloudinaryFolders::companyFiles('document-letters'),
+                CloudinaryFolders::filename('document-letter-'.$documentLetter->id.'-attachment')
+            );
 
             $documentLetter->attachments()->create([
                 'original_name' => $file->getClientOriginalName(),
-                'file_path' => $storedPath,
+                'file_path' => $publicId,
                 'mime_type' => $file->getClientMimeType(),
                 'size_file' => $this->formatBytes($file->getSize()),
                 'uploaded_by' => Auth::id(),
@@ -374,9 +390,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
             return;
         }
 
-        if ($attachment->file_path && Storage::disk('public')->exists($attachment->file_path)) {
-            Storage::disk('public')->delete($attachment->file_path);
-        }
+        $this->cloudinary->delete($attachment->file_path, CloudinaryResourceType::fromMime($attachment->mime_type));
 
         $attachment->delete();
     }

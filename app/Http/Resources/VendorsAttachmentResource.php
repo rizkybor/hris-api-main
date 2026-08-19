@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,7 +18,11 @@ class VendorsAttachmentResource extends JsonResource
         return [
             'id' => $this->id,
             'document_name' => $this->document_name,
-            'document_path' => $this->document_path,
+            // Was a raw relative path before (unlike every other
+            // attachment Resource, which already wrapped it) -- now a full
+            // URL like the rest, since document_path holds a Cloudinary
+            // public_id rather than a local path.
+            'document_path' => CloudinaryUrl::autoByExtension($this->document_path, $this->type_file),
             'type_file' => $this->type_file,
             'size_file' => $this->size_file,
             'description' => $this->description,

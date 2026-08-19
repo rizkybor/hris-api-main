@@ -83,7 +83,7 @@ class BackupController extends Controller implements HasMiddleware
                 ->log('downloaded a database backup');
 
             return response()->download(Storage::disk('local')->path($backup->disk_path), $backup->filename, [
-                'Content-Type' => 'application/sql',
+                'Content-Type' => 'application/gzip',
             ]);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Backup Not Found', null, 404);

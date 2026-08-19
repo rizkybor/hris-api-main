@@ -5,13 +5,16 @@ namespace App\Repositories;
 use App\DTOs\ProjectTaskDto;
 use App\Interfaces\ProjectTaskRepositoryInterface;
 use App\Models\ProjectTask;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Storage;
 
 class ProjectTaskRepository implements ProjectTaskRepositoryInterface
 {
+    public function __construct(private CloudinaryManager $cloudinary) {}
+
     public function getAll(
         ?string $search,
         ?int $projectId,
@@ -90,8 +93,13 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
         $task = ProjectTask::create($taskArray);
 
         if (isset($data['image'])) {
-            $imagePath = $data['image']->store('task-images', 'public');
-            $task->update(['image' => $imagePath]);
+            $task->load('project');
+            $publicId = $this->cloudinary->uploadImage(
+                $data['image'],
+                CloudinaryFolders::projectFiles(),
+                CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($task->project->name, $task->project_id).'-task-'.$task->id)
+            );
+            $task->update(['image' => $publicId]);
         }
 
         return $task;
@@ -104,17 +112,17 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
         $task->update($taskDto->toArray());
 
         if (! empty($data['remove_image'])) {
-            if ($task->image && Storage::disk('public')->exists($task->image)) {
-                Storage::disk('public')->delete($task->image);
-            }
+            $this->cloudinary->delete($task->image);
             $task->update(['image' => null]);
         } elseif (isset($data['image'])) {
-            if ($task->image && Storage::disk('public')->exists($task->image)) {
-                Storage::disk('public')->delete($task->image);
-            }
+            $this->cloudinary->delete($task->image);
 
-            $imagePath = $data['image']->store('task-images', 'public');
-            $task->update(['image' => $imagePath]);
+            $publicId = $this->cloudinary->uploadImage(
+                $data['image'],
+                CloudinaryFolders::projectFiles(),
+                CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($task->project->name, $task->project_id).'-task-'.$task->id)
+            );
+            $task->update(['image' => $publicId]);
         }
 
         return $task;
@@ -124,9 +132,7 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
     {
         $task = $this->getById($id);
 
-        if ($task->image && Storage::disk('public')->exists($task->image)) {
-            Storage::disk('public')->delete($task->image);
-        }
+        $this->cloudinary->delete($task->image);
 
         $task->delete();
 

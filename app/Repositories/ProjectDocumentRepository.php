@@ -20,7 +20,7 @@ class ProjectDocumentRepository implements ProjectDocumentRepositoryInterface
 
     public function getById(string $id): ProjectDocument
     {
-        return ProjectDocument::findOrFail($id);
+        return ProjectDocument::with('project')->findOrFail($id);
     }
 
     public function create(array $data): ProjectDocument

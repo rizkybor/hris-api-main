@@ -5,12 +5,18 @@ namespace App\Services;
 use App\Models\Certificate;
 use App\Models\CertificateSetting;
 use App\Models\CertificateTemplate;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 
 class CertificateService
 {
-    public function __construct(protected DocumentNumberService $numberService) {}
+    public function __construct(
+        protected DocumentNumberService $numberService,
+        protected CloudinaryManager $cloudinary
+    ) {}
 
     public function currentSettings(): CertificateSetting
     {
@@ -70,9 +76,17 @@ class CertificateService
 
     public function renderAndStore(Certificate $certificate, ?CertificateTemplate $template): string
     {
+        $defaultBackground = public_path('images/certificate-default-bg.png');
+
+        // dompdf can't fetch remote images itself (enable_remote is off in
+        // config/dompdf.php, deliberately -- turning it on would let a PDF
+        // render arbitrary remote images/CSS from any URL a request feeds
+        // it), so a Cloudinary-hosted template background has to be pulled
+        // down to a temp file first, same as it used to just be a local
+        // storage path.
         $backgroundImagePath = $template?->background_path
-            ? Storage::disk('public')->path($template->background_path)
-            : public_path('images/certificate-default-bg.png');
+            ? $this->downloadToTemp(CloudinaryUrl::image($template->background_path))
+            : $defaultBackground;
 
         $pdf = Pdf::loadView('pdf.certificate', [
             'certificate' => $certificate,
@@ -81,14 +95,38 @@ class CertificateService
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape');
 
-        $filename = 'certificates/'.str_replace('/', '-', $certificate->certificate_number).'-'.$certificate->id.'.pdf';
-        Storage::disk('public')->put($filename, $pdf->output());
+        $publicId = $this->cloudinary->uploadFromString(
+            $pdf->output(),
+            CloudinaryFolders::companyFiles('certificates'),
+            CloudinaryFolders::filename(str_replace('/', '-', $certificate->certificate_number).'-'.$certificate->id),
+            'pdf'
+        );
 
-        return $filename;
+        if ($backgroundImagePath !== $defaultBackground) {
+            @unlink($backgroundImagePath);
+        }
+
+        return $publicId;
     }
 
-    public function absolutePdfPath(Certificate $certificate): string
+    /**
+     * Raw PDF bytes for a generated certificate, fetched from Cloudinary --
+     * used by the download/zip-export flows so the response still comes
+     * from our own API (matching the frontend's existing blob-download
+     * contract) rather than redirecting the browser to Cloudinary.
+     */
+    public function downloadBytes(Certificate $certificate): string
     {
-        return Storage::disk('public')->path($certificate->pdf_path);
+        $url = CloudinaryUrl::raw($certificate->pdf_path);
+
+        return Http::get($url)->throw()->body();
+    }
+
+    private function downloadToTemp(string $url): string
+    {
+        $tempPath = tempnam(sys_get_temp_dir(), 'cert-bg-');
+        file_put_contents($tempPath, Http::get($url)->throw()->body());
+
+        return $tempPath;
     }
 }

@@ -4,13 +4,16 @@ namespace App\Repositories;
 
 use App\Interfaces\AuthRepositoryInterface;
 use App\Models\User;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 
 class AuthRepository implements AuthRepositoryInterface
 {
+    public function __construct(private CloudinaryManager $cloudinary) {}
+
     public function login(array $data): User
     {
         DB::beginTransaction();
@@ -91,12 +94,18 @@ class AuthRepository implements AuthRepositoryInterface
             }
 
             if (isset($data['profile_photo'])) {
-                if ($user->profile_photo && Storage::disk('public')->exists($user->profile_photo)) {
-                    Storage::disk('public')->delete($user->profile_photo);
-                }
+                $this->cloudinary->delete($user->profile_photo);
 
-                $profilePhotoPath = $data['profile_photo']->store('profile-pictures', 'public');
-                $user->profile_photo = $profilePhotoPath;
+                // Same company-files/employees folder as UserRepository's
+                // admin-side photo upload -- these two were previously
+                // pointed at different local folders (profile-pictures/ vs
+                // users/) for the same profile_photo column, unified here.
+                $publicId = $this->cloudinary->uploadImage(
+                    $data['profile_photo'],
+                    CloudinaryFolders::companyFiles('employees'),
+                    CloudinaryFolders::filename('user-'.$user->id.'-photo')
+                );
+                $user->profile_photo = $publicId;
             }
 
             // Email is intentionally not updatable

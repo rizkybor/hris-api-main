@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -40,7 +41,7 @@ class DocumentLetterResource extends JsonResource
                 'id' => $file->id,
                 'original_name' => $file->original_name,
                 'file_path' => $file->file_path,
-                'url' => asset('storage/'.$file->file_path),
+                'url' => CloudinaryUrl::auto($file->file_path, $file->mime_type),
                 'mime_type' => $file->mime_type,
                 'size_file' => $file->size_file,
             ])),

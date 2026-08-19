@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,7 +20,7 @@ class EmployeeFileResource extends JsonResource
             'employee_id' => $this->employee_id,
             'original_name' => $this->original_name,
             'display_name' => $this->display_name ?: $this->original_name,
-            'url' => $this->file_path ? asset('storage/'.$this->file_path) : null,
+            'url' => CloudinaryUrl::auto($this->file_path, $this->mime_type),
             'mime_type' => $this->mime_type,
             'size_file' => $this->size_file,
             'uploader' => new UserResource($this->whenLoaded('uploader')),
