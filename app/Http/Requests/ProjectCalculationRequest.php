@@ -29,9 +29,9 @@ class ProjectCalculationRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'client_name' => ['nullable', 'string', 'max:255'],
-            'scenario' => ['required', 'string', 'in:feature,build'],
+            'scenario' => ['required', 'string', 'in:feature,build,landing_page'],
 
-            'items' => ['required', 'array', 'min:1'],
+            'items' => [$scenario === 'landing_page' ? 'nullable' : 'required', 'array'],
             'items.*.name' => ['required', 'string', 'max:255'],
             'items.*.complexity_factor' => ['required', 'numeric', 'min:0.1'],
             'items.*.buffer_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -45,6 +45,22 @@ class ProjectCalculationRequest extends FormRequest
 
             'pm_overhead_percent' => [$scenario === 'build' ? 'required' : 'nullable', 'numeric', 'min:0', 'max:100'],
             'infra_setup_cost' => [$scenario === 'build' ? 'required' : 'nullable', 'numeric', 'min:0'],
+
+            // Landing Page's own fixed-shape fields -- not part of the
+            // "items" list, since it's a single package per calculation.
+            'server_type' => [$scenario === 'landing_page' ? 'required' : 'nullable', 'string', 'in:dedicated,shared'],
+            'design_type' => [$scenario === 'landing_page' ? 'required' : 'nullable', 'string', 'in:dedicated,template'],
+            'estimated_hours' => [$scenario === 'landing_page' ? 'required' : 'nullable', 'numeric', 'min:0'],
+            'rate_developer' => ['nullable', 'numeric', 'min:0'],
+            'developer_count' => ['nullable', 'integer', 'min:1'],
+            'margin_percent' => ['nullable', 'numeric', 'min:0', 'max:1000'],
+
+            // Optional extra line items -- free-form, so the array itself is
+            // never required, but a row that does exist must be complete.
+            'additional_items' => ['nullable', 'array'],
+            'additional_items.*.description' => ['required', 'string', 'max:255'],
+            'additional_items.*.amount' => ['required', 'numeric', 'min:0'],
+            'additional_items.*.price' => ['required', 'numeric', 'min:0'],
 
             'include_ppn' => ['nullable', 'boolean'],
             'ppn_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -64,6 +80,13 @@ class ProjectCalculationRequest extends FormRequest
             'client_name' => 'Nama Klien',
             'scenario' => 'Skenario',
             'items' => 'Daftar Item',
+            'server_type' => 'Jenis Server',
+            'design_type' => 'Jenis Design',
+            'estimated_hours' => 'Estimasi Waktu Pengerjaan',
+            'rate_developer' => 'Rate Developer',
+            'developer_count' => 'Jumlah Developer',
+            'margin_percent' => 'Margin Jual',
+            'additional_items' => 'Item Tambahan',
         ];
     }
 }
