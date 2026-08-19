@@ -5,12 +5,15 @@ namespace App\Repositories;
 use App\DTOs\UserDto;
 use App\Interfaces\UserRepositoryInterface;
 use App\Models\User;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 
 class UserRepository implements UserRepositoryInterface
 {
+    public function __construct(private CloudinaryManager $cloudinary) {}
+
     public function getById(string $id): User
     {
         return User::findOrFail($id)->load(['roles']);
@@ -23,8 +26,12 @@ class UserRepository implements UserRepositoryInterface
             $user = User::create($userDto->toArray());
 
             if (isset($data['profile_photo'])) {
-                $profilePhotoPath = $data['profile_photo']->store('users', 'public');
-                $user->update(['profile_photo' => $profilePhotoPath]);
+                $publicId = $this->cloudinary->uploadImage(
+                    $data['profile_photo'],
+                    CloudinaryFolders::companyFiles('employees'),
+                    CloudinaryFolders::filename('user-'.$user->id.'-photo')
+                );
+                $user->update(['profile_photo' => $publicId]);
             }
 
             if (isset($data['roles'])) {
@@ -54,12 +61,14 @@ class UserRepository implements UserRepositoryInterface
             $user->update($userDto->toArray());
 
             if (isset($data['profile_photo'])) {
-                if ($user->profile_photo && Storage::disk('public')->exists($user->profile_photo)) {
-                    Storage::disk('public')->delete($user->profile_photo);
-                }
+                $this->cloudinary->delete($user->profile_photo);
 
-                $profilePhotoPath = $data['profile_photo']->store('users', 'public');
-                $user->update(['profile_photo' => $profilePhotoPath]);
+                $publicId = $this->cloudinary->uploadImage(
+                    $data['profile_photo'],
+                    CloudinaryFolders::companyFiles('employees'),
+                    CloudinaryFolders::filename('user-'.$user->id.'-photo')
+                );
+                $user->update(['profile_photo' => $publicId]);
             }
 
             if (isset($data['roles'])) {

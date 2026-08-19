@@ -11,6 +11,9 @@ use App\Http\Resources\PaginateResource;
 use App\Models\DocumentLetter;
 use App\Models\DocumentLetterAttachment;
 use App\Models\User;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryResourceType;
 use App\Services\DocumentNumberService;
 use App\Services\EmailService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -21,7 +24,6 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class DocumentLetterController extends Controller implements HasMiddleware
@@ -30,7 +32,8 @@ class DocumentLetterController extends Controller implements HasMiddleware
 
     public function __construct(
         private DocumentNumberService $numberService,
-        private EmailService $emailService
+        private EmailService $emailService,
+        private CloudinaryManager $cloudinary
     ) {}
 
     public static function middleware()
@@ -354,11 +357,15 @@ class DocumentLetterController extends Controller implements HasMiddleware
     private function storeAttachments(DocumentLetter $documentLetter, array $files): void
     {
         foreach ($files as $file) {
-            $storedPath = $file->store('document-letters', 'public');
+            $publicId = $this->cloudinary->uploadAuto(
+                $file,
+                CloudinaryFolders::companyFiles('document-letters'),
+                CloudinaryFolders::filename('document-letter-'.$documentLetter->id.'-attachment')
+            );
 
             $documentLetter->attachments()->create([
                 'original_name' => $file->getClientOriginalName(),
-                'file_path' => $storedPath,
+                'file_path' => $publicId,
                 'mime_type' => $file->getClientMimeType(),
                 'size_file' => $this->formatBytes($file->getSize()),
                 'uploaded_by' => Auth::id(),
@@ -374,9 +381,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
             return;
         }
 
-        if ($attachment->file_path && Storage::disk('public')->exists($attachment->file_path)) {
-            Storage::disk('public')->delete($attachment->file_path);
-        }
+        $this->cloudinary->delete($attachment->file_path, CloudinaryResourceType::fromMime($attachment->mime_type));
 
         $attachment->delete();
     }

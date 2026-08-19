@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
@@ -44,7 +45,7 @@ class MeetingNoteResource extends JsonResource
             'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments->map(fn ($file) => [
                 'id' => $file->id,
                 'original_name' => $file->original_name,
-                'url' => asset('storage/'.$file->file_path),
+                'url' => CloudinaryUrl::auto($file->file_path, $file->mime_type),
                 'mime_type' => $file->mime_type,
                 'size_file' => $file->size_file,
             ])),

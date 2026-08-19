@@ -8,15 +8,18 @@ use App\Interfaces\ProjectRepositoryInterface;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\TeamMember;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class ProjectRepository implements ProjectRepositoryInterface
 {
+    public function __construct(private CloudinaryManager $cloudinary) {}
+
     public function getAll(
         ?string $search,
         ?string $status,
@@ -125,8 +128,12 @@ class ProjectRepository implements ProjectRepositoryInterface
             $project = Project::create($projectDto->toArray());
 
             if (isset($data['photo'])) {
-                $photoPath = $data['photo']->store('project-photos', 'public');
-                $project->update(['photo' => $photoPath]);
+                $publicId = $this->cloudinary->uploadImage(
+                    $data['photo'],
+                    CloudinaryFolders::projectFiles(),
+                    CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($project->name, $project->id).'-photo')
+                );
+                $project->update(['photo' => $publicId]);
             }
 
             $this->applyTeamAssignment($project, $data);
@@ -146,12 +153,14 @@ class ProjectRepository implements ProjectRepositoryInterface
             $project->update($projectDto->toArray());
 
             if (isset($data['photo'])) {
-                if ($project->photo && Storage::disk('public')->exists($project->photo)) {
-                    Storage::disk('public')->delete($project->photo);
-                }
+                $this->cloudinary->delete($project->photo);
 
-                $photoPath = $data['photo']->store('project-photos', 'public');
-                $project->update(['photo' => $photoPath]);
+                $publicId = $this->cloudinary->uploadImage(
+                    $data['photo'],
+                    CloudinaryFolders::projectFiles(),
+                    CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($project->name, $project->id).'-photo')
+                );
+                $project->update(['photo' => $publicId]);
             }
 
             if (array_key_exists('team_assignment_mode', $data) || array_key_exists('team_id', $data) || array_key_exists('member_employee_ids', $data)) {
@@ -198,9 +207,7 @@ class ProjectRepository implements ProjectRepositoryInterface
         return DB::transaction(function () use ($id) {
             $project = $this->getById($id);
 
-            if ($project->photo && Storage::disk('public')->exists($project->photo)) {
-                Storage::disk('public')->delete($project->photo);
-            }
+            $this->cloudinary->delete($project->photo);
 
             $project->delete();
 

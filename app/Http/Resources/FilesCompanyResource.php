@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,10 +15,7 @@ class FilesCompanyResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            // Gunakan asset() untuk public disk, aman dan IDE-friendly
-            'document_path' => $this->document_path 
-                ? asset('storage/' . $this->document_path) 
-                : null,
+            'document_path' => CloudinaryUrl::auto($this->document_path, $this->type_file),
             'document_name' => $this->document_name,
             'description' => $this->description,
             'type_file' => $this->type_file,

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -27,6 +28,6 @@ class CertificateTemplate extends Model
 
     public function getBackgroundUrlAttribute(): ?string
     {
-        return $this->background_path ? asset('storage/'.$this->background_path) : null;
+        return CloudinaryUrl::image($this->background_path);
     }
 }

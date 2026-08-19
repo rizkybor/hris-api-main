@@ -9,12 +9,12 @@ use App\Http\Resources\PaginateResource;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use App\Services\CertificateService;
+use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\DocumentNumberService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use ZipArchive;
@@ -24,6 +24,7 @@ class CertificateController extends Controller implements HasMiddleware
     public function __construct(
         protected CertificateService $certificateService,
         protected DocumentNumberService $numberService,
+        protected CloudinaryManager $cloudinary,
     ) {}
 
     public static function middleware()
@@ -128,10 +129,10 @@ class CertificateController extends Controller implements HasMiddleware
             if (! $isBulk) {
                 $certificate = $certificates[0];
 
-                return response()->download(
-                    $this->certificateService->absolutePdfPath($certificate),
-                    str_replace('/', '-', $certificate->certificate_number).'.pdf'
-                );
+                return response($this->certificateService->downloadBytes($certificate), 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'attachment; filename="'.str_replace('/', '-', $certificate->certificate_number).'.pdf"',
+                ]);
             }
 
             return $this->streamZip($certificates, $batchId);
@@ -153,9 +154,9 @@ class CertificateController extends Controller implements HasMiddleware
         $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
         foreach ($certificates as $certificate) {
-            $zip->addFile(
-                $this->certificateService->absolutePdfPath($certificate),
-                str_replace('/', '-', $certificate->certificate_number).'.pdf'
+            $zip->addFromString(
+                str_replace('/', '-', $certificate->certificate_number).'.pdf',
+                $this->certificateService->downloadBytes($certificate)
             );
         }
 
@@ -182,14 +183,14 @@ class CertificateController extends Controller implements HasMiddleware
         try {
             $certificate = Certificate::findOrFail($id);
 
-            if (! $certificate->pdf_path || ! Storage::disk('public')->exists($certificate->pdf_path)) {
+            if (! $certificate->pdf_path) {
                 return ResponseHelper::jsonResponse(false, 'Certificate File Not Found', null, 404);
             }
 
-            return response()->download(
-                $this->certificateService->absolutePdfPath($certificate),
-                str_replace('/', '-', $certificate->certificate_number).'.pdf'
-            );
+            return response($this->certificateService->downloadBytes($certificate), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.str_replace('/', '-', $certificate->certificate_number).'.pdf"',
+            ]);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Certificate Not Found', null, 404);
         } catch (\Throwable $e) {
@@ -202,9 +203,7 @@ class CertificateController extends Controller implements HasMiddleware
         try {
             $certificate = Certificate::findOrFail($id);
 
-            if ($certificate->pdf_path && Storage::disk('public')->exists($certificate->pdf_path)) {
-                Storage::disk('public')->delete($certificate->pdf_path);
-            }
+            $this->cloudinary->delete($certificate->pdf_path, 'raw');
 
             $certificate->delete();
 

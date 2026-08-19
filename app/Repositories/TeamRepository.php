@@ -9,14 +9,17 @@ use App\Models\Project;
 use App\Models\Team;
 use App\Models\TeamMember;
 use App\Models\User;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class TeamRepository implements TeamRepositoryInterface
 {
+    public function __construct(private CloudinaryManager $cloudinary) {}
+
     public function getAll(
         ?string $search,
         ?int $leaderId,
@@ -99,8 +102,12 @@ class TeamRepository implements TeamRepositoryInterface
             $team = Team::create($teamDto->toArray());
 
             if (isset($data['icon'])) {
-                $iconPath = $data['icon']->store('team-icons', 'public');
-                $team->update(['icon' => $iconPath]);
+                $publicId = $this->cloudinary->uploadImage(
+                    $data['icon'],
+                    CloudinaryFolders::companyFiles('teams'),
+                    CloudinaryFolders::filename('team-'.$team->id.'-icon')
+                );
+                $team->update(['icon' => $publicId]);
             }
 
             if ($team->team_lead_id) {
@@ -149,12 +156,14 @@ class TeamRepository implements TeamRepositoryInterface
             $team->update($teamDto->toArray());
 
             if (isset($data['icon'])) {
-                if ($team->icon && Storage::disk('public')->exists($team->icon)) {
-                    Storage::disk('public')->delete($team->icon);
-                }
+                $this->cloudinary->delete($team->icon);
 
-                $iconPath = $data['icon']->store('team-icons', 'public');
-                $team->update(['icon' => $iconPath]);
+                $publicId = $this->cloudinary->uploadImage(
+                    $data['icon'],
+                    CloudinaryFolders::companyFiles('teams'),
+                    CloudinaryFolders::filename('team-'.$team->id.'-icon')
+                );
+                $team->update(['icon' => $publicId]);
             }
 
             if ($team->team_lead_id && $team->team_lead_id !== $oldLeaderId) {
@@ -195,9 +204,7 @@ class TeamRepository implements TeamRepositoryInterface
         return DB::transaction(function () use ($id) {
             $team = $this->getById($id);
 
-            if ($team->icon && Storage::disk('public')->exists($team->icon)) {
-                Storage::disk('public')->delete($team->icon);
-            }
+            $this->cloudinary->delete($team->icon);
 
             // Clear caches before deleting
             $this->clearTeamCaches($team->id);

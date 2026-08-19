@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,7 +17,7 @@ class UserResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'profile_photo' => $this->profile_photo ? asset('storage/'.$this->profile_photo) : null,
+            'profile_photo' => CloudinaryUrl::image($this->profile_photo),
             'name' => $this->name,
             'email' => $this->email,
             'employee_profile' => new EmployeeProfileResource($this->whenLoaded('employeeProfile')),

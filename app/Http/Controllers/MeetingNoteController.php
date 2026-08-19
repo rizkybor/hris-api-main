@@ -11,6 +11,9 @@ use App\Models\MeetingNote;
 use App\Models\MeetingNoteAttachment;
 use App\Models\MeetingNoteViewer;
 use App\Models\User;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryResourceType;
 use App\Services\DocumentNumberService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -19,7 +22,6 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class MeetingNoteController extends Controller implements HasMiddleware
@@ -34,7 +36,10 @@ class MeetingNoteController extends Controller implements HasMiddleware
 
     private const RELATIONS = ['creator.employeeProfile', 'updater', 'attendees.user', 'attachments'];
 
-    public function __construct(private DocumentNumberService $numberService) {}
+    public function __construct(
+        private DocumentNumberService $numberService,
+        private CloudinaryManager $cloudinary
+    ) {}
 
     public static function middleware()
     {
@@ -352,11 +357,15 @@ class MeetingNoteController extends Controller implements HasMiddleware
     private function storeAttachments(MeetingNote $note, array $files): void
     {
         foreach ($files as $file) {
-            $storedPath = $file->store('meeting-notes', 'public');
+            $publicId = $this->cloudinary->uploadAuto(
+                $file,
+                CloudinaryFolders::companyFiles('meeting-notes'),
+                CloudinaryFolders::filename('meeting-note-'.$note->id.'-attachment')
+            );
 
             $note->attachments()->create([
                 'original_name' => $file->getClientOriginalName(),
-                'file_path' => $storedPath,
+                'file_path' => $publicId,
                 'mime_type' => $file->getClientMimeType(),
                 'size_file' => $this->formatBytes($file->getSize()),
                 'uploaded_by' => Auth::id(),
@@ -372,9 +381,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
             return;
         }
 
-        if ($attachment->file_path && Storage::disk('public')->exists($attachment->file_path)) {
-            Storage::disk('public')->delete($attachment->file_path);
-        }
+        $this->cloudinary->delete($attachment->file_path, CloudinaryResourceType::fromMime($attachment->mime_type));
 
         $attachment->delete();
     }

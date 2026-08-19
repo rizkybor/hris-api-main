@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,7 +20,7 @@ class ProjectTaskResource extends JsonResource
             'project_id' => $this->project_id,
             'name' => $this->name,
             'description' => $this->description,
-            'image' => $this->image ? asset('storage/'.$this->image) : null,
+            'image' => CloudinaryUrl::image($this->image),
             'assignee_id' => $this->assignee_id,
             'priority' => $this->priority,
             'status' => $this->status,

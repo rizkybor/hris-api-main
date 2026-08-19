@@ -8,17 +8,20 @@ use App\Http\Requests\FilesCompanyUpdateRequest;
 use App\Http\Resources\FilesCompanyResource;
 use App\Http\Resources\PaginateResource;
 use App\Interfaces\FilesCompanyRepositoryInterface;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryResourceType;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class FilesCompanyController extends Controller
 {
     private FilesCompanyRepositoryInterface $filesCompanyRepository;
 
-    public function __construct(FilesCompanyRepositoryInterface $filesCompanyRepository)
-    {
+    public function __construct(
+        FilesCompanyRepositoryInterface $filesCompanyRepository,
+        private CloudinaryManager $cloudinary
+    ) {
         $this->filesCompanyRepository = $filesCompanyRepository;
     }
 
@@ -92,10 +95,13 @@ class FilesCompanyController extends Controller
             if ($request->hasFile('document_path') && $request->file('document_path')->isValid()) {
                 $file = $request->file('document_path');
 
-                // Simpan file di storage/app/public/company-files
-                $storedPath = $file->store('company-files', 'public');
+                $publicId = $this->cloudinary->uploadAuto(
+                    $file,
+                    CloudinaryFolders::companyFiles('company-files'),
+                    CloudinaryFolders::filename('company-file')
+                );
 
-                $validated['document_path'] = $storedPath; // relative path: company-files/nama-file.png
+                $validated['document_path'] = $publicId;
                 $validated['type_file'] = $file->getClientMimeType();
                 $validated['size_file'] = $file->getSize();
             } else {
@@ -121,9 +127,7 @@ class FilesCompanyController extends Controller
             // 1️⃣ Tangani remove_file
             // =========================
             if ($request->boolean('remove_file') && $fileModel->document_path) {
-                if (Storage::disk('public')->exists($fileModel->document_path)) {
-                    Storage::disk('public')->delete($fileModel->document_path);
-                }
+                $this->cloudinary->delete($fileModel->document_path, CloudinaryResourceType::fromMime($fileModel->type_file));
                 $validated['document_path'] = null;
                 $validated['type_file'] = null;
                 $validated['size_file'] = null;
@@ -135,13 +139,15 @@ class FilesCompanyController extends Controller
             if ($request->hasFile('document_path') && $request->file('document_path')->isValid()) {
                 $file = $request->file('document_path');
 
-                if ($fileModel->document_path && Storage::disk('public')->exists($fileModel->document_path)) {
-                    Storage::disk('public')->delete($fileModel->document_path);
-                }
+                $this->cloudinary->delete($fileModel->document_path, CloudinaryResourceType::fromMime($fileModel->type_file));
 
-                $storedPath = $file->store('company-files', 'public');
+                $publicId = $this->cloudinary->uploadAuto(
+                    $file,
+                    CloudinaryFolders::companyFiles('company-files'),
+                    CloudinaryFolders::filename('company-file')
+                );
 
-                $validated['document_path'] = $storedPath;
+                $validated['document_path'] = $publicId;
                 $validated['type_file'] = $file->getClientMimeType();
                 $validated['size_file'] = $file->getSize();
             }
@@ -167,11 +173,6 @@ class FilesCompanyController extends Controller
         try {
             $file = $this->filesCompanyRepository->getById($id);
 
-            // Optional: tambahkan URL lengkap untuk akses file
-            if ($file->document_path) {
-                $file->file_url = asset('storage/' . $file->document_path);
-            }
-
             return ResponseHelper::jsonResponse(true, 'Company File Retrieved Successfully', new FilesCompanyResource($file), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
@@ -184,6 +185,9 @@ class FilesCompanyController extends Controller
     public function destroy(string $id)
     {
         try {
+            $fileModel = $this->filesCompanyRepository->getById($id);
+            $this->cloudinary->delete($fileModel->document_path, CloudinaryResourceType::fromMime($fileModel->type_file));
+
             $this->filesCompanyRepository->delete($id);
             return ResponseHelper::jsonResponse(true, 'Company File Deleted Successfully', null, 200);
         } catch (ModelNotFoundException $e) {

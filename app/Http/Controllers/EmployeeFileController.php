@@ -6,16 +6,20 @@ use App\Helpers\ResponseHelper;
 use App\Http\Resources\EmployeeFileResource;
 use App\Models\EmployeeFile;
 use App\Models\EmployeeProfile;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryResourceType;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class EmployeeFileController extends Controller implements HasMiddleware
 {
+    public function __construct(private CloudinaryManager $cloudinary) {}
+
     public static function middleware()
     {
         return [
@@ -54,12 +58,16 @@ class EmployeeFileController extends Controller implements HasMiddleware
             $names = $request->input('names', []);
 
             $uploaded = collect($request->file('files'))->map(function ($file, $index) use ($employee, $names) {
-                $storedPath = $file->store('employee-files', 'public');
+                $publicId = $this->cloudinary->uploadAuto(
+                    $file,
+                    CloudinaryFolders::companyFiles('employees'),
+                    CloudinaryFolders::filename('employee-'.$employee->id.'-file')
+                );
 
                 return $employee->files()->create([
                     'original_name' => $file->getClientOriginalName(),
                     'display_name' => $names[$index] ?? $file->getClientOriginalName(),
-                    'file_path' => $storedPath,
+                    'file_path' => $publicId,
                     'mime_type' => $file->getClientMimeType(),
                     'size_file' => $this->formatBytes($file->getSize()),
                     'uploaded_by' => Auth::id(),
@@ -81,9 +89,7 @@ class EmployeeFileController extends Controller implements HasMiddleware
         try {
             $file = EmployeeFile::findOrFail($id);
 
-            if ($file->file_path && Storage::disk('public')->exists($file->file_path)) {
-                Storage::disk('public')->delete($file->file_path);
-            }
+            $this->cloudinary->delete($file->file_path, CloudinaryResourceType::fromMime($file->mime_type));
 
             $file->delete();
 
