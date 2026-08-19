@@ -27,6 +27,11 @@ class ProjectCalculationResource extends JsonResource
             'include_ppn' => (bool) $this->include_ppn,
             'ppn_percent' => (float) $this->ppn_percent,
             'total_with_ppn' => $this->total_with_ppn !== null ? (float) $this->total_with_ppn : null,
+            'include_pph' => (bool) $this->include_pph,
+            'pph_type' => $this->pph_type,
+            'pph_percent' => $this->pph_percent !== null ? (float) $this->pph_percent : null,
+            'pph_amount' => $this->pph_amount !== null ? (float) $this->pph_amount : null,
+            'net_received' => $this->net_received !== null ? (float) $this->net_received : null,
             'estimated_duration_weeks' => $this->estimated_duration_weeks,
             'notes' => $this->notes,
             'creator' => [

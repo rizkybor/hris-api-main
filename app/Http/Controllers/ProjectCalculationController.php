@@ -103,6 +103,8 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 (float) $rateSetting->total_productive_hours_per_month,
                 $data['include_ppn'] ?? false,
                 $data['ppn_percent'] ?? 11,
+                $data['include_pph'] ?? false,
+                $data['pph_percent'] ?? 0,
             );
 
             return ResponseHelper::jsonResponse(true, 'Preview Calculated Successfully', $result, 200);
@@ -127,6 +129,8 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 (float) $rateSetting->total_productive_hours_per_month,
                 $data['include_ppn'] ?? false,
                 $data['ppn_percent'] ?? 11,
+                $data['include_pph'] ?? false,
+                $data['pph_percent'] ?? 0,
             );
 
             $calculation = ProjectCalculation::create([
@@ -146,6 +150,11 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'include_ppn' => $data['include_ppn'] ?? false,
                 'ppn_percent' => $data['ppn_percent'] ?? 11,
                 'total_with_ppn' => $result['total_with_ppn'],
+                'include_pph' => $data['include_pph'] ?? false,
+                'pph_type' => $data['pph_type'] ?? null,
+                'pph_percent' => $data['pph_percent'] ?? null,
+                'pph_amount' => $result['pph_amount'],
+                'net_received' => $result['net_received'],
                 'estimated_duration_weeks' => $result['estimated_duration_weeks'],
                 'notes' => $data['notes'] ?? null,
                 'created_by' => auth()->id(),
@@ -187,6 +196,8 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 (float) $rateSetting->total_productive_hours_per_month,
                 $data['include_ppn'] ?? false,
                 $data['ppn_percent'] ?? 11,
+                $data['include_pph'] ?? false,
+                $data['pph_percent'] ?? 0,
             );
 
             $calculation->update([
@@ -206,6 +217,11 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'include_ppn' => $data['include_ppn'] ?? false,
                 'ppn_percent' => $data['ppn_percent'] ?? 11,
                 'total_with_ppn' => $result['total_with_ppn'],
+                'include_pph' => $data['include_pph'] ?? false,
+                'pph_type' => $data['pph_type'] ?? null,
+                'pph_percent' => $data['pph_percent'] ?? null,
+                'pph_amount' => $result['pph_amount'],
+                'net_received' => $result['net_received'],
                 'estimated_duration_weeks' => $result['estimated_duration_weeks'],
                 'notes' => $data['notes'] ?? null,
             ]);

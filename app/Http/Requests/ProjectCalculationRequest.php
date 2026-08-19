@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\PphType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProjectCalculationRequest extends FormRequest
@@ -14,10 +15,10 @@ class ProjectCalculationRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        if ($this->has('include_ppn')) {
-            $this->merge([
-                'include_ppn' => filter_var($this->input('include_ppn'), FILTER_VALIDATE_BOOLEAN),
-            ]);
+        foreach (['include_ppn', 'include_pph'] as $field) {
+            if ($this->has($field)) {
+                $this->merge([$field => filter_var($this->input($field), FILTER_VALIDATE_BOOLEAN)]);
+            }
         }
     }
 
@@ -47,6 +48,10 @@ class ProjectCalculationRequest extends FormRequest
 
             'include_ppn' => ['nullable', 'boolean'],
             'ppn_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+
+            'include_pph' => ['nullable', 'boolean'],
+            'pph_type' => [$this->boolean('include_pph') ? 'required' : 'nullable', 'string', 'in:'.implode(',', array_column(PphType::cases(), 'value'))],
+            'pph_percent' => [$this->boolean('include_pph') ? 'required' : 'nullable', 'numeric', 'min:0', 'max:100'],
 
             'notes' => ['nullable', 'string'],
         ];
