@@ -97,7 +97,7 @@ class FilesCompanyController extends Controller
 
                 $publicId = $this->cloudinary->uploadAuto(
                     $file,
-                    CloudinaryFolders::companyFiles('company-files'),
+                    CloudinaryFolders::companyFiles('general'),
                     CloudinaryFolders::filename('company-file')
                 );
 
@@ -143,7 +143,7 @@ class FilesCompanyController extends Controller
 
                 $publicId = $this->cloudinary->uploadAuto(
                     $file,
-                    CloudinaryFolders::companyFiles('company-files'),
+                    CloudinaryFolders::companyFiles('general'),
                     CloudinaryFolders::filename('company-file')
                 );
 
