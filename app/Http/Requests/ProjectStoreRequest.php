@@ -28,8 +28,13 @@ class ProjectStoreRequest extends FormRequest
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'budget' => ['nullable', 'numeric', 'min:0'],
             'project_leader_id' => ['nullable', 'exists:employee_profiles,id', new NotProtectedEmployee('Project Leader')],
-            'teams' => ['nullable', 'array'],
-            'teams.*' => ['integer', 'exists:teams,id'],
+            // "team": exactly one Team supplies both the leader and the
+            // member roster. "employee": project_leader_id and
+            // member_employee_ids are picked individually instead.
+            'team_assignment_mode' => ['required', 'string', 'in:team,employee'],
+            'team_id' => ['required_if:team_assignment_mode,team', 'nullable', 'integer', 'exists:teams,id'],
+            'member_employee_ids' => ['nullable', 'array'],
+            'member_employee_ids.*' => ['integer', 'exists:employee_profiles,id', new NotProtectedEmployee('a project member')],
         ];
     }
 
@@ -46,8 +51,9 @@ class ProjectStoreRequest extends FormRequest
             'photo' => 'Project Photo',
             'budget' => 'Budget',
             'project_leader_id' => 'Project Leader',
-            'teams' => 'Teams',
-            'teams.*' => 'Team',
+            'team_assignment_mode' => 'Team Assignment Mode',
+            'team_id' => 'Team',
+            'member_employee_ids' => 'Members',
         ];
     }
 }

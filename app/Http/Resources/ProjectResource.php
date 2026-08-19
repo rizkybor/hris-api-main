@@ -34,7 +34,12 @@ class ProjectResource extends JsonResource
             'budget' => (float) (string) $this->budget,
             'progress' => $progress,
             'leader' => new EmployeeProfileResource($this->projectLeader),
+            'team_assignment_mode' => $this->team_assignment_mode,
             'teams' => TeamResource::collection($this->whenLoaded('teams')),
+            'members' => $this->whenLoaded('members', fn () => $this->members->map(fn ($employee) => [
+                'id' => $employee->id,
+                'name' => $employee->user?->name,
+            ])),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

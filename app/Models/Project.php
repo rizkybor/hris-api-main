@@ -32,6 +32,7 @@ class Project extends Model
         'photo',
         'budget',
         'project_leader_id',
+        'team_assignment_mode',
     ];
 
     protected function casts(): array
@@ -69,6 +70,17 @@ class Project extends Model
     }
 
     /**
+     * Individually-picked project members -- the "By Employee" alternative
+     * to "By Team" assignment (see team_assignment_mode). Mutually
+     * exclusive with teams() in practice: assigning a project stores one or
+     * the other, never both.
+     */
+    public function members()
+    {
+        return $this->belongsToMany(EmployeeProfile::class, 'project_members', 'project_id', 'employee_id');
+    }
+
+    /**
      * Only employees assigned to one of this project's teams (via Team
      * Assignments, set up when the project was created/edited) may comment
      * on or be mentioned in this project's tasks.
@@ -89,14 +101,26 @@ class Project extends Model
     }
 
     /**
+     * Only relevant in "employee" assignment mode -- individually-picked
+     * members who aren't attached through any Team.
+     */
+    public function hasDirectMember(int $employeeId): bool
+    {
+        return $this->members()->where('employee_profiles.id', $employeeId)->exists();
+    }
+
+    /**
      * Who may comment on / be mentioned in this project's tasks: employees
-     * assigned to one of the project's teams, or the project leader.
-     * Managers additionally bypass this on any project (checked separately
-     * via the user's role, since it isn't project-scoped).
+     * assigned to one of the project's teams, individually-picked members,
+     * or the project leader. Managers additionally bypass this on any
+     * project (checked separately via the user's role, since it isn't
+     * project-scoped).
      */
     public function isEmployeeProjectParticipant(int $employeeId): bool
     {
-        return $this->isProjectLeader($employeeId) || $this->hasEmployeeAssignedToTeam($employeeId);
+        return $this->isProjectLeader($employeeId)
+            || $this->hasEmployeeAssignedToTeam($employeeId)
+            || $this->hasDirectMember($employeeId);
     }
 
     public function tasks()
