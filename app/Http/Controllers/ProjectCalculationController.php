@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProjectCalculationController extends Controller implements HasMiddleware
@@ -157,7 +158,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'net_received' => $result['net_received'],
                 'estimated_duration_weeks' => $result['estimated_duration_weeks'],
                 'notes' => $data['notes'] ?? null,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
             return ResponseHelper::jsonResponse(true, 'Project Calculation Saved Successfully', new ProjectCalculationResource($calculation->load('creator')), 201);
