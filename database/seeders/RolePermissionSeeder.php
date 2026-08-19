@@ -237,6 +237,12 @@ class RolePermissionSeeder extends Seeder
                     'project-menu',
                     'project-list',
                     'project-export',
+                    // Finance Manager can be individually assigned onto a
+                    // project as a Team Assignment member (Project's
+                    // "employee" mode) and comment on its tasks -- needs
+                    // task-list to even open a task, but not task-create/
+                    // edit/delete, which stays with PM-facing roles.
+                    'task-list',
                     'project-calculator-menu',
                     'project-calculator-create',
                     'project-calculator-edit',
