@@ -18,6 +18,7 @@ class ProjectCalculationResource extends JsonResource
             'rate_sell_per_hour' => (float) $this->rate_sell_per_hour,
             'pm_overhead_percent' => $this->pm_overhead_percent !== null ? (float) $this->pm_overhead_percent : null,
             'infra_setup_cost' => $this->infra_setup_cost !== null ? (float) $this->infra_setup_cost : null,
+            'rate_setting_snapshot' => $this->rate_setting_snapshot,
             'items' => $this->items,
             'subtotal' => (float) $this->subtotal,
             'buffer_total' => (float) $this->buffer_total,
