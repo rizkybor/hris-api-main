@@ -14,6 +14,8 @@ class ProjectTaskDto
         public readonly string $priority,
         public readonly string $status,
         public readonly ?string $due_date = null,
+        public readonly ?string $type = null,
+        public readonly ?string $color = null,
     ) {}
 
     public function toArray(): array
@@ -26,6 +28,8 @@ class ProjectTaskDto
             'priority' => $this->priority,
             'status' => $this->status,
             'due_date' => $this->due_date,
+            'type' => $this->type,
+            'color' => $this->color,
         ];
     }
 
@@ -39,6 +43,8 @@ class ProjectTaskDto
             priority: $data['priority'],
             status: $data['status'],
             due_date: $data['due_date'] ?? null,
+            type: $data['type'] ?? null,
+            color: $data['color'] ?? null,
         );
     }
 
@@ -52,6 +58,8 @@ class ProjectTaskDto
             priority: $data['priority'] ?? $existingTask->priority,
             status: $data['status'] ?? $existingTask->status,
             due_date: $data['due_date'] ?? ($existingTask->due_date ? $existingTask->due_date->format('Y-m-d') : null),
+            type: array_key_exists('type', $data) ? $data['type'] : $existingTask->type,
+            color: array_key_exists('color', $data) ? $data['color'] : $existingTask->color,
         );
     }
 }

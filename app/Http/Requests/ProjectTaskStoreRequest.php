@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\TaskColor;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use Illuminate\Foundation\Http\FormRequest;
@@ -32,6 +33,8 @@ class ProjectTaskStoreRequest extends FormRequest
             'priority' => ['required', 'string', 'in:'.implode(',', array_column(TaskPriority::cases(), 'value'))],
             'status' => ['required', 'string', 'in:'.implode(',', array_column(TaskStatus::cases(), 'value'))],
             'due_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'type' => ['nullable', 'string', 'max:100'],
+            'color' => ['nullable', 'string', 'in:'.implode(',', array_column(TaskColor::cases(), 'value'))],
         ];
     }
 
@@ -46,6 +49,8 @@ class ProjectTaskStoreRequest extends FormRequest
             'priority' => 'Priority',
             'status' => 'Status',
             'due_date' => 'Due Date',
+            'type' => 'Task Type',
+            'color' => 'Color',
         ];
     }
 }

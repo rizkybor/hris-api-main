@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\TaskColor;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,6 +26,12 @@ class ProjectTaskUpdateRequest extends FormRequest
             'priority' => ['sometimes', 'string', 'in:'.implode(',', array_column(TaskPriority::cases(), 'value'))],
             'status' => ['sometimes', 'string', 'in:'.implode(',', array_column(TaskStatus::cases(), 'value'))],
             'due_date' => ['nullable', 'date'],
+            'type' => ['nullable', 'string', 'max:100'],
+            'color' => ['nullable', 'string', 'in:'.implode(',', array_column(TaskColor::cases(), 'value'))],
+            // Only sent by the Kanban drag-and-drop move action -- a
+            // fractional position within the task's (project_id, status)
+            // group, computed client-side from its new neighbors.
+            'position' => ['nullable', 'numeric'],
         ];
     }
 
@@ -52,6 +59,9 @@ class ProjectTaskUpdateRequest extends FormRequest
             'priority' => 'Priority',
             'status' => 'Status',
             'due_date' => 'Due Date',
+            'type' => 'Task Type',
+            'color' => 'Color',
+            'position' => 'Position',
         ];
     }
 }
