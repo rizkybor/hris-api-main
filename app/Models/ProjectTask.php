@@ -30,12 +30,16 @@ class ProjectTask extends Model
         'priority',
         'status',
         'due_date',
+        'type',
+        'color',
+        'position',
     ];
 
     protected function casts(): array
     {
         return [
             'due_date' => 'date',
+            'position' => 'float',
         ];
     }
 
