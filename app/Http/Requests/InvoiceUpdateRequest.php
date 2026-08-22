@@ -14,11 +14,13 @@ class InvoiceUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'faktur_pajak_number' => ['nullable', 'string', 'max:50'],
             'client_code' => ['sometimes', 'required', 'string', 'max:20'],
             'client_name' => ['sometimes', 'required', 'string', 'max:255'],
             'client_pic' => ['nullable', 'string', 'max:255'],
             'client_email' => ['nullable', 'string', 'max:255'],
             'client_phone' => ['nullable', 'string', 'max:50'],
+            'client_npwp' => ['nullable', 'string', 'max:25'],
             'date' => ['sometimes', 'required', 'date'],
             'items' => ['sometimes', 'required', 'array', 'min:1'],
             'items.*.description' => ['required', 'string', 'max:255'],

@@ -19,6 +19,7 @@ class EmployeeProfileResource extends JsonResource
             'user' => new UserResource($this->whenLoaded('user')),
             'code' => $this->code,
             'identity_number' => $this->identity_number,
+            'npwp' => $this->npwp,
             'phone' => $this->phone,
             'date_of_birth' => $this->date_of_birth?->format('Y-m-d'),
             'gender' => $this->gender,

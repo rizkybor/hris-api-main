@@ -17,6 +17,8 @@ class CompanyAboutResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'legal_name' => $this->legal_name,
+            'npwp' => $this->npwp,
             'description' => $this->description,
             'vision' => $this->vision,
             'mission' => $this->mission,
