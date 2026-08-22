@@ -22,7 +22,7 @@ class EmployeeProfileStoreRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $optionalFields = ['bank_name', 'account_number', 'account_holder_name', 'bank_branch', 'account_type', 'monthly_salary', 'ptkp_status'];
+        $optionalFields = ['bank_name', 'account_number', 'account_holder_name', 'bank_branch', 'account_type', 'monthly_salary', 'ptkp_status', 'team_id'];
 
         $blanked = collect($optionalFields)
             ->filter(fn ($field) => $this->has($field) && $this->input($field) === '')
@@ -79,16 +79,16 @@ class EmployeeProfileStoreRequest extends FormRequest
 
             // Bank Information fields (optional -- e.g. interns without a payroll account yet)
             'bank_name' => ['nullable', 'string', Rule::in($this->configurableValues('bank_name'))],
-            'account_number' => ['nullable', 'string', 'max:50'],
+            'account_number' => ['nullable', 'string', 'max:50', 'unique:bank_information,account_number'],
             'account_holder_name' => ['nullable', 'string', 'max:255'],
             'bank_branch' => ['nullable', 'string', 'max:255'],
             'account_type' => ['nullable', 'string', 'in:'.implode(',', array_column(AccountType::cases(), 'value'))],
 
-            // Emergency Contacts fields (array)
-            'emergency_contacts' => ['required', 'array', 'min:1'],
-            'emergency_contacts.*.full_name' => ['required', 'string', 'max:255'],
-            'emergency_contacts.*.relationship' => ['required', 'string', 'max:100'],
-            'emergency_contacts.*.phone' => ['required', 'string', 'max:20'],
+            // Emergency Contacts fields (array, optional -- e.g. employee hasn't provided one yet)
+            'emergency_contacts' => ['nullable', 'array'],
+            'emergency_contacts.*.full_name' => ['nullable', 'string', 'max:255'],
+            'emergency_contacts.*.relationship' => ['required_with:emergency_contacts.*.full_name,emergency_contacts.*.phone,emergency_contacts.*.email', 'string', 'max:100'],
+            'emergency_contacts.*.phone' => ['required_with:emergency_contacts.*.full_name,emergency_contacts.*.relationship,emergency_contacts.*.email', 'string', 'max:20'],
             'emergency_contacts.*.email' => ['nullable', 'email', 'max:255'],
         ];
     }
