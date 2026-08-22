@@ -12,11 +12,14 @@ use App\Http\Resources\ProjectResource;
 use App\Http\Resources\TeamMemberResource;
 use App\Http\Resources\TeamResource;
 use App\Interfaces\EmployeeProfileRepositoryInterface;
+use App\Services\Cloudinary\CloudinaryUrl;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class EmployeeProfileController extends Controller implements HasMiddleware
@@ -35,7 +38,7 @@ class EmployeeProfileController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['employee-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['employee-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['employee-delete']), only: ['destroy']),
-            new Middleware(PermissionMiddleware::using(['profile-view']), only: ['getMyProfile', 'getPerformanceStatistics']),
+            new Middleware(PermissionMiddleware::using(['profile-view']), only: ['getMyProfile', 'getPerformanceStatistics', 'downloadIdCard']),
             new Middleware(PermissionMiddleware::using(['team-view']), only: ['getMyTeam', 'getMyTeamMembers', 'getMyTeamProjects']),
         ];
     }
@@ -220,6 +223,38 @@ class EmployeeProfileController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * Digital ID card (authenticated employee) -- streamed as a CR80
+     * card-sized PDF, not the usual A4 document layout.
+     */
+    public function downloadIdCard()
+    {
+        $employee = $this->employeeProfileRepository->getMyProfile();
+
+        $photoDataUri = null;
+        $publicId = $employee->user?->profile_photo;
+
+        if ($publicId) {
+            try {
+                $response = Http::timeout(5)->get(CloudinaryUrl::image($publicId));
+                if ($response->successful()) {
+                    $mime = $response->header('Content-Type') ?: 'image/jpeg';
+                    $photoDataUri = 'data:'.$mime.';base64,'.base64_encode($response->body());
+                }
+            } catch (\Throwable $e) {
+                // Photo is a nice-to-have on the card, not worth failing the download over.
+            }
+        }
+
+        // CR80 card size (85.6mm x 53.98mm) converted to points (1mm = 2.83465pt).
+        $pdf = Pdf::loadView('pdf.id-card', [
+            'employee' => $employee,
+            'photoDataUri' => $photoDataUri,
+        ])->setPaper([0, 0, 242.65, 153.05]);
+
+        return $pdf->stream('ID-Card-'.$employee->code.'.pdf');
     }
 
     /**
