@@ -319,12 +319,29 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
     private function createEmergencyContacts(array $data, int $employeeId): void
     {
-        foreach ($data['emergency_contacts'] as $contactData) {
+        foreach ($data['emergency_contacts'] ?? [] as $contactData) {
+            if ($this->isBlankEmergencyContact($contactData)) {
+                continue;
+            }
+
             $contactData['employee_id'] = $employeeId;
             $emergencyContactDto = EmergencyContactDto::fromArray($contactData);
 
             $this->emergencyContactRepository->create($emergencyContactDto->toArray());
         }
+    }
+
+    /**
+     * Emergency Contact is optional -- the form always submits its fields
+     * (even when left blank), so a fully-empty entry means "no contact
+     * provided" rather than a real record to persist.
+     */
+    private function isBlankEmergencyContact(array $contactData): bool
+    {
+        return blank($contactData['full_name'] ?? null)
+            && blank($contactData['relationship'] ?? null)
+            && blank($contactData['phone'] ?? null)
+            && blank($contactData['email'] ?? null);
     }
 
     private function updateUser(int $userId, array $data): void
@@ -418,7 +435,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
                     $this->emergencyContactRepository->update($contact['id'], $emergencyContactDto->toArray());
                     $submittedContactIds[] = $contact['id'];
                 }
-            } else {
+            } elseif (! $this->isBlankEmergencyContact($contact)) {
                 $emergencyContactDto = EmergencyContactDto::fromArray($contact);
                 $newContact = $this->emergencyContactRepository->create($emergencyContactDto->toArray());
                 $submittedContactIds[] = $newContact->id;
