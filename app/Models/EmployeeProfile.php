@@ -26,6 +26,7 @@ class EmployeeProfile extends Model
         'user_id',
         'code',
         'identity_number',
+        'npwp',
         'phone',
         'date_of_birth',
         'gender',

@@ -8,6 +8,7 @@ use App\Models\CompanyFinance;
 use App\Models\EmployeeProfile;
 use App\Models\FixedCost;
 use App\Models\InfrastructureTool;
+use App\Models\Invoice;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\SdmResource;
@@ -166,6 +167,75 @@ class ReportRepository implements ReportRepositoryInterface
                 'infrastructure_tools' => $infrastructureTools,
                 'sdm_resources' => $sdmResources,
             ],
+        ];
+    }
+
+    /**
+     * PPh 21 recap per employee for payroll runs within the period -- a
+     * starting point for the Coretax/Bukti Potong bulk-upload sheet, not a
+     * compliance-grade calculation (see PayrollCalculationService).
+     */
+    public function getPph21Report(?string $startDate, ?string $endDate)
+    {
+        $startDate = $startDate ?: now()->startOfYear()->toDateString();
+        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+
+        $payrollIds = Payroll::query()
+            ->whereBetween('salary_month', [$startDate, $endDate])
+            ->pluck('id');
+
+        $rows = PayrollDetail::query()
+            ->whereIn('payroll_id', $payrollIds)
+            ->where('pph21', '>', 0)
+            ->with(['employee.user', 'employee.jobInformation', 'payroll'])
+            ->join('payrolls', 'payrolls.id', '=', 'payroll_details.payroll_id')
+            ->orderBy('payrolls.salary_month', 'desc')
+            ->select('payroll_details.*')
+            ->get();
+
+        $rows->each(function ($detail) {
+            $detail->setAttribute('salary_month', $detail->payroll->salary_month);
+        });
+
+        $summary = [
+            'total_employees_taxed' => $rows->count(),
+            'total_gross_salary' => (float) $rows->sum('gross_salary'),
+            'total_pph21' => (float) $rows->sum('pph21'),
+        ];
+
+        return [
+            'period' => ['start_date' => $startDate, 'end_date' => $endDate],
+            'summary' => $summary,
+            'rows' => $rows,
+        ];
+    }
+
+    /**
+     * PPN (Pajak Keluaran) recap from issued invoices within the period,
+     * keyed by Faktur Pajak date -- a starting point for SPT Masa PPN, not a
+     * live Coretax integration.
+     */
+    public function getPpnReport(?string $startDate, ?string $endDate)
+    {
+        $startDate = $startDate ?: now()->startOfYear()->toDateString();
+        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+
+        $rows = Invoice::query()
+            ->whereBetween('date', [$startDate, $endDate])
+            ->where('ppn_amount', '>', 0)
+            ->orderBy('date', 'desc')
+            ->get();
+
+        $summary = [
+            'total_invoices' => $rows->count(),
+            'total_dpp' => (float) $rows->sum('subtotal'),
+            'total_ppn' => (float) $rows->sum('ppn_amount'),
+        ];
+
+        return [
+            'period' => ['start_date' => $startDate, 'end_date' => $endDate],
+            'summary' => $summary,
+            'rows' => $rows,
         ];
     }
 }

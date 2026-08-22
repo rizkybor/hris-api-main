@@ -10,6 +10,8 @@ class CompanyAboutStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'legal_name' => ['nullable', 'string', 'max:255'],
+            'npwp' => ['nullable', 'string', 'max:25'],
             'description' => ['nullable', 'string'],
             'vision' => ['nullable', 'string'],
             'mission' => ['nullable', 'array'],
@@ -27,6 +29,8 @@ class CompanyAboutStoreRequest extends FormRequest
     {
         return [
             'name' => 'Company Name',
+            'legal_name' => 'Legal Name',
+            'npwp' => 'NPWP',
             'description' => 'Description',
             'vision' => 'Vision',
             'mission' => 'Mission',

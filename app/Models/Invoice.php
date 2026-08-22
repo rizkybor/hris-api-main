@@ -22,11 +22,13 @@ class Invoice extends Model
 
     protected $fillable = [
         'invoice_number',
+        'faktur_pajak_number',
         'client_code',
         'client_name',
         'client_pic',
         'client_email',
         'client_phone',
+        'client_npwp',
         'date',
         'items',
         'subtotal',
