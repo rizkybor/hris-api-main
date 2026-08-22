@@ -80,6 +80,7 @@ Route::prefix('v1')
             Route::apiResource('teams', TeamController::class);
 
             Route::get('my-profile', [EmployeeProfileController::class, 'getMyProfile']);
+            Route::get('my-profile/id-card', [EmployeeProfileController::class, 'downloadIdCard']);
             Route::get('my-team', [EmployeeProfileController::class, 'getMyTeam']);
             Route::get('my-team/members', [EmployeeProfileController::class, 'getMyTeamMembers']);
             Route::get('my-team/projects', [EmployeeProfileController::class, 'getMyTeamProjects']);
