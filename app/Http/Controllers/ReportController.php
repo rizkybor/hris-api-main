@@ -6,6 +6,8 @@ use App\Exports\AttendanceReportExport;
 use App\Exports\EmployeeReportExport;
 use App\Exports\FinanceReportExport;
 use App\Exports\PayrollReportExport;
+use App\Exports\Pph21ReportExport;
+use App\Exports\PpnReportExport;
 use App\Helpers\ResponseHelper;
 use App\Interfaces\ReportRepositoryInterface;
 use Illuminate\Http\Request;
@@ -26,7 +28,7 @@ class ReportController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance']),
+            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn']),
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
         ];
     }
@@ -87,6 +89,28 @@ class ReportController extends Controller implements HasMiddleware
         }
     }
 
+    public function pph21(Request $request)
+    {
+        try {
+            $data = $this->reportRepository->getPph21Report($request->start_date, $request->end_date);
+
+            return ResponseHelper::jsonResponse(true, 'PPh 21 Report Retrieved Successfully', $data, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    public function ppn(Request $request)
+    {
+        try {
+            $data = $this->reportRepository->getPpnReport($request->start_date, $request->end_date);
+
+            return ResponseHelper::jsonResponse(true, 'PPN Report Retrieved Successfully', $data, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
     public function export(Request $request)
     {
         $type = $request->query('type', 'attendance');
@@ -100,6 +124,8 @@ class ReportController extends Controller implements HasMiddleware
                 'payroll' => new PayrollReportExport($startDate, $endDate),
                 'employee' => new EmployeeReportExport($request->query('team_id'), $request->query('status')),
                 'finance' => new FinanceReportExport($startDate, $endDate),
+                'pph21' => new Pph21ReportExport($startDate, $endDate),
+                'ppn' => new PpnReportExport($startDate, $endDate),
                 default => null,
             };
 

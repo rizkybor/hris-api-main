@@ -22,7 +22,7 @@ class EmployeeProfileStoreRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $optionalFields = ['bank_name', 'account_number', 'account_holder_name', 'bank_branch', 'account_type', 'monthly_salary', 'ptkp_status', 'team_id'];
+        $optionalFields = ['bank_name', 'account_number', 'account_holder_name', 'bank_branch', 'account_type', 'monthly_salary', 'ptkp_status', 'team_id', 'npwp'];
 
         $blanked = collect($optionalFields)
             ->filter(fn ($field) => $this->has($field) && $this->input($field) === '')
@@ -51,6 +51,7 @@ class EmployeeProfileStoreRequest extends FormRequest
 
             // Employee Profile fields
             'identity_number' => ['required', 'string', 'max:20', 'unique:employee_profiles,identity_number'],
+            'npwp' => ['nullable', 'string', 'max:25'],
             'phone' => ['required', 'string', 'max:20'],
             'date_of_birth' => ['required', 'date', 'before:today'],
             'gender' => ['required', 'string', 'in:'.implode(',', array_column(Gender::cases(), 'value'))],
@@ -115,6 +116,7 @@ class EmployeeProfileStoreRequest extends FormRequest
             // Employee Profile attributes
             'code' => 'Employee Code',
             'identity_number' => 'Identity Number',
+            'npwp' => 'NPWP',
             'phone' => 'Phone Number',
             'date_of_birth' => 'Date of Birth',
             'gender' => 'Gender',

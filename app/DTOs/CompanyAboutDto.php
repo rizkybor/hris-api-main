@@ -8,6 +8,8 @@ class CompanyAboutDto
 {
     public function __construct(
         public readonly ?string $name = null,
+        public readonly ?string $legal_name = null,
+        public readonly ?string $npwp = null,
         public readonly ?string $description = null,
         public readonly ?string $vision = null,
         public readonly ?array $mission = [],
@@ -22,6 +24,8 @@ class CompanyAboutDto
     {
         return [
             'name' => $this->name,
+            'legal_name' => $this->legal_name,
+            'npwp' => $this->npwp,
             'description' => $this->description,
             'vision' => $this->vision,
             'mission' => $this->mission ? json_encode($this->mission) : null,
@@ -37,6 +41,8 @@ class CompanyAboutDto
     {
         return new self(
             name: $data['name'] ?? null,
+            legal_name: $data['legal_name'] ?? null,
+            npwp: $data['npwp'] ?? null,
             description: $data['description'] ?? null,
             vision: $data['vision'] ?? null,
             mission: isset($data['mission']) ? (array)$data['mission'] : null,
@@ -52,6 +58,8 @@ class CompanyAboutDto
     {
         return new self(
             name: $data['name'] ?? $existing->name,
+            legal_name: $data['legal_name'] ?? $existing->legal_name,
+            npwp: $data['npwp'] ?? $existing->npwp,
             description: $data['description'] ?? $existing->description,
             vision: $data['vision'] ?? $existing->vision,
             mission:  $data['mission'] ?? ($existing->mission ? json_decode($existing->mission, true) : null),
