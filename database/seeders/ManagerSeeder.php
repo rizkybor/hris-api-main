@@ -26,7 +26,7 @@ class ManagerSeeder extends Seeder
             'code' => app(EmployeeCodeGenerator::class)->generate('full_time', '2025-12-10'),
             'identity_number' => '111121121',
             'phone' => '081234567892',
-            'date_of_birth' => '1995-01-01',
+            'date_of_birth' => '1994-07-31',
             'gender' => 'male',
             'place_of_birth' => 'Jakarta',
             'address' => 'Jl. Sudirman No. 1',
@@ -44,22 +44,6 @@ class ManagerSeeder extends Seeder
             'start_date' => '2025-12-10',
             'monthly_salary' => 15000000,
             'skill_level' => 'expert',
-        ]);
-
-        $employeeProfile->bankInformation()->create([
-            'employee_id' => $employeeProfile->id,
-            'bank_name' => 'bca',
-            'account_number' => '122333444',
-            'account_holder_name' => env('SEED_MANAGER_NAME', 'Rizky Aji Kurniawan'),
-            'account_type' => 'savings',
-        ]);
-
-        $employeeProfile->emergencyContacts()->create([
-            'employee_id' => $employeeProfile->id,
-            'full_name' => 'Manager',
-            'phone' => '081234567892',
-            'relationship' => 'Family',
-            'email' => 'manager.emergency@gmail.com',
         ]);
 
         $manager->assignRole('manager');

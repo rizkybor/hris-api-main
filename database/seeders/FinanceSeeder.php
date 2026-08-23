@@ -46,22 +46,6 @@ class FinanceSeeder extends Seeder
             'skill_level' => 'expert',
         ]);
 
-        $employeeProfile->bankInformation()->create([
-            'employee_id' => $employeeProfile->id,
-            'bank_name' => 'bca',
-            'account_number' => '9876543210',
-            'account_holder_name' => 'Andy Saputra',
-            'account_type' => 'savings',
-        ]);
-
-        $employeeProfile->emergencyContacts()->create([
-            'employee_id' => $employeeProfile->id,
-            'full_name' => 'Finance Emergency Contact',
-            'phone' => '081234567891',
-            'relationship' => 'Family',
-            'email' => 'finance.emergency@gmail.com',
-        ]);
-
         $employee->assignRole('finance');
     }
 }
