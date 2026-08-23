@@ -46,22 +46,6 @@ class OperationalDirectorSeeder extends Seeder
             'skill_level' => 'expert',
         ]);
 
-        $employeeProfile->bankInformation()->create([
-            'employee_id' => $employeeProfile->id,
-            'bank_name' => 'bca',
-            'account_number' => '244422131',
-            'account_holder_name' => 'Aldi Pratama Putra',
-            'account_type' => 'savings',
-        ]);
-
-        $employeeProfile->emergencyContacts()->create([
-            'employee_id' => $employeeProfile->id,
-            'full_name' => 'Aldi Emergency Contact',
-            'phone' => '081234567890',
-            'relationship' => 'Family',
-            'email' => 'hr@gmail.com',
-        ]);
-
         $employee->assignRole('operational_director');
     }
 }
