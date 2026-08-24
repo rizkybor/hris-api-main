@@ -10,6 +10,7 @@ use App\Services\DocumentNumberService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -59,13 +60,31 @@ class PaymentReceiptController extends Controller implements HasMiddleware
         try {
             $date = Carbon::parse($validated['date']);
 
+            $receiptNumber = $validated['numbering_mode'] === 'manual'
+                ? $validated['receipt_number']
+                : $this->numberService->generateReceiptNumber($validated['client_code'], $date);
+
+            unset($validated['numbering_mode'], $validated['receipt_number']);
+
             $receipt = PaymentReceipt::create([
                 ...$validated,
-                'receipt_number' => $this->numberService->generateReceiptNumber($validated['client_code'], $date),
+                'receipt_number' => $receiptNumber,
                 'created_by' => Auth::id(),
             ]);
 
             return ResponseHelper::jsonResponse(true, 'Payment Receipt Created Successfully', $receipt, 201);
+        } catch (QueryException $e) {
+            // Unique index on receipt_number is the real backstop against
+            // duplicates (e.g. a manual number colliding with one the
+            // automatic sequence later generates, or two concurrent manual
+            // submissions racing past the FormRequest's unique check) --
+            // surface it as a normal validation-style error instead of a
+            // raw 500 so the user knows to just retry.
+            if ((int) $e->getCode() === 23000) {
+                return ResponseHelper::jsonResponse(false, 'This receipt number is already in use. Please try again.', null, 422);
+            }
+
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
