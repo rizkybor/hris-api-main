@@ -237,6 +237,7 @@ Route::prefix('v1')
             Route::get('reports/finance', [ReportController::class, 'finance']);
             Route::get('reports/pph21', [ReportController::class, 'pph21']);
             Route::get('reports/ppn', [ReportController::class, 'ppn']);
+            Route::get('reports/project', [ReportController::class, 'project']);
             Route::get('reports/export', [ReportController::class, 'export']);
 
             // Settings: Roles & Permissions

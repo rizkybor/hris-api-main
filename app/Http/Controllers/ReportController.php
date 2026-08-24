@@ -8,6 +8,7 @@ use App\Exports\FinanceReportExport;
 use App\Exports\PayrollReportExport;
 use App\Exports\Pph21ReportExport;
 use App\Exports\PpnReportExport;
+use App\Exports\ProjectReportExport;
 use App\Helpers\ResponseHelper;
 use App\Interfaces\ReportRepositoryInterface;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ class ReportController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn']),
+            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project']),
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
         ];
     }
@@ -111,6 +112,23 @@ class ReportController extends Controller implements HasMiddleware
         }
     }
 
+    public function project(Request $request)
+    {
+        try {
+            $data = $this->reportRepository->getProjectReport(
+                $request->start_date,
+                $request->end_date,
+                $request->status,
+                (int) ($request->page ?? 1),
+                (int) ($request->row_per_page ?? 15)
+            );
+
+            return ResponseHelper::jsonResponse(true, 'Project Report Retrieved Successfully', $data, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
     public function export(Request $request)
     {
         $type = $request->query('type', 'attendance');
@@ -126,6 +144,7 @@ class ReportController extends Controller implements HasMiddleware
                 'finance' => new FinanceReportExport($startDate, $endDate),
                 'pph21' => new Pph21ReportExport($startDate, $endDate),
                 'ppn' => new PpnReportExport($startDate, $endDate),
+                'project' => new ProjectReportExport($startDate, $endDate, $request->query('status')),
                 default => null,
             };
 
