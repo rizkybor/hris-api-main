@@ -19,6 +19,7 @@ class ProjectDto
         public readonly ?int $project_leader_id = null,
         public readonly string $team_assignment_mode = 'employee',
         public readonly ?int $vendor_id = null,
+        public readonly ?string $inspect_note = null,
     ) {}
 
     public function toArray(): array
@@ -36,9 +37,15 @@ class ProjectDto
             'project_leader_id' => $this->project_leader_id,
             'team_assignment_mode' => $this->team_assignment_mode,
             'vendor_id' => $this->vendor_id,
+            'inspect_note' => $this->inspect_note,
         ];
     }
 
+    /**
+     * Create-only: deliberately has no `inspect_note` parameter -- that
+     * field can only ever be set later via fromArrayForUpdate(), by the
+     * Project Leader, once the project (and its leader) actually exist.
+     */
     public static function fromArray(array $data): self
     {
         return new self(
@@ -72,6 +79,7 @@ class ProjectDto
             project_leader_id: $data['project_leader_id'] ?? $existingProject->project_leader_id,
             team_assignment_mode: $data['team_assignment_mode'] ?? $existingProject->team_assignment_mode,
             vendor_id: array_key_exists('vendor_id', $data) ? ($data['vendor_id'] ?: null) : $existingProject->vendor_id,
+            inspect_note: array_key_exists('inspect_note', $data) ? $data['inspect_note'] : $existingProject->inspect_note,
         );
     }
 }
