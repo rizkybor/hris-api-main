@@ -41,6 +41,30 @@ class ProjectResource extends JsonResource
                 'id' => $employee->id,
                 'name' => $employee->user?->name,
             ])),
+            'vendor_id' => $this->vendor_id,
+            'vendor' => $this->whenLoaded('vendor', fn () => $this->vendor ? [
+                'id' => $this->vendor->id,
+                'name' => $this->vendor->name,
+                'pic_name' => $this->vendor->pic_name,
+                'pic_phone' => $this->vendor->pic_phone,
+                'email' => $this->vendor->email,
+            ] : null),
+            // Optional -- only present when a project has invoices billed
+            // against it (see Invoice::project()).
+            'invoices' => $this->whenLoaded('invoices', fn () => $this->invoices->map(fn ($invoice) => [
+                'id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'date' => $invoice->date,
+                'total' => (float) (string) $invoice->total,
+                'status' => $invoice->status,
+                'receipts' => $invoice->relationLoaded('receipts') ? $invoice->receipts->map(fn ($receipt) => [
+                    'id' => $receipt->id,
+                    'receipt_number' => $receipt->receipt_number,
+                    'date' => $receipt->date,
+                    'amount' => (float) (string) $receipt->amount,
+                    'payment_status' => $receipt->payment_status,
+                ]) : [],
+            ])),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

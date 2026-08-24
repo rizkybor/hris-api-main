@@ -33,6 +33,7 @@ class Project extends Model
         'budget',
         'project_leader_id',
         'team_assignment_mode',
+        'vendor_id',
     ];
 
     protected function casts(): array
@@ -154,5 +155,23 @@ class Project extends Model
     public function documents()
     {
         return $this->hasMany(ProjectDocument::class);
+    }
+
+    /**
+     * The vendor this project is contracted through -- optional, a project
+     * may have no vendor at all.
+     */
+    public function vendor()
+    {
+        return $this->belongsTo(Vendors::class, 'vendor_id');
+    }
+
+    /**
+     * Invoices billed against this project -- optional, an invoice isn't
+     * required to reference a project.
+     */
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
     }
 }

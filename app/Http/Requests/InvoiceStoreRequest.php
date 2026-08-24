@@ -15,6 +15,7 @@ class InvoiceStoreRequest extends FormRequest
     {
         return [
             'faktur_pajak_number' => ['nullable', 'string', 'max:50'],
+            'project_id' => ['nullable', 'exists:projects,id'],
             'client_code' => ['required', 'string', 'max:30'],
             'client_name' => ['required', 'string', 'max:255'],
             'client_pic' => ['nullable', 'string', 'max:255'],

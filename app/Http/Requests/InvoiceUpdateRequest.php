@@ -15,6 +15,7 @@ class InvoiceUpdateRequest extends FormRequest
     {
         return [
             'faktur_pajak_number' => ['nullable', 'string', 'max:50'],
+            'project_id' => ['nullable', 'exists:projects,id'],
             'client_code' => ['sometimes', 'required', 'string', 'max:20'],
             'client_name' => ['sometimes', 'required', 'string', 'max:255'],
             'client_pic' => ['nullable', 'string', 'max:255'],
