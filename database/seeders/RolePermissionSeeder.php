@@ -61,6 +61,45 @@ class RolePermissionSeeder extends Seeder
             // hasRole('finance') so this holds even if permissions drift.
             $officialMemoApproveOnly = ['document-letter-approve'];
 
+            // Default dashboard widget sets, matching each role's original
+            // hardcoded Overview.vue exactly (before the widget permission/
+            // drag-drop system existed) -- kept as named lists here so the
+            // "except" grants below stay legible about what's deliberately
+            // excluded and why, rather than a bare array of strings.
+            // Super Admin's own System Stats/Settings/Recent Activity
+            // widgets are Super-Admin-only by nature (system-level, not
+            // "everyone except X"), so they're excluded from every other
+            // role instead of being granted broadly.
+            $superAdminOnlyWidgets = [
+                'widget-system-stats',
+                'widget-system-settings-links',
+                'widget-recent-activity',
+            ];
+            // Everything Super Admin's own dashboard never showed --
+            // it gets the 3 widgets above via its own explicit grant later,
+            // not through the "all except" mechanism.
+            $nonSuperAdminWidgets = [
+                'widget-key-metrics',
+                'widget-project-budget',
+                'widget-project-realized',
+                'widget-search-section',
+                'widget-sticky-notes',
+                'widget-projects-at-risk',
+                'widget-latest-employees',
+                'widget-latest-teams',
+                'widget-quick-links',
+                'widget-pending-leave-requests',
+                'widget-employee-statistics',
+            ];
+            // Manager/Operational Director's dashboard never showed these
+            // (Search, Super Admin's system widgets, HR's Pending Leave
+            // Requests card, or Staff's My Overview stat block).
+            $managerScopeExcludedWidgets = array_merge($superAdminOnlyWidgets, [
+                'widget-search-section',
+                'widget-pending-leave-requests',
+                'widget-employee-statistics',
+            ]);
+
             // Meeting Note is deliberately scoped to Manager, Operational
             // Director, HR, and Finance Manager only -- not even Super
             // Admin, per spec. The controller also hard-checks hasAnyRole()
@@ -74,87 +113,118 @@ class RolePermissionSeeder extends Seeder
                 'meeting-note-pin',
             ];
 
-            $superadmin->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly, $meetingNotePermissions, [
-                'payslip-view',
-                'task-list',
-                'team-menu',
-                'attendance-menu',
-                'project-menu',
-                'payroll-menu',
-            ])));
+            $superadmin->syncPermissions(
+                $this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly, $meetingNotePermissions, $nonSuperAdminWidgets, [
+                    'payslip-view',
+                    'task-list',
+                    'team-menu',
+                    'attendance-menu',
+                    'project-menu',
+                    'payroll-menu',
+                ]))->merge(Permission::whereIn('name', $superAdminOnlyWidgets)->get())
+            );
 
-            $manager->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly)));
+            $manager->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly, $managerScopeExcludedWidgets)));
 
-            $hr->syncPermissions($this->permissionsByPrefixes([
-                'dashboard-',
-                'team-',
-                'employee-',
-                'project-',
-                'task-',
-                'attendance-',
-                'leave-request-',
-                'credential-account-',
-                'files-company-',
-                'company-about-',
-                'sdm-resource-',
-                'vendors-',
-                'vendors-attachment',
-                'vendors-task-list',
-                'vendors-task-scope',
-                'vendors-task-payment',
-                'vendors-task-pivot',
-                'report-',
-                'purchase-order-',
-                'invoice-',
-                'payment-receipt-',
-                'letter-',
-                'document-letter-',
-                'meeting-note-',
-                'certificate-',
-                'payslip-',
-                'backup-',
-                'announcement-',
-                'asset-',
-                'performance-review-',
-                'staff-permission-',
-            ], array_merge($employeeSpecific, $officialMemoApproveOnly)));
+            $hr->syncPermissions(
+                $this->permissionsByPrefixes([
+                    'dashboard-',
+                    'team-',
+                    'employee-',
+                    'project-',
+                    'task-',
+                    'attendance-',
+                    'leave-request-',
+                    'credential-account-',
+                    'files-company-',
+                    'company-about-',
+                    'sdm-resource-',
+                    'vendors-',
+                    'vendors-attachment',
+                    'vendors-task-list',
+                    'vendors-task-scope',
+                    'vendors-task-payment',
+                    'vendors-task-pivot',
+                    'report-',
+                    'purchase-order-',
+                    'invoice-',
+                    'payment-receipt-',
+                    'letter-',
+                    'document-letter-',
+                    'meeting-note-',
+                    'certificate-',
+                    'payslip-',
+                    'backup-',
+                    'announcement-',
+                    'asset-',
+                    'performance-review-',
+                    'staff-permission-',
+                ], array_merge($employeeSpecific, $officialMemoApproveOnly))
+                    // HR's original dashboard: Pending Leave Requests, Sticky
+                    // Notes, Key Metrics, Project Budget, Quick Access,
+                    // Latest Employees -- not the full widget catalog.
+                    ->merge(Permission::whereIn('name', [
+                        'widget-pending-leave-requests',
+                        'widget-sticky-notes',
+                        'widget-key-metrics',
+                        'widget-project-budget',
+                        'widget-quick-links',
+                        'widget-latest-employees',
+                    ])->get())
+            );
 
             // Operational Director shares HR's operational scope -- it's a
             // distinct role (Aldi's account), not a rename of HR, so both
             // remain independently selectable and permissioned.
-            $operationalDirector->syncPermissions($this->permissionsByPrefixes([
-                'dashboard-',
-                'team-',
-                'employee-',
-                'project-',
-                'task-',
-                'attendance-',
-                'leave-request-',
-                'credential-account-',
-                'files-company-',
-                'company-about-',
-                'sdm-resource-',
-                'vendors-',
-                'vendors-attachment',
-                'vendors-task-list',
-                'vendors-task-scope',
-                'vendors-task-payment',
-                'vendors-task-pivot',
-                'report-',
-                'purchase-order-',
-                'invoice-',
-                'payment-receipt-',
-                'letter-',
-                'document-letter-',
-                'meeting-note-',
-                'certificate-',
-                'payslip-',
-                'backup-',
-                'announcement-',
-                'asset-',
-                'performance-review-',
-                'staff-permission-',
-            ], array_merge($employeeSpecific, $officialMemoApproveOnly)));
+            $operationalDirector->syncPermissions(
+                $this->permissionsByPrefixes([
+                    'dashboard-',
+                    'team-',
+                    'employee-',
+                    'project-',
+                    'task-',
+                    'attendance-',
+                    'leave-request-',
+                    'credential-account-',
+                    'files-company-',
+                    'company-about-',
+                    'sdm-resource-',
+                    'vendors-',
+                    'vendors-attachment',
+                    'vendors-task-list',
+                    'vendors-task-scope',
+                    'vendors-task-payment',
+                    'vendors-task-pivot',
+                    'report-',
+                    'purchase-order-',
+                    'invoice-',
+                    'payment-receipt-',
+                    'letter-',
+                    'document-letter-',
+                    'meeting-note-',
+                    'certificate-',
+                    'payslip-',
+                    'backup-',
+                    'announcement-',
+                    'asset-',
+                    'performance-review-',
+                    'staff-permission-',
+                ], array_merge($employeeSpecific, $officialMemoApproveOnly))
+                    // Operational Director's original dashboard matched
+                    // Manager's exactly: Projects at Risk, Sticky Notes, Key
+                    // Metrics, Project Budget, Project Realized, Latest
+                    // Employees, Latest Teams, Quick Access.
+                    ->merge(Permission::whereIn('name', [
+                        'widget-projects-at-risk',
+                        'widget-sticky-notes',
+                        'widget-key-metrics',
+                        'widget-project-budget',
+                        'widget-project-realized',
+                        'widget-latest-employees',
+                        'widget-latest-teams',
+                        'widget-quick-links',
+                    ])->get())
+            );
 
             $employee->syncPermissions(
                 Permission::whereIn('name', [
@@ -189,6 +259,8 @@ class RolePermissionSeeder extends Seeder
                     // they authored themselves -- no create/edit/delete/approve.
                     'document-letter-menu',
                     'document-letter-list',
+                    'widget-employee-statistics',
+                    'widget-search-section',
                 ])->get()
             );
 
@@ -332,6 +404,11 @@ class RolePermissionSeeder extends Seeder
                     'announcement-list',
                     'asset-menu',
                     'asset-list',
+                    'widget-key-metrics',
+                    'widget-project-budget',
+                    'widget-project-realized',
+                    'widget-quick-links',
+                    'widget-sticky-notes',
                 ])->get()
             );
         });

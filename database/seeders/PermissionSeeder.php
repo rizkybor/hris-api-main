@@ -305,6 +305,27 @@ class PermissionSeeder extends Seeder
             'my-reviews',
             'acknowledge',
         ],
+
+        // Gates whether a user can add a given widget to their own
+        // dashboard at all (see App\Support\DashboardWidgetRegistry).
+        // Which widgets are actually on their dashboard, and in what
+        // order, is a separate per-user preference (dashboard_widget_layouts).
+        'widget' => [
+            'key-metrics',
+            'project-budget',
+            'project-realized',
+            'search-section',
+            'sticky-notes',
+            'projects-at-risk',
+            'latest-employees',
+            'latest-teams',
+            'quick-links',
+            'system-settings-links',
+            'pending-leave-requests',
+            'employee-statistics',
+            'system-stats',
+            'recent-activity',
+        ],
     ];
 
     /**
