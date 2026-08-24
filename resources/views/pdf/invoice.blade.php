@@ -124,6 +124,12 @@
             </tr>
         </table>
 
+        @if($invoice->pph23_type)
+            <p style="margin: 3mm 0 0 0; font-style: italic;">
+                Note: This invoice is subject to {{ number_format((float) $invoice->pph23_percent, 0) }}% PPh 23 withholding by the client upon payment (est. Rp. {{ number_format($invoice->total * $invoice->pph23_percent / 100, 0, ',', '.') }}). Total Amount Due above is unaffected -- the withheld amount is recorded when payment is received.
+            </p>
+        @endif
+
         @if($invoice->terms)
             <div style="margin-top: 8mm;">
                 <p class="label" style="margin: 0 0 2px 0;">Terms and Conditions</p>

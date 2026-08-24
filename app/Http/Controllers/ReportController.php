@@ -7,6 +7,7 @@ use App\Exports\EmployeeReportExport;
 use App\Exports\FinanceReportExport;
 use App\Exports\PayrollReportExport;
 use App\Exports\Pph21ReportExport;
+use App\Exports\Pph23ReportExport;
 use App\Exports\PpnReportExport;
 use App\Exports\ProjectReportExport;
 use App\Helpers\ResponseHelper;
@@ -29,7 +30,7 @@ class ReportController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project']),
+            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project', 'pph23']),
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
         ];
     }
@@ -112,6 +113,17 @@ class ReportController extends Controller implements HasMiddleware
         }
     }
 
+    public function pph23(Request $request)
+    {
+        try {
+            $data = $this->reportRepository->getPph23Report($request->start_date, $request->end_date);
+
+            return ResponseHelper::jsonResponse(true, 'PPh 23 Report Retrieved Successfully', $data, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
     public function project(Request $request)
     {
         try {
@@ -145,6 +157,7 @@ class ReportController extends Controller implements HasMiddleware
                 'pph21' => new Pph21ReportExport($startDate, $endDate),
                 'ppn' => new PpnReportExport($startDate, $endDate),
                 'project' => new ProjectReportExport($startDate, $endDate, $request->query('status')),
+                'pph23' => new Pph23ReportExport($startDate, $endDate),
                 default => null,
             };
 

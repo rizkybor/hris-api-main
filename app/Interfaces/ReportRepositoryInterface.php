@@ -14,4 +14,6 @@ interface ReportRepositoryInterface
     public function getPpnReport(?string $startDate, ?string $endDate);
 
     public function getProjectReport(?string $startDate, ?string $endDate, ?string $status, int $page = 1, int $rowPerPage = 15);
+
+    public function getPph23Report(?string $startDate, ?string $endDate);
 }
