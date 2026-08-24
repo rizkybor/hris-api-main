@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProjectController extends Controller implements HasMiddleware
@@ -121,6 +122,19 @@ class ProjectController extends Controller implements HasMiddleware
         $request = $request->validated();
 
         try {
+            // Project Inspect is a Project Leader-only field: gated here
+            // (not in the FormRequest, which has no access to the existing
+            // Project or the authenticated user's employee id) rather than
+            // relying on the frontend alone to hide the control.
+            if (array_key_exists('inspect_note', $request)) {
+                $existingProject = Project::findOrFail($id);
+                $employeeId = Auth::user()?->employeeProfile?->id;
+
+                if ($employeeId === null || $existingProject->project_leader_id !== $employeeId) {
+                    return ResponseHelper::jsonResponse(false, 'Only the Project Leader can update the Project Inspect note.', null, 403);
+                }
+            }
+
             $project = $this->projectRepository->update($id, $request);
 
             return ResponseHelper::jsonResponse(true, 'Project Updated Successfully', new ProjectResource($project), 200);

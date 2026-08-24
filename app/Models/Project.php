@@ -34,6 +34,7 @@ class Project extends Model
         'project_leader_id',
         'team_assignment_mode',
         'vendor_id',
+        'inspect_note',
     ];
 
     protected function casts(): array
