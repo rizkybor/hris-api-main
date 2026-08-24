@@ -16,7 +16,8 @@ class InvoiceUpdateRequest extends FormRequest
         return [
             'faktur_pajak_number' => ['nullable', 'string', 'max:50'],
             'project_id' => ['nullable', 'exists:projects,id'],
-            'client_code' => ['sometimes', 'required', 'string', 'max:20'],
+            // See InvoiceStoreRequest for why "/" is disallowed here.
+            'client_code' => ['sometimes', 'required', 'string', 'max:40', 'regex:/^[^\/]+$/'],
             'client_name' => ['sometimes', 'required', 'string', 'max:255'],
             'client_pic' => ['nullable', 'string', 'max:255'],
             'client_email' => ['nullable', 'string', 'max:255'],
@@ -33,6 +34,13 @@ class InvoiceUpdateRequest extends FormRequest
             'bank_name' => ['nullable', 'string', 'max:255'],
             'bank_account' => ['nullable', 'string', 'max:100'],
             'terms' => ['nullable', 'string'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'client_code.regex' => 'Client Code should be a short code (e.g. "ZACO"), not a full invoice number -- it gets combined with the date and sequence to build the invoice number automatically.',
         ];
     }
 }
