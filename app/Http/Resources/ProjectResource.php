@@ -42,6 +42,10 @@ class ProjectResource extends JsonResource
                 'name' => $employee->user?->name,
             ])),
             'vendor_id' => $this->vendor_id,
+            // Rich-text note only the Project Leader may write (see
+            // ProjectController::update()) -- readable by anyone who can
+            // view the project.
+            'inspect_note' => $this->inspect_note,
             'vendor' => $this->whenLoaded('vendor', fn () => $this->vendor ? [
                 'id' => $this->vendor->id,
                 'name' => $this->vendor->name,

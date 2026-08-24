@@ -29,6 +29,11 @@ class ProjectUpdateRequest extends FormRequest
             'budget' => ['nullable', 'numeric', 'min:0'],
             'project_leader_id' => ['nullable', 'exists:employee_profiles,id', new NotProtectedEmployee('Project Leader')],
             'vendor_id' => ['nullable', 'exists:vendors,id'],
+            // Free-text HTML from the RichTextEditor -- only the Project
+            // Leader may actually change it (enforced in the controller,
+            // not here, since that requires the existing Project + auth
+            // context this FormRequest doesn't have).
+            'inspect_note' => ['nullable', 'string'],
             'team_assignment_mode' => ['sometimes', 'required', 'string', 'in:team,employee'],
             'team_id' => ['required_if:team_assignment_mode,team', 'nullable', 'integer', 'exists:teams,id'],
             'member_employee_ids' => ['nullable', 'array'],
