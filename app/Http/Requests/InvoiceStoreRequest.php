@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\PphType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class InvoiceStoreRequest extends FormRequest
@@ -43,6 +44,10 @@ class InvoiceStoreRequest extends FormRequest
             'bank_name' => ['nullable', 'string', 'max:255'],
             'bank_account' => ['nullable', 'string', 'max:100'],
             'terms' => ['nullable', 'string'],
+            // Purely informational heads-up that the client is expected to
+            // withhold PPh 23 on payment -- doesn't affect subtotal/total.
+            'pph23_type' => ['nullable', 'string', 'in:'.implode(',', array_column(PphType::cases(), 'value'))],
+            'pph23_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ];
     }
 

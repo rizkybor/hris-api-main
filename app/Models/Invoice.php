@@ -40,6 +40,8 @@ class Invoice extends Model
         'bank_name',
         'bank_account',
         'terms',
+        'pph23_type',
+        'pph23_percent',
         'status',
         'created_by',
     ];
@@ -54,6 +56,7 @@ class Invoice extends Model
             'ppn_amount' => 'decimal:2',
             'admin_fee' => 'decimal:2',
             'total' => 'decimal:2',
+            'pph23_percent' => 'decimal:2',
         ];
     }
 
