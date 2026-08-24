@@ -4,6 +4,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialAccountController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardWidgetController;
 use App\Http\Controllers\DivisionCodeController;
 use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\InvoiceController;
@@ -172,6 +173,9 @@ Route::prefix('v1')
             // Dashboard routes
             Route::get('dashboard/statistics', [DashboardController::class, 'getStatistics']);
             Route::get('dashboard/my-statistics', [DashboardController::class, 'getEmployeeStatistics']);
+            Route::get('dashboard/widgets', [DashboardWidgetController::class, 'index']);
+            Route::put('dashboard/widgets/order', [DashboardWidgetController::class, 'updateOrder']);
+            Route::delete('dashboard/widgets/order', [DashboardWidgetController::class, 'resetOrder']);
 
             // Credential Account routes
             Route::get('credential-accounts/all/paginated', [CredentialAccountController::class, 'getAllPaginated']);

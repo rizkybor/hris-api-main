@@ -36,6 +36,18 @@ class ProjectStoreRequest extends FormRequest
             'team_id' => ['required_if:team_assignment_mode,team', 'nullable', 'integer', 'exists:teams,id'],
             'member_employee_ids' => ['nullable', 'array'],
             'member_employee_ids.*' => ['integer', 'exists:employee_profiles,id', new NotProtectedEmployee('a project member')],
+            // Optional quick-access links -- each is a name+url pair, open
+            // to whoever can edit the project (unlike inspect_note, no
+            // leader restriction).
+            'access_project_name' => ['nullable', 'string', 'max:255'],
+            'access_project_url' => ['nullable', 'url', 'max:2048'],
+            'access_github_name' => ['nullable', 'string', 'max:255'],
+            'access_github_url' => ['nullable', 'url', 'max:2048'],
+            'access_figma_name' => ['nullable', 'string', 'max:255'],
+            'access_figma_url' => ['nullable', 'url', 'max:2048'],
+            'additional_access' => ['nullable', 'array'],
+            'additional_access.*.name' => ['required_with:additional_access.*.url', 'nullable', 'string', 'max:255'],
+            'additional_access.*.url' => ['required_with:additional_access.*.name', 'nullable', 'url', 'max:2048'],
         ];
     }
 
@@ -56,6 +68,12 @@ class ProjectStoreRequest extends FormRequest
             'team_assignment_mode' => 'Team Assignment Mode',
             'team_id' => 'Team',
             'member_employee_ids' => 'Members',
+            'access_project_name' => 'Access Project Name',
+            'access_project_url' => 'Access Project Link',
+            'access_github_name' => 'Access Github Name',
+            'access_github_url' => 'Access Github Link',
+            'access_figma_name' => 'Access Figma Name',
+            'access_figma_url' => 'Access Figma Link',
         ];
     }
 }

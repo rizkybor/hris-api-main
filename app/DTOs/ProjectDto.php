@@ -20,6 +20,13 @@ class ProjectDto
         public readonly string $team_assignment_mode = 'employee',
         public readonly ?int $vendor_id = null,
         public readonly ?string $inspect_note = null,
+        public readonly ?string $access_project_name = null,
+        public readonly ?string $access_project_url = null,
+        public readonly ?string $access_github_name = null,
+        public readonly ?string $access_github_url = null,
+        public readonly ?string $access_figma_name = null,
+        public readonly ?string $access_figma_url = null,
+        public readonly ?array $additional_access = null,
     ) {}
 
     public function toArray(): array
@@ -38,6 +45,13 @@ class ProjectDto
             'team_assignment_mode' => $this->team_assignment_mode,
             'vendor_id' => $this->vendor_id,
             'inspect_note' => $this->inspect_note,
+            'access_project_name' => $this->access_project_name,
+            'access_project_url' => $this->access_project_url,
+            'access_github_name' => $this->access_github_name,
+            'access_github_url' => $this->access_github_url,
+            'access_figma_name' => $this->access_figma_name,
+            'access_figma_url' => $this->access_figma_url,
+            'additional_access' => $this->additional_access,
         ];
     }
 
@@ -61,6 +75,13 @@ class ProjectDto
             project_leader_id: $data['project_leader_id'] ?? null,
             team_assignment_mode: $data['team_assignment_mode'] ?? 'employee',
             vendor_id: $data['vendor_id'] ?? null,
+            access_project_name: $data['access_project_name'] ?? null,
+            access_project_url: $data['access_project_url'] ?? null,
+            access_github_name: $data['access_github_name'] ?? null,
+            access_github_url: $data['access_github_url'] ?? null,
+            access_figma_name: $data['access_figma_name'] ?? null,
+            access_figma_url: $data['access_figma_url'] ?? null,
+            additional_access: $data['additional_access'] ?? null,
         );
     }
 
@@ -80,6 +101,13 @@ class ProjectDto
             team_assignment_mode: $data['team_assignment_mode'] ?? $existingProject->team_assignment_mode,
             vendor_id: array_key_exists('vendor_id', $data) ? ($data['vendor_id'] ?: null) : $existingProject->vendor_id,
             inspect_note: array_key_exists('inspect_note', $data) ? $data['inspect_note'] : $existingProject->inspect_note,
+            access_project_name: array_key_exists('access_project_name', $data) ? $data['access_project_name'] : $existingProject->access_project_name,
+            access_project_url: array_key_exists('access_project_url', $data) ? $data['access_project_url'] : $existingProject->access_project_url,
+            access_github_name: array_key_exists('access_github_name', $data) ? $data['access_github_name'] : $existingProject->access_github_name,
+            access_github_url: array_key_exists('access_github_url', $data) ? $data['access_github_url'] : $existingProject->access_github_url,
+            access_figma_name: array_key_exists('access_figma_name', $data) ? $data['access_figma_name'] : $existingProject->access_figma_name,
+            access_figma_url: array_key_exists('access_figma_url', $data) ? $data['access_figma_url'] : $existingProject->access_figma_url,
+            additional_access: array_key_exists('additional_access', $data) ? $data['additional_access'] : $existingProject->additional_access,
         );
     }
 }
