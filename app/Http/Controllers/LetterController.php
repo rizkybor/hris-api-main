@@ -153,7 +153,9 @@ class LetterController extends Controller implements HasMiddleware
     {
         $letter = Letter::with(['letterCode', 'divisionCode'])->findOrFail($id);
 
-        $pdf = Pdf::loadView('pdf.letter', ['letter' => $letter])
+        $view = $letter->letterCode?->code === 'BAST' ? 'pdf.bast' : 'pdf.letter';
+
+        $pdf = Pdf::loadView($view, ['letter' => $letter])
             ->setPaper('a4');
 
         return $pdf->stream(str_replace('/', '-', $letter->letter_number).'.pdf');
