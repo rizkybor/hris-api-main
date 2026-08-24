@@ -35,12 +35,20 @@ class Project extends Model
         'team_assignment_mode',
         'vendor_id',
         'inspect_note',
+        'access_project_name',
+        'access_project_url',
+        'access_github_name',
+        'access_github_url',
+        'access_figma_name',
+        'access_figma_url',
+        'additional_access',
     ];
 
     protected function casts(): array
     {
         return [
             'budget' => 'decimal:2',
+            'additional_access' => 'array',
         ];
     }
 

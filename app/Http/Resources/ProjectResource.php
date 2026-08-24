@@ -46,6 +46,16 @@ class ProjectResource extends JsonResource
             // ProjectController::update()) -- readable by anyone who can
             // view the project.
             'inspect_note' => $this->inspect_note,
+            // Optional quick-access links -- readable by anyone who can
+            // view the project, editable by anyone who can edit it (no
+            // leader restriction, unlike inspect_note).
+            'access_project_name' => $this->access_project_name,
+            'access_project_url' => $this->access_project_url,
+            'access_github_name' => $this->access_github_name,
+            'access_github_url' => $this->access_github_url,
+            'access_figma_name' => $this->access_figma_name,
+            'access_figma_url' => $this->access_figma_url,
+            'additional_access' => $this->additional_access ?? [],
             'vendor' => $this->whenLoaded('vendor', fn () => $this->vendor ? [
                 'id' => $this->vendor->id,
                 'name' => $this->vendor->name,
