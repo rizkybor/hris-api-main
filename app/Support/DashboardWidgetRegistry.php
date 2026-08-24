@@ -21,8 +21,8 @@ class DashboardWidgetRegistry
 {
     /**
      * `size` is the DEFAULT grid width for a widget the user has never
-     * resized themselves -- "small" (1 of 3 columns), "medium" (2 of 3),
-     * "large" (full row). Widgets whose content is itself a multi-card
+     * resized themselves -- "small" (1/3 row width), "medium" (1/2 row
+     * width), "large" (full row). Widgets whose content is itself a multi-card
      * grid (Key Metrics, My Overview, System Stats) default to "large" so
      * their internal cards aren't cramped into a third of the row.
      */

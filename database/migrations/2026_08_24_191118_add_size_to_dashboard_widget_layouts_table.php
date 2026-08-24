@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('dashboard_widget_layouts', function (Blueprint $table) {
-            // "small" (1 of 3 grid columns), "medium" (2 of 3), "large"
+            // "small" (1/3 row width), "medium" (1/2 row width), "large"
             // (full row) -- macOS/iOS-style widget resizing. Null falls
             // back to the widget's registry default (see
             // DashboardWidgetRegistry::WIDGETS) until the user actually
