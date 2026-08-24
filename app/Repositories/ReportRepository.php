@@ -9,6 +9,7 @@ use App\Models\EmployeeProfile;
 use App\Models\FixedCost;
 use App\Models\InfrastructureTool;
 use App\Models\Invoice;
+use App\Models\PaymentReceipt;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\Project;
@@ -285,6 +286,37 @@ class ReportRepository implements ReportRepositoryInterface
                 'from' => $paginated->firstItem(),
                 'to' => $paginated->lastItem(),
             ],
+        ];
+    }
+
+    /**
+     * PPh 23 recap from Payment Receipts where the client withheld it
+     * (pph23_amount set) within the period, keyed by receipt date -- a
+     * starting point for Bukti Potong/Coretax, same spirit as getPpnReport.
+     */
+    public function getPph23Report(?string $startDate, ?string $endDate)
+    {
+        $startDate = $startDate ?: now()->startOfYear()->toDateString();
+        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+
+        $rows = PaymentReceipt::query()
+            ->whereBetween('date', [$startDate, $endDate])
+            ->where('pph23_amount', '>', 0)
+            ->with('invoice:id,invoice_number,client_name')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        $summary = [
+            'total_receipts' => $rows->count(),
+            'total_gross' => (float) $rows->sum(fn ($r) => (float) $r->amount + (float) $r->pph23_amount),
+            'total_pph23' => (float) $rows->sum('pph23_amount'),
+            'total_net_received' => (float) $rows->sum('amount'),
+        ];
+
+        return [
+            'period' => ['start_date' => $startDate, 'end_date' => $endDate],
+            'summary' => $summary,
+            'rows' => $rows,
         ];
     }
 }

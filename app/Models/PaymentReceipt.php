@@ -26,6 +26,9 @@ class PaymentReceipt extends Model
         'date',
         'received_from',
         'amount',
+        'pph23_type',
+        'pph23_percent',
+        'pph23_amount',
         'for_payment_of',
         'invoice_id',
         'payment_status',
@@ -39,6 +42,8 @@ class PaymentReceipt extends Model
         return [
             'date' => 'date',
             'amount' => 'decimal:2',
+            'pph23_percent' => 'decimal:2',
+            'pph23_amount' => 'decimal:2',
         ];
     }
 

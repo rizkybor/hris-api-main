@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\PphType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PaymentReceiptStoreRequest extends FormRequest
@@ -28,6 +29,11 @@ class PaymentReceiptStoreRequest extends FormRequest
             'date' => ['required', 'date'],
             'received_from' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
+            // Withheld by the client from what they pay -- amount above is
+            // already what was actually received (net of this).
+            'pph23_type' => ['nullable', 'string', 'in:'.implode(',', array_column(PphType::cases(), 'value'))],
+            'pph23_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'pph23_amount' => ['nullable', 'numeric', 'min:0'],
             'for_payment_of' => ['required', 'string'],
             'invoice_id' => ['nullable', 'integer', 'exists:invoices,id'],
             'payment_status' => ['required', 'in:paid,partial'],

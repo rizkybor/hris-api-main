@@ -46,6 +46,9 @@
             <tr><td style="width: 20%;" class="label">No.</td><td>: {{ $receipt->receipt_number }}</td></tr>
             <tr><td class="label">Received From</td><td>: {{ $receipt->received_from }}</td></tr>
             <tr><td class="label">Amount</td><td>: {{ strtoupper(\App\Helpers\TerbilangHelper::toRupiah((float) $receipt->amount)) }}</td></tr>
+            @if($receipt->pph23_amount)
+                <tr><td class="label">Note</td><td>: Net of {{ number_format((float) $receipt->pph23_percent, 0) }}% PPh 23 withholding (Rp {{ number_format((float) $receipt->pph23_amount, 0, ',', '.') }})</td></tr>
+            @endif
             <tr>
                 <td class="label">For Payment of</td>
                 <td>: {{ $receipt->for_payment_of }}
@@ -56,9 +59,21 @@
             </tr>
         </table>
 
-        <table style="margin-top: 14mm; border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51;">
+        @if($receipt->pph23_amount)
+            <table style="margin-top: 14mm;">
+                <tr>
+                    <td style="border: none; padding: 3px 0;">Gross Amount</td>
+                    <td style="border: none; padding: 3px 0; text-align: right;">Rp. {{ number_format((float) $receipt->amount + (float) $receipt->pph23_amount, 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 3px 0;">PPh 23 Withheld ({{ number_format((float) $receipt->pph23_percent, 0) }}%)</td>
+                    <td style="border: none; padding: 3px 0; text-align: right;">- Rp. {{ number_format((float) $receipt->pph23_amount, 0, ',', '.') }}</td>
+                </tr>
+            </table>
+        @endif
+        <table style="margin-top: {{ $receipt->pph23_amount ? '2mm' : '14mm' }}; border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51;">
             <tr>
-                <td style="border: none; padding: 8px 0; font-weight: bold;">Amount:</td>
+                <td style="border: none; padding: 8px 0; font-weight: bold;">{{ $receipt->pph23_amount ? 'Net Amount Received:' : 'Amount:' }}</td>
                 <td style="border: none; padding: 8px 0; font-weight: bold; text-align: right;">Rp. {{ number_format($receipt->amount, 0, ',', '.') }}</td>
             </tr>
         </table>
