@@ -37,7 +37,7 @@ class ProjectTaskCommentMention extends Notification implements ShouldQueue
         return [
             'title' => 'You were mentioned in a comment',
             'message' => $commenterName.' mentioned you in a comment on "'.$task?->name.'"',
-            'url' => '/admin/projects/'.$task?->project_id,
+            'url' => '/admin/projects/'.$task?->project_id.'?task='.$this->comment->project_task_id.'&comment='.$this->comment->id,
             'project_task_id' => $this->comment->project_task_id,
             'comment_id' => $this->comment->id,
         ];

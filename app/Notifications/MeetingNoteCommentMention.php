@@ -37,7 +37,7 @@ class MeetingNoteCommentMention extends Notification implements ShouldQueue
         return [
             'title' => 'You were mentioned in a comment',
             'message' => $commenterName.' mentioned you in a comment on "'.$note?->title.'"',
-            'url' => '/admin/documents/meeting-notes/'.$this->comment->meeting_note_id,
+            'url' => '/admin/documents/meeting-notes/'.$this->comment->meeting_note_id.'?comment='.$this->comment->id,
             'meeting_note_id' => $this->comment->meeting_note_id,
             'comment_id' => $this->comment->id,
         ];
