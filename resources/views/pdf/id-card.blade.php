@@ -54,7 +54,7 @@
             font-family: 'Anton', 'Helvetica', sans-serif;
             font-weight: bold;
             color: #ffffff;
-            font-size: 14pt;
+            font-size: 12pt;
             line-height: 1;
             white-space: nowrap;
             overflow: hidden;
