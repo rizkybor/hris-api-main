@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialAccountController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DivisionCodeController;
+use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
@@ -317,6 +318,9 @@ Route::prefix('v1')
             Route::post('invoices/{id}/mark-as-paid', [InvoiceController::class, 'markAsPaid']);
             Route::post('invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
             Route::apiResource('invoices', InvoiceController::class);
+
+            // Document Letters: Invoices reference table (Bank Accounts for Payment & Tax)
+            Route::apiResource('bank-accounts', BankAccountController::class)->only(['index', 'store', 'update', 'destroy']);
 
             // Document Letters: Payment Receipts
             Route::get('payment-receipts/{id}/export-pdf', [PaymentReceiptController::class, 'exportPdf']);
