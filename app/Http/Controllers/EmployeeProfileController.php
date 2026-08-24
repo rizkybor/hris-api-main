@@ -12,14 +12,12 @@ use App\Http\Resources\ProjectResource;
 use App\Http\Resources\TeamMemberResource;
 use App\Http\Resources\TeamResource;
 use App\Interfaces\EmployeeProfileRepositoryInterface;
-use App\Services\Cloudinary\CloudinaryUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class EmployeeProfileController extends Controller implements HasMiddleware
@@ -226,33 +224,23 @@ class EmployeeProfileController extends Controller implements HasMiddleware
     }
 
     /**
-     * Digital ID card (authenticated employee) -- streamed as a CR80
-     * card-sized PDF, not the usual A4 document layout.
+     * Digital ID card (authenticated employee) -- streamed as a 2-page
+     * (front + back) portrait 54mm x 85.6mm badge-sized PDF, not the usual
+     * A4 document layout.
+     *
+     * Both sides are the design team's own background artwork (rasterized
+     * once from their source PDFs into public/images) with the employee's
+     * name/title/id/contact overlaid on the front only -- the back carries
+     * no per-employee content, so it's used completely unchanged.
      */
     public function downloadIdCard()
     {
         $employee = $this->employeeProfileRepository->getMyProfile();
 
-        $photoDataUri = null;
-        $publicId = $employee->user?->profile_photo;
-
-        if ($publicId) {
-            try {
-                $response = Http::timeout(5)->get(CloudinaryUrl::image($publicId));
-                if ($response->successful()) {
-                    $mime = $response->header('Content-Type') ?: 'image/jpeg';
-                    $photoDataUri = 'data:'.$mime.';base64,'.base64_encode($response->body());
-                }
-            } catch (\Throwable $e) {
-                // Photo is a nice-to-have on the card, not worth failing the download over.
-            }
-        }
-
-        // CR80 card size (85.6mm x 53.98mm) converted to points (1mm = 2.83465pt).
+        // Portrait badge size (54mm x 85.6mm) converted to points (1mm = 2.83465pt).
         $pdf = Pdf::loadView('pdf.id-card', [
             'employee' => $employee,
-            'photoDataUri' => $photoDataUri,
-        ])->setPaper([0, 0, 242.65, 153.05]);
+        ])->setPaper([0, 0, 153.07, 242.69]);
 
         return $pdf->stream('ID-Card-'.$employee->code.'.pdf');
     }
