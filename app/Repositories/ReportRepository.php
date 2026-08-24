@@ -11,6 +11,7 @@ use App\Models\InfrastructureTool;
 use App\Models\Invoice;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Models\Project;
 use App\Models\SdmResource;
 use Carbon\Carbon;
 
@@ -236,6 +237,54 @@ class ReportRepository implements ReportRepositoryInterface
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
             'summary' => $summary,
             'rows' => $rows,
+        ];
+    }
+
+    /**
+     * Project recap filtered by start_date (matching how every other
+     * report here filters on one date column, e.g. Payroll on
+     * salary_month, PPN on invoice date) -- not an "active during this
+     * period" overlap check.
+     */
+    public function getProjectReport(?string $startDate, ?string $endDate, ?string $status, int $page = 1, int $rowPerPage = 15)
+    {
+        $startDate = $startDate ?: now()->startOfYear()->toDateString();
+        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+
+        $baseQuery = Project::query()->whereBetween('start_date', [$startDate, $endDate]);
+
+        if ($status) {
+            $baseQuery->where('status', $status);
+        }
+
+        $summary = [
+            'total_projects' => (clone $baseQuery)->count(),
+            'active_projects' => (clone $baseQuery)->where('status', 'active')->count(),
+            'completed_projects' => (clone $baseQuery)->where('status', 'completed')->count(),
+            'total_budget' => (float) (clone $baseQuery)->sum('budget'),
+        ];
+
+        $paginated = (clone $baseQuery)
+            ->with(['projectLeader.user', 'vendor'])
+            ->withCount([
+                'tasks as tasks_total_count',
+                'tasks as tasks_done_count' => fn ($q) => $q->where('status', 'done'),
+            ])
+            ->orderBy('start_date', 'desc')
+            ->paginate($rowPerPage, ['*'], 'page', $page);
+
+        return [
+            'period' => ['start_date' => $startDate, 'end_date' => $endDate],
+            'summary' => $summary,
+            'rows' => $paginated->items(),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'to' => $paginated->lastItem(),
+            ],
         ];
     }
 }
