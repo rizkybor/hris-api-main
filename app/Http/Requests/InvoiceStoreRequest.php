@@ -16,12 +16,17 @@ class InvoiceStoreRequest extends FormRequest
         return [
             'faktur_pajak_number' => ['nullable', 'string', 'max:50'],
             'project_id' => ['nullable', 'exists:projects,id'],
+            // "automatic": client_code (a short code, e.g. "ZACO") is combined
+            // with the date and sequence into INV/JCD-{code}/DDMM/YY.NNN.
+            // "manual": invoice_number is used verbatim as typed.
+            'numbering_mode' => ['required', 'in:automatic,manual'],
             // No "/" allowed: this is a short code slotted into the
-            // auto-generated invoice number (INV/JCD-{client_code}/DDMM/
-            // YY.NNN) -- a value that already contains "/" (e.g. someone
-            // pasting a full invoice number in here instead of just the
-            // code) doubles up and breaks the generated number.
-            'client_code' => ['required', 'string', 'max:40', 'regex:/^[^\/]+$/'],
+            // auto-generated invoice number -- a value that already
+            // contains "/" (e.g. someone pasting a full invoice number in
+            // here instead of just the code) doubles up and breaks the
+            // generated number. Only required in automatic mode.
+            'client_code' => ['required_if:numbering_mode,automatic', 'nullable', 'string', 'max:40', 'regex:/^[^\/]+$/'],
+            'invoice_number' => ['required_if:numbering_mode,manual', 'nullable', 'string', 'max:255', 'unique:invoices,invoice_number'],
             'client_name' => ['required', 'string', 'max:255'],
             'client_pic' => ['nullable', 'string', 'max:255'],
             'client_email' => ['nullable', 'string', 'max:255'],
@@ -45,6 +50,9 @@ class InvoiceStoreRequest extends FormRequest
     {
         return [
             'client_code.regex' => 'Client Code should be a short code (e.g. "ZACO"), not a full invoice number -- it gets combined with the date and sequence to build the invoice number automatically.',
+            'client_code.required_if' => 'Client Code is required for automatic numbering.',
+            'invoice_number.required_if' => 'Invoice Number is required for manual numbering.',
+            'invoice_number.unique' => 'This invoice number is already in use.',
         ];
     }
 }

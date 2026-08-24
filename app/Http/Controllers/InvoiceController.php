@@ -75,9 +75,15 @@ class InvoiceController extends Controller implements HasMiddleware
             $date = Carbon::parse($validated['date']);
             $totals = $this->calculateTotals($validated['items'], $validated['ppn_percentage'] ?? null, $validated['admin_fee'] ?? null);
 
+            $invoiceNumber = $validated['numbering_mode'] === 'manual'
+                ? $validated['invoice_number']
+                : $this->numberService->generateInvoiceNumber($validated['client_code'], $date);
+
+            unset($validated['numbering_mode'], $validated['invoice_number']);
+
             $invoice = Invoice::create([
                 ...$validated,
-                'invoice_number' => $this->numberService->generateInvoiceNumber($validated['client_code'], $date),
+                'invoice_number' => $invoiceNumber,
                 'subtotal' => $totals['subtotal'],
                 'ppn_percentage' => $validated['ppn_percentage'] ?? 0,
                 'ppn_amount' => $totals['ppnAmount'],
