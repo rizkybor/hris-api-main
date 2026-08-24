@@ -50,7 +50,8 @@ class VendorsController extends Controller implements HasMiddleware
                 'taskPivots.taskVendor',
                 'taskPivots.paymentVendor',
                 'taskPivots.scopeVendor',
-                'attachments'
+                'attachments',
+                'projects',
             ]);
 
             return ResponseHelper::jsonResponse(
@@ -134,7 +135,8 @@ class VendorsController extends Controller implements HasMiddleware
                 'taskPivots.taskVendor',
                 'taskPivots.paymentVendor',
                 'taskPivots.scopeVendor',
-                'attachments'
+                'attachments',
+                'projects',
             ]);
 
             return ResponseHelper::jsonResponse(

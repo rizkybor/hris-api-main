@@ -33,7 +33,7 @@ class InvoiceController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
-            $query = Invoice::query()->with('creator:id,name')->orderByDesc('created_at');
+            $query = Invoice::query()->with(['creator:id,name', 'project:id,name'])->orderByDesc('created_at');
 
             if ($request->search) {
                 $query->search($request->search);
@@ -41,6 +41,10 @@ class InvoiceController extends Controller implements HasMiddleware
 
             if ($request->status) {
                 $query->where('status', $request->status);
+            }
+
+            if ($request->project_id) {
+                $query->where('project_id', $request->project_id);
             }
 
             $rowPerPage = (int) ($request->row_per_page ?? 10);
@@ -91,7 +95,7 @@ class InvoiceController extends Controller implements HasMiddleware
     public function show(string $id)
     {
         try {
-            $invoice = Invoice::with('creator:id,name')->findOrFail($id);
+            $invoice = Invoice::with(['creator:id,name', 'project:id,name', 'receipts'])->findOrFail($id);
 
             return ResponseHelper::jsonResponse(true, 'Invoice Retrieved Successfully', $invoice, 200);
         } catch (ModelNotFoundException $e) {

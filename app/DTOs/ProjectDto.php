@@ -18,6 +18,7 @@ class ProjectDto
         public readonly ?float $budget = null,
         public readonly ?int $project_leader_id = null,
         public readonly string $team_assignment_mode = 'employee',
+        public readonly ?int $vendor_id = null,
     ) {}
 
     public function toArray(): array
@@ -34,6 +35,7 @@ class ProjectDto
             'budget' => $this->budget,
             'project_leader_id' => $this->project_leader_id,
             'team_assignment_mode' => $this->team_assignment_mode,
+            'vendor_id' => $this->vendor_id,
         ];
     }
 
@@ -51,6 +53,7 @@ class ProjectDto
             budget: isset($data['budget']) ? (float) $data['budget'] : null,
             project_leader_id: $data['project_leader_id'] ?? null,
             team_assignment_mode: $data['team_assignment_mode'] ?? 'employee',
+            vendor_id: $data['vendor_id'] ?? null,
         );
     }
 
@@ -68,6 +71,7 @@ class ProjectDto
             budget: isset($data['budget']) ? (float) $data['budget'] : $existingProject->budget,
             project_leader_id: $data['project_leader_id'] ?? $existingProject->project_leader_id,
             team_assignment_mode: $data['team_assignment_mode'] ?? $existingProject->team_assignment_mode,
+            vendor_id: array_key_exists('vendor_id', $data) ? ($data['vendor_id'] ?: null) : $existingProject->vendor_id,
         );
     }
 }
