@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Constants\CacheConstants;
 use App\DTOs\ProjectDto;
 use App\Interfaces\ProjectRepositoryInterface;
+use App\Models\PaymentReceipt;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\TeamMember;
@@ -309,6 +310,8 @@ class ProjectRepository implements ProjectRepositoryInterface
                 'completion_rate' => $completionRate,
                 'total_budget' => (float) ($projectStats->total_budget ?? 0),
                 'budget_by_month' => $this->getBudgetByMonth(),
+                'total_realized' => (float) $this->realizedQuery()->sum('amount'),
+                'realized_by_month' => $this->getRealizedByMonth(),
             ];
         });
     }
@@ -326,6 +329,30 @@ class ProjectRepository implements ProjectRepositoryInterface
             ->selectRaw('SUM(budget) as total_budget')
             ->selectRaw('COUNT(*) as total_projects')
             ->groupBy(DB::raw('DATE_FORMAT(start_date, "%Y-%m")'))
+            ->orderBy('month')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * "Realized" = money actually collected against project-linked invoices,
+     * i.e. Payment Receipts whose invoice has a project_id, excluding
+     * cancelled receipts. Distinct from `budget` (planned) on Project.
+     */
+    private function realizedQuery(): Builder
+    {
+        return PaymentReceipt::query()
+            ->where('status', 'active')
+            ->whereHas('invoice', fn ($q) => $q->whereNotNull('project_id'));
+    }
+
+    private function getRealizedByMonth(): array
+    {
+        return $this->realizedQuery()
+            ->selectRaw('DATE_FORMAT(date, "%Y-%m") as month')
+            ->selectRaw('SUM(amount) as total_realized')
+            ->selectRaw('COUNT(*) as total_receipts')
+            ->groupBy(DB::raw('DATE_FORMAT(date, "%Y-%m")'))
             ->orderBy('month')
             ->get()
             ->toArray();
