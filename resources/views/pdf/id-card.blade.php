@@ -54,7 +54,7 @@
             font-family: 'Anton', 'Helvetica', sans-serif;
             font-weight: bold;
             color: #ffffff;
-            font-size: 14pt;
+            font-size: 12pt;
             line-height: 1;
             white-space: nowrap;
             overflow: hidden;
@@ -82,29 +82,33 @@
         <img class="bg" src="{{ public_path('images/idcard-front-bg.png') }}">
 
         @php
-            // Greedily fills line 1 word-by-word up to $maxChars (tuned for
-            // Anton 20pt within the ~127pt-wide name column), then puts
-            // whatever's left on line 2, truncating it if still too long.
-            // A single word longer than the whole budget is hard-truncated
-            // on line 1 so it never has a chance to overflow either line.
+            // The degree/title suffix (e.g. ", S.Kom.") is treated as part
+            // of the word it's attached to, never split from it. Line 1
+            // always takes the first two name words; everything after that
+            // -- including the trailing degree -- goes to line 2. A name of
+            // two words or fewer (with or without a degree) fits entirely
+            // on line 1. $maxChars is a truncation safety net only (tuned
+            // for Anton 20pt within the ~127pt-wide name column).
             $maxChars = 28;
-            $nameWords = preg_split('/\s+/', trim($employee->user->name ?? '-'));
-            $nameLine1 = '';
-            $consumed = 0;
+            $nameWords = array_values(array_filter(preg_split('/\s+/', trim($employee->user->name ?? '-'))));
+            $commaIdx = null;
             foreach ($nameWords as $i => $word) {
-                $candidate = $nameLine1 === '' ? $word : $nameLine1.' '.$word;
-                if (mb_strlen($candidate) <= $maxChars) {
-                    $nameLine1 = $candidate;
-                    $consumed = $i + 1;
-                } else {
+                if (str_contains($word, ',')) {
+                    $commaIdx = $i;
                     break;
                 }
             }
-            if ($nameLine1 === '') {
-                $nameLine1 = mb_substr($nameWords[0], 0, $maxChars - 1).'…';
-                $consumed = 1;
+            $nameWordCount = $commaIdx === null ? count($nameWords) : $commaIdx + 1;
+            if ($nameWordCount > 2) {
+                $nameLine1 = implode(' ', array_slice($nameWords, 0, 2));
+                $nameLine2 = implode(' ', array_slice($nameWords, 2));
+            } else {
+                $nameLine1 = implode(' ', $nameWords);
+                $nameLine2 = '';
             }
-            $nameLine2 = implode(' ', array_slice($nameWords, $consumed));
+            if (mb_strlen($nameLine1) > $maxChars) {
+                $nameLine1 = mb_substr($nameLine1, 0, $maxChars - 1).'…';
+            }
             if (mb_strlen($nameLine2) > $maxChars) {
                 $nameLine2 = mb_substr($nameLine2, 0, $maxChars - 1).'…';
             }
