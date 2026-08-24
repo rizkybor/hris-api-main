@@ -14,7 +14,8 @@ class PaymentReceiptUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'client_code' => ['sometimes', 'required', 'string', 'max:20'],
+            // See PaymentReceiptStoreRequest for why "/" is disallowed here.
+            'client_code' => ['sometimes', 'required', 'string', 'max:40', 'regex:/^[^\/]+$/'],
             'date' => ['sometimes', 'required', 'date'],
             'received_from' => ['sometimes', 'required', 'string', 'max:255'],
             'amount' => ['sometimes', 'required', 'numeric', 'min:0'],
@@ -22,6 +23,13 @@ class PaymentReceiptUpdateRequest extends FormRequest
             'invoice_id' => ['nullable', 'integer', 'exists:invoices,id'],
             'payment_status' => ['sometimes', 'required', 'in:paid,partial'],
             'recipient_name' => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'client_code.regex' => 'Client Code should be a short code (e.g. "ZACO"), not a full receipt/invoice number -- it gets combined with the date and sequence to build the receipt number automatically.',
         ];
     }
 }

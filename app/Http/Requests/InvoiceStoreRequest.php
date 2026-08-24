@@ -16,7 +16,12 @@ class InvoiceStoreRequest extends FormRequest
         return [
             'faktur_pajak_number' => ['nullable', 'string', 'max:50'],
             'project_id' => ['nullable', 'exists:projects,id'],
-            'client_code' => ['required', 'string', 'max:30'],
+            // No "/" allowed: this is a short code slotted into the
+            // auto-generated invoice number (INV/JCD-{client_code}/DDMM/
+            // YY.NNN) -- a value that already contains "/" (e.g. someone
+            // pasting a full invoice number in here instead of just the
+            // code) doubles up and breaks the generated number.
+            'client_code' => ['required', 'string', 'max:40', 'regex:/^[^\/]+$/'],
             'client_name' => ['required', 'string', 'max:255'],
             'client_pic' => ['nullable', 'string', 'max:255'],
             'client_email' => ['nullable', 'string', 'max:255'],
@@ -33,6 +38,13 @@ class InvoiceStoreRequest extends FormRequest
             'bank_name' => ['nullable', 'string', 'max:255'],
             'bank_account' => ['nullable', 'string', 'max:100'],
             'terms' => ['nullable', 'string'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'client_code.regex' => 'Client Code should be a short code (e.g. "ZACO"), not a full invoice number -- it gets combined with the date and sequence to build the invoice number automatically.',
         ];
     }
 }
