@@ -34,7 +34,7 @@ class InvoiceController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
-            $query = Invoice::query()->with(['creator:id,name', 'project:id,name'])->orderByDesc('created_at');
+            $query = Invoice::query()->with(['creator:id,name', 'project:id,name', 'receipts:id,invoice_id,receipt_number'])->orderByDesc('created_at');
 
             if ($request->search) {
                 $query->search($request->search);
