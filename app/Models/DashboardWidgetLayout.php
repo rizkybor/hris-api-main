@@ -10,6 +10,7 @@ class DashboardWidgetLayout extends Model
         'user_id',
         'widget_key',
         'position',
+        'size',
     ];
 
     public function user()

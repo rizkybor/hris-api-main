@@ -19,22 +19,31 @@ namespace App\Support;
  */
 class DashboardWidgetRegistry
 {
+    /**
+     * `size` is the DEFAULT grid width for a widget the user has never
+     * resized themselves -- "small" (1 of 3 columns), "medium" (2 of 3),
+     * "large" (full row). Widgets whose content is itself a multi-card
+     * grid (Key Metrics, My Overview, System Stats) default to "large" so
+     * their internal cards aren't cramped into a third of the row.
+     */
     public const WIDGETS = [
-        ['key' => 'key_metrics', 'permission' => 'widget-key-metrics'],
-        ['key' => 'project_budget', 'permission' => 'widget-project-budget'],
-        ['key' => 'project_realized', 'permission' => 'widget-project-realized'],
-        ['key' => 'search_section', 'permission' => 'widget-search-section'],
-        ['key' => 'sticky_notes', 'permission' => 'widget-sticky-notes'],
-        ['key' => 'projects_at_risk', 'permission' => 'widget-projects-at-risk'],
-        ['key' => 'latest_employees', 'permission' => 'widget-latest-employees'],
-        ['key' => 'latest_teams', 'permission' => 'widget-latest-teams'],
-        ['key' => 'quick_links', 'permission' => 'widget-quick-links'],
-        ['key' => 'system_settings_links', 'permission' => 'widget-system-settings-links'],
-        ['key' => 'pending_leave_requests', 'permission' => 'widget-pending-leave-requests'],
-        ['key' => 'employee_statistics', 'permission' => 'widget-employee-statistics'],
-        ['key' => 'system_stats', 'permission' => 'widget-system-stats'],
-        ['key' => 'recent_activity', 'permission' => 'widget-recent-activity'],
+        ['key' => 'key_metrics', 'permission' => 'widget-key-metrics', 'size' => 'large'],
+        ['key' => 'project_budget', 'permission' => 'widget-project-budget', 'size' => 'small'],
+        ['key' => 'project_realized', 'permission' => 'widget-project-realized', 'size' => 'small'],
+        ['key' => 'search_section', 'permission' => 'widget-search-section', 'size' => 'small'],
+        ['key' => 'sticky_notes', 'permission' => 'widget-sticky-notes', 'size' => 'small'],
+        ['key' => 'projects_at_risk', 'permission' => 'widget-projects-at-risk', 'size' => 'small'],
+        ['key' => 'latest_employees', 'permission' => 'widget-latest-employees', 'size' => 'small'],
+        ['key' => 'latest_teams', 'permission' => 'widget-latest-teams', 'size' => 'small'],
+        ['key' => 'quick_links', 'permission' => 'widget-quick-links', 'size' => 'small'],
+        ['key' => 'system_settings_links', 'permission' => 'widget-system-settings-links', 'size' => 'small'],
+        ['key' => 'pending_leave_requests', 'permission' => 'widget-pending-leave-requests', 'size' => 'small'],
+        ['key' => 'employee_statistics', 'permission' => 'widget-employee-statistics', 'size' => 'large'],
+        ['key' => 'system_stats', 'permission' => 'widget-system-stats', 'size' => 'large'],
+        ['key' => 'recent_activity', 'permission' => 'widget-recent-activity', 'size' => 'medium'],
     ];
+
+    public const SIZES = ['small', 'medium', 'large'];
 
     /**
      * Per-role default widget order, matching each role's original

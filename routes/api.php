@@ -175,6 +175,7 @@ Route::prefix('v1')
             Route::get('dashboard/my-statistics', [DashboardController::class, 'getEmployeeStatistics']);
             Route::get('dashboard/widgets', [DashboardWidgetController::class, 'index']);
             Route::put('dashboard/widgets/order', [DashboardWidgetController::class, 'updateOrder']);
+            Route::put('dashboard/widgets/size', [DashboardWidgetController::class, 'updateSize']);
             Route::delete('dashboard/widgets/order', [DashboardWidgetController::class, 'resetOrder']);
 
             // Credential Account routes
