@@ -48,6 +48,15 @@ class Vendors extends Model
     return $this->hasMany(VendorsAttachment::class, 'vendor_id');
 }
 
+    /**
+     * Projects owned by this vendor -- optional, a Project may have no
+     * vendor at all.
+     */
+    public function projects()
+    {
+        return $this->hasMany(Project::class, 'vendor_id');
+    }
+
 
     public function scopeSearch($query, $search)
     {

@@ -26,7 +26,7 @@ class ProjectRepository implements ProjectRepositoryInterface
         ?int $limit,
         bool $execute
     ): Builder|Collection {
-        $query = Project::with(['projectLeader', 'projectLeader.user', 'projectLeader.jobInformation', 'teams', 'members', 'members.user', 'tasks'])
+        $query = Project::with(['projectLeader', 'projectLeader.user', 'projectLeader.jobInformation', 'teams', 'members', 'members.user', 'tasks', 'vendor'])
             ->where(function ($query) use ($search, $status) {
                 if ($search) {
                     $query->search($search);
@@ -121,6 +121,11 @@ class ProjectRepository implements ProjectRepositoryInterface
             'members',
             'members.user',
             'tasks',
+            'vendor',
+            'invoices' => function ($query) {
+                $query->orderByDesc('date');
+            },
+            'invoices.receipts',
         ])
             ->findOrFail($id);
     }

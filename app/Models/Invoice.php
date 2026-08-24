@@ -23,6 +23,7 @@ class Invoice extends Model
     protected $fillable = [
         'invoice_number',
         'faktur_pajak_number',
+        'project_id',
         'client_code',
         'client_name',
         'client_pic',
@@ -64,6 +65,11 @@ class Invoice extends Model
     public function receipts()
     {
         return $this->hasMany(PaymentReceipt::class);
+    }
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
     }
 
     public function scopeSearch($query, $search)

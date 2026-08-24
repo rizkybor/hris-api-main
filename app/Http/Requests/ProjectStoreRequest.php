@@ -28,6 +28,7 @@ class ProjectStoreRequest extends FormRequest
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'budget' => ['nullable', 'numeric', 'min:0'],
             'project_leader_id' => ['nullable', 'exists:employee_profiles,id', new NotProtectedEmployee('Project Leader')],
+            'vendor_id' => ['nullable', 'exists:vendors,id'],
             // "team": exactly one Team supplies both the leader and the
             // member roster. "employee": project_leader_id and
             // member_employee_ids are picked individually instead.
@@ -51,6 +52,7 @@ class ProjectStoreRequest extends FormRequest
             'photo' => 'Project Photo',
             'budget' => 'Budget',
             'project_leader_id' => 'Project Leader',
+            'vendor_id' => 'Vendor',
             'team_assignment_mode' => 'Team Assignment Mode',
             'team_id' => 'Team',
             'member_employee_ids' => 'Members',

@@ -60,12 +60,12 @@
             overflow: hidden;
         }
         .name-line-1 { top: 90pt; }
-        .name-line-2 { top: 116pt; }
+        .name-line-2 { top: 108pt; }
         .rule {
-            position: absolute; top: 158pt; left: 14pt; width: 24pt; height: 2pt; background-color: #ffffff;
+            position: absolute; top: 150pt; left: 14pt; width: 24pt; height: 2pt; background-color: #ffffff;
         }
         .job-title {
-            position: absolute; top: 164pt; left: 14pt; right: 14pt;
+            position: absolute; top: 156pt; left: 14pt; right: 14pt;
             color: #ffffff; font-size: 9pt; white-space: nowrap; overflow: hidden;
         }
         .panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }

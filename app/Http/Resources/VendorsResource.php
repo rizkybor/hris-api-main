@@ -36,6 +36,17 @@ class VendorsResource extends JsonResource
             'attachments' => $this->whenLoaded('attachments', function () {
                 return VendorsAttachmentResource::collection($this->attachments);
             }),
+
+            // Projects this vendor is contracted on -- optional, may be empty.
+            'projects' => $this->whenLoaded('projects', function () {
+                return $this->projects->map(fn ($project) => [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'status' => $project->status,
+                    'start_date' => $project->start_date,
+                    'end_date' => $project->end_date,
+                ]);
+            }),
         ];
     }
 }
