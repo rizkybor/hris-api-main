@@ -54,7 +54,7 @@
             font-family: 'Anton', 'Helvetica', sans-serif;
             font-weight: bold;
             color: #ffffff;
-            font-size: 16pt;
+            font-size: 14pt;
             line-height: 1;
             white-space: nowrap;
             overflow: hidden;
@@ -87,7 +87,7 @@
             // whatever's left on line 2, truncating it if still too long.
             // A single word longer than the whole budget is hard-truncated
             // on line 1 so it never has a chance to overflow either line.
-            $maxChars = 11;
+            $maxChars = 28;
             $nameWords = preg_split('/\s+/', trim($employee->user->name ?? '-'));
             $nameLine1 = '';
             $consumed = 0;
