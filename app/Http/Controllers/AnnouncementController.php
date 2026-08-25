@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class AnnouncementController extends Controller implements HasMiddleware
@@ -76,6 +77,11 @@ class AnnouncementController extends Controller implements HasMiddleware
             'expires_at' => 'nullable|date',
         ]);
 
+        if ($validated['is_pinned'] ?? false) {
+            $this->assertNotExpiredForPin($validated['expires_at'] ?? null);
+            $this->assertNoOtherActivePin();
+        }
+
         try {
             $announcement = Announcement::create([
                 ...$validated,
@@ -107,20 +113,92 @@ class AnnouncementController extends Controller implements HasMiddleware
 
         try {
             $announcement = Announcement::findOrFail($id);
+
+            if (! $this->canManage($announcement, $request->user())) {
+                return ResponseHelper::jsonResponse(false, 'You can only edit an announcement you created yourself.', null, 403);
+            }
+
+            if ($validated['is_pinned'] ?? false) {
+                $effectiveExpiresAt = array_key_exists('expires_at', $validated)
+                    ? $validated['expires_at']
+                    : $announcement->expires_at?->toDateString();
+
+                $this->assertNotExpiredForPin($effectiveExpiresAt);
+                $this->assertNoOtherActivePin($announcement->id);
+            }
+
             $announcement->update($validated);
+
+            $audience = $announcement->audience ?? 'all';
+            $recipients = $audience === 'all'
+                ? User::all()
+                : User::role($audience)->get();
+
+            Notification::send($recipients, new AnnouncementPublished($announcement));
 
             return ResponseHelper::jsonResponse(true, 'Announcement Updated Successfully', new AnnouncementResource($announcement), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Announcement Not Found', null, 404);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
-    public function destroy(string $id)
+    /**
+     * Edit/delete are restricted to the announcement's own creator, except
+     * for manager/superadmin who may manage anyone's announcement.
+     */
+    private function canManage(Announcement $announcement, User $user): bool
+    {
+        return $announcement->created_by === $user->id
+            || $user->hasRole('manager')
+            || $user->hasRole('superadmin');
+    }
+
+    /**
+     * A pinned announcement whose Valid Until date has already passed would
+     * occupy the one pin slot without ever actually showing on anyone's
+     * Dashboard (scopeActive excludes it), silently blocking a real one.
+     */
+    private function assertNotExpiredForPin(?string $expiresAt): void
+    {
+        if ($expiresAt && $expiresAt < now()->toDateString()) {
+            throw ValidationException::withMessages([
+                'is_pinned' => ['An already-expired announcement cannot be pinned.'],
+            ]);
+        }
+    }
+
+    /**
+     * Only one announcement may be pinned at a time -- the pinned one is what
+     * gets surfaced on every audience member's Dashboard, so a second pin
+     * would silently bump the first one out of that slot.
+     */
+    private function assertNoOtherActivePin(?string $excludingId = null): void
+    {
+        $alreadyPinned = Announcement::active()
+            ->where('is_pinned', true)
+            ->when($excludingId, fn ($q) => $q->where('id', '!=', $excludingId))
+            ->exists();
+
+        if ($alreadyPinned) {
+            throw ValidationException::withMessages([
+                'is_pinned' => ['Only one announcement can be pinned at a time. Unpin the current one first.'],
+            ]);
+        }
+    }
+
+    public function destroy(Request $request, string $id)
     {
         try {
             $announcement = Announcement::findOrFail($id);
+
+            if (! $this->canManage($announcement, $request->user())) {
+                return ResponseHelper::jsonResponse(false, 'You can only delete an announcement you created yourself.', null, 403);
+            }
+
             $announcement->delete();
 
             return ResponseHelper::jsonResponse(true, 'Announcement Deleted Successfully', null, 200);
