@@ -28,9 +28,13 @@ class CompanyAboutDto
             'npwp' => $this->npwp,
             'description' => $this->description,
             'vision' => $this->vision,
-            'mission' => $this->mission ? json_encode($this->mission) : null,
+            // CompanyAbout casts 'mission'/'branches' as 'array' -- Eloquent
+            // already handles the JSON encode/decode on save/read. Encoding
+            // here too double-encoded the value (a JSON string got encoded
+            // again into a JSON-string-of-a-string), corrupting every save.
+            'mission' => $this->mission ?: null,
             'established_date' => $this->established_date,
-            'branches' => $this->branches ? json_encode($this->branches) : null,
+            'branches' => $this->branches ?: null,
             'address' => $this->address,
             'email' => $this->email,
             'phone' => $this->phone,
@@ -62,9 +66,11 @@ class CompanyAboutDto
             npwp: $data['npwp'] ?? $existing->npwp,
             description: $data['description'] ?? $existing->description,
             vision: $data['vision'] ?? $existing->vision,
-            mission:  $data['mission'] ?? ($existing->mission ? json_decode($existing->mission, true) : null),
+            // $existing->mission/branches are already plain PHP arrays --
+            // the model's 'array' cast decodes them on read.
+            mission: $data['mission'] ?? $existing->mission,
             established_date: $data['established_date'] ?? $existing->established_date,
-            branches: $data['branches'] ?? ($existing->branches ? json_decode($existing->branches, true) : null),
+            branches: $data['branches'] ?? $existing->branches,
             address: $data['address'] ?? $existing->address,
             email: $data['email'] ?? $existing->email,
             phone: $data['phone'] ?? $existing->phone,
