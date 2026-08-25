@@ -271,6 +271,7 @@ class PermissionSeeder extends Seeder
             'list',
             'create',
             'delete',
+            'restore',
         ],
 
         'history' => [

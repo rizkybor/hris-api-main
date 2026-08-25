@@ -265,6 +265,9 @@ Route::prefix('v1')
             // its own, independent of anyone's login credentials.
             Route::post('backups', [BackupController::class, 'store'])->middleware('throttle:3,1');
             Route::get('backups/{id}/download', [BackupController::class, 'download']);
+            // Rewrites every table in place -- at least as heavy/dangerous
+            // as generating a backup, so throttled the same way.
+            Route::post('backups/{id}/restore', [BackupController::class, 'restore'])->middleware('throttle:3,1');
             Route::delete('backups/{id}', [BackupController::class, 'destroy']);
 
             // History / Activity Log
