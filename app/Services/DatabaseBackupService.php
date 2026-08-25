@@ -41,7 +41,12 @@ class DatabaseBackupService
      */
     public function createAndStore(?int $userId, bool $isAutomatic = false): Backup
     {
-        $filename = 'hris-backup-'.now()->format('Y-m-d_His').'.sql.gz';
+        // A per-second timestamp alone can collide -- e.g. restoreFromBackup's
+        // pre-restore safety snapshot fires within the same second as the
+        // backup it's about to restore, and without a unique suffix would
+        // silently overwrite that backup's file on disk with the current
+        // (about-to-be-replaced) data before it's ever read back.
+        $filename = 'hris-backup-'.now()->format('Y-m-d_His').'-'.uniqid().'.sql.gz';
         $diskPath = 'backups/'.$filename;
 
         Storage::disk('local')->makeDirectory('backups');
@@ -65,6 +70,54 @@ class DatabaseBackupService
             'created_by' => $userId,
             'is_automatic' => $isAutomatic,
         ]);
+    }
+
+    /**
+     * Restore the database from a previously stored backup, overwriting all
+     * current data with the dump's snapshot. A fresh safety backup of the
+     * *current* state is taken first -- a restore is a DROP TABLE + reinsert
+     * per table (see streamDump/dumpTable), which MySQL auto-commits per
+     * statement, so a failure partway through cannot be rolled back by a
+     * transaction; the safety snapshot is the only way back if the restore
+     * itself goes wrong or was a mistake.
+     */
+    public function restoreFromBackup(Backup $backup, ?int $triggeredByUserId): void
+    {
+        if (! Storage::disk('local')->exists($backup->disk_path)) {
+            throw new \RuntimeException('Backup file no longer exists on disk.');
+        }
+
+        $safetySnapshot = $this->createAndStore($triggeredByUserId, isAutomatic: true);
+
+        $absolutePath = Storage::disk('local')->path($backup->disk_path);
+        $handle = gzopen($absolutePath, 'rb');
+        $sql = '';
+        while (! gzeof($handle)) {
+            $sql .= gzread($handle, 1024 * 1024);
+        }
+        gzclose($handle);
+
+        DB::unprepared($sql);
+
+        // The `backups` table is itself part of the dump, so the statement
+        // above just reverted it back to however it looked at the *target*
+        // backup's own dump time -- which predates (and so omits) both that
+        // backup's own row (created *after* its dump was streamed, see
+        // createAndStore) and the safety snapshot taken above. Without this,
+        // both files would sit orphaned on disk with no listing/download/
+        // restore path in the UI -- for the safety snapshot specifically,
+        // that would silently defeat the one thing it exists for.
+        foreach ([$backup, $safetySnapshot] as $shouldExist) {
+            if (! Backup::whereKey($shouldExist->id)->exists()) {
+                Backup::create([
+                    'filename' => $shouldExist->filename,
+                    'disk_path' => $shouldExist->disk_path,
+                    'size_bytes' => $shouldExist->size_bytes,
+                    'created_by' => $shouldExist->created_by,
+                    'is_automatic' => $shouldExist->is_automatic,
+                ]);
+            }
+        }
     }
 
     /**

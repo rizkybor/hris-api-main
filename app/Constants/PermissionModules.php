@@ -43,6 +43,7 @@ class PermissionModules
         'asset' => 'Company Assets',
         'performance-review' => 'Performance Reviews',
         'widget' => 'Dashboard Widgets',
+        'greeting' => 'Calendar Greetings',
     ];
 
     /**

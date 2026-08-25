@@ -30,6 +30,7 @@ class BackupController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['backup-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['backup-list']), only: ['download']),
             new Middleware(PermissionMiddleware::using(['backup-delete']), only: ['destroy']),
+            new Middleware(PermissionMiddleware::using(['backup-restore']), only: ['restore']),
         ];
     }
 
@@ -85,6 +86,33 @@ class BackupController extends Controller implements HasMiddleware
             return response()->download(Storage::disk('local')->path($backup->disk_path), $backup->filename, [
                 'Content-Type' => 'application/gzip',
             ]);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Backup Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Overwrite the current database with a stored backup's snapshot. Highly
+     * destructive and cannot be undone from the UI (the service takes a
+     * fresh safety snapshot first, but restoring *that* would need to be
+     * done manually the same way).
+     */
+    public function restore(Request $request, int $id)
+    {
+        try {
+            $backup = Backup::findOrFail($id);
+
+            $this->backupService->restoreFromBackup($backup, $request->user()->id);
+
+            activity('Security')
+                ->causedBy($request->user())
+                ->withProperties(['filename' => $backup->filename])
+                ->event('backup_restored')
+                ->log('restored the database from a backup');
+
+            return ResponseHelper::jsonResponse(true, 'Database Restored Successfully', null, 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Backup Not Found', null, 404);
         } catch (\Throwable $e) {
