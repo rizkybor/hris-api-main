@@ -40,6 +40,7 @@ use App\Http\Controllers\StaffPermissionController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\GreetingController;
 use App\Http\Controllers\CompanyAssetController;
 use App\Http\Controllers\EmployeeResignationController;
 use App\Http\Controllers\PerformanceReviewController;
@@ -278,6 +279,12 @@ Route::prefix('v1')
             // Announcements
             Route::apiResource('announcements', AnnouncementController::class)->except(['show']);
             Route::get('announcements/{id}', [AnnouncementController::class, 'show']);
+
+            // Calendar Greetings (Settings): admin-configured list, plus an
+            // ungated "today" lookup any logged-in user can hit for the
+            // dashboard welcome banner.
+            Route::get('greetings/today', [GreetingController::class, 'today']);
+            Route::apiResource('greetings', GreetingController::class)->except(['show']);
 
             // Company Assets
             Route::get('my-assets', [CompanyAssetController::class, 'myAssets']);

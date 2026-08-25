@@ -307,6 +307,19 @@ class PermissionSeeder extends Seeder
             'acknowledge',
         ],
 
+        // Configuration for the Calendar Greetings shown on the dashboard
+        // welcome banner (national holidays, birthdays, meeting reminders,
+        // etc). Viewing today's greeting itself needs no permission -- see
+        // GET /greetings/today in routes/api.php -- these only gate the
+        // Settings screen that manages the list.
+        'greeting' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
         // Gates whether a user can add a given widget to their own
         // dashboard at all (see App\Support\DashboardWidgetRegistry).
         // Which widgets are actually on their dashboard, and in what
