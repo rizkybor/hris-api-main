@@ -9,7 +9,7 @@ class CompanyAboutUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'name' => ['nullable', 'string', 'max:255'],
             'legal_name' => ['nullable', 'string', 'max:255'],
             'npwp' => ['nullable', 'string', 'max:25'],
             'description' => ['nullable', 'string'],
