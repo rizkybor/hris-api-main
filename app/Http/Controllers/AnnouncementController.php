@@ -114,6 +114,10 @@ class AnnouncementController extends Controller implements HasMiddleware
         try {
             $announcement = Announcement::findOrFail($id);
 
+            if (! $this->canManage($announcement, $request->user())) {
+                return ResponseHelper::jsonResponse(false, 'You can only edit an announcement you created yourself.', null, 403);
+            }
+
             if ($validated['is_pinned'] ?? false) {
                 $effectiveExpiresAt = array_key_exists('expires_at', $validated)
                     ? $validated['expires_at']
@@ -140,6 +144,17 @@ class AnnouncementController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * Edit/delete are restricted to the announcement's own creator, except
+     * for manager/superadmin who may manage anyone's announcement.
+     */
+    private function canManage(Announcement $announcement, User $user): bool
+    {
+        return $announcement->created_by === $user->id
+            || $user->hasRole('manager')
+            || $user->hasRole('superadmin');
     }
 
     /**
@@ -175,10 +190,15 @@ class AnnouncementController extends Controller implements HasMiddleware
         }
     }
 
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         try {
             $announcement = Announcement::findOrFail($id);
+
+            if (! $this->canManage($announcement, $request->user())) {
+                return ResponseHelper::jsonResponse(false, 'You can only delete an announcement you created yourself.', null, 403);
+            }
+
             $announcement->delete();
 
             return ResponseHelper::jsonResponse(true, 'Announcement Deleted Successfully', null, 200);
