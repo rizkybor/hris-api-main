@@ -28,15 +28,15 @@ class DashboardWidgetRegistry
      */
     public const WIDGETS = [
         ['key' => 'key_metrics', 'permission' => 'widget-key-metrics', 'size' => 'large'],
-        ['key' => 'project_budget', 'permission' => 'widget-project-budget', 'size' => 'small'],
-        ['key' => 'project_realized', 'permission' => 'widget-project-realized', 'size' => 'small'],
+        ['key' => 'project_budget', 'permission' => 'widget-project-budget', 'size' => 'medium'],
+        ['key' => 'project_realized', 'permission' => 'widget-project-realized', 'size' => 'medium'],
         // Medium rather than small: a search box reads better with more
         // typing room, and Staff's dashboard (the only role with this
         // widget) has just 2 widgets total, so it would otherwise sit
         // alone in a mostly-empty row regardless of size.
         ['key' => 'search_section', 'permission' => 'widget-search-section', 'size' => 'medium'],
-        ['key' => 'sticky_notes', 'permission' => 'widget-sticky-notes', 'size' => 'small'],
-        ['key' => 'projects_at_risk', 'permission' => 'widget-projects-at-risk', 'size' => 'small'],
+        ['key' => 'sticky_notes', 'permission' => 'widget-sticky-notes', 'size' => 'medium'],
+        ['key' => 'projects_at_risk', 'permission' => 'widget-projects-at-risk', 'size' => 'medium'],
         ['key' => 'latest_employees', 'permission' => 'widget-latest-employees', 'size' => 'small'],
         ['key' => 'latest_teams', 'permission' => 'widget-latest-teams', 'size' => 'small'],
         ['key' => 'quick_links', 'permission' => 'widget-quick-links', 'size' => 'small'],
