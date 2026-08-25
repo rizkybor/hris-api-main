@@ -271,6 +271,7 @@ class PermissionSeeder extends Seeder
             'list',
             'create',
             'delete',
+            'restore',
         ],
 
         'history' => [
@@ -304,6 +305,19 @@ class PermissionSeeder extends Seeder
             'delete',
             'my-reviews',
             'acknowledge',
+        ],
+
+        // Configuration for the Calendar Greetings shown on the dashboard
+        // welcome banner (national holidays, birthdays, meeting reminders,
+        // etc). Viewing today's greeting itself needs no permission -- see
+        // GET /greetings/today in routes/api.php -- these only gate the
+        // Settings screen that manages the list.
+        'greeting' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
         ],
 
         // Gates whether a user can add a given widget to their own

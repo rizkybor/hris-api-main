@@ -70,20 +70,19 @@ class EmailService
     {
         Payroll::findOrFail($payrollId);
 
-        $payrollDetails = PayrollDetail::where('payroll_id', $payrollId)
+        PayrollDetail::where('payroll_id', $payrollId)
             ->with('employee.user')
-            ->take(10)
-            ->get();
+            ->chunkById(100, function ($payrollDetails) {
+                foreach ($payrollDetails as $payrollDetail) {
+                    $user = $payrollDetail->employee?->user;
 
-        foreach ($payrollDetails as $payrollDetail) {
-            $user = $payrollDetail->employee?->user;
+                    if (! $user || ! $user->email) {
+                        continue;
+                    }
 
-            if (! $user || ! $user->email) {
-                continue;
-            }
-
-            $user->notify(new PayrollPaid($payrollDetail));
-        }
+                    $user->notify(new PayrollPaid($payrollDetail));
+                }
+            });
     }
 
     /**

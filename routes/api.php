@@ -40,6 +40,7 @@ use App\Http\Controllers\StaffPermissionController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\GreetingController;
 use App\Http\Controllers\CompanyAssetController;
 use App\Http\Controllers\EmployeeResignationController;
 use App\Http\Controllers\PerformanceReviewController;
@@ -265,6 +266,9 @@ Route::prefix('v1')
             // its own, independent of anyone's login credentials.
             Route::post('backups', [BackupController::class, 'store'])->middleware('throttle:3,1');
             Route::get('backups/{id}/download', [BackupController::class, 'download']);
+            // Rewrites every table in place -- at least as heavy/dangerous
+            // as generating a backup, so throttled the same way.
+            Route::post('backups/{id}/restore', [BackupController::class, 'restore'])->middleware('throttle:3,1');
             Route::delete('backups/{id}', [BackupController::class, 'destroy']);
 
             // History / Activity Log
@@ -275,6 +279,12 @@ Route::prefix('v1')
             // Announcements
             Route::apiResource('announcements', AnnouncementController::class)->except(['show']);
             Route::get('announcements/{id}', [AnnouncementController::class, 'show']);
+
+            // Calendar Greetings (Settings): admin-configured list, plus an
+            // ungated "today" lookup any logged-in user can hit for the
+            // dashboard welcome banner.
+            Route::get('greetings/today', [GreetingController::class, 'today']);
+            Route::apiResource('greetings', GreetingController::class)->except(['show']);
 
             // Company Assets
             Route::get('my-assets', [CompanyAssetController::class, 'myAssets']);
