@@ -5,18 +5,16 @@
     <style>
         @page { margin: 0; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11px; }
-        .top-bar { position: fixed; top: 0; left: 0; right: 0; height: 10mm; background-color: #0b1d51; }
-        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 5mm; background-color: #0b1d51; }
-        .watermark { position: fixed; top: 110mm; left: 50mm; width: 110mm; height: 93mm; opacity: 0.08; }
-        .page { padding: 18mm 15mm 18mm 15mm; }
-        .header-row { width: 100%; }
-        .header-row td { border: none; vertical-align: top; }
-        .brand { font-size: 22px; font-weight: bold; color: #0b1d51; margin: 0; }
-        .doc-title { font-size: 26px; font-weight: bold; color: #0b1d51; text-align: right; margin: 0; }
+        /* Top/bottom bars, brand name, doc title, watermark, and footer are
+           all baked into this flattened letterhead image (matching the
+           design team's template-payment-receipt.png reference) rather than
+           redrawn with CSS. Explicit A4 mm dimensions keep it sized to the
+           page regardless of the image's own intrinsic pixel size. */
+        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; }
+        .page { padding: 42mm 15mm 30mm 15mm; }
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
         .info-table td { border: none; padding: 6px 0; font-size: 11px; vertical-align: top; }
-        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 9.5px; color: #0b1d51; }
         .cancelled-stamp {
             position: fixed; top: 120mm; left: 40mm; width: 130mm; text-align: center;
             font-size: 42px; font-weight: bold; color: #dc2626; opacity: 0.35;
@@ -25,22 +23,13 @@
     </style>
 </head>
 <body>
-    <div class="top-bar"></div>
-    <div class="bottom-bar"></div>
-    <img class="watermark" src="{{ public_path('images/jcd-only-color.png') }}">
+    <img class="letterhead" src="{{ public_path('images/template-payment-receipt.png') }}">
     @if($receipt->status === 'cancelled')
         <div class="cancelled-stamp">DIBATALKAN</div>
     @endif
 
     <div class="page">
-        <table class="header-row">
-            <tr>
-                <td style="width: 50%;"><p class="brand">JENDELA CAKRA<br>DIGITAL</p></td>
-                <td style="width: 50%;"><p class="doc-title">PAYMENT RECEIPT</p></td>
-            </tr>
-        </table>
-
-        <p style="text-align: right; margin: 6mm 0 10mm 0;">Date : &nbsp;&nbsp;{{ $receipt->date->translatedFormat('d F Y') }}</p>
+        <p style="text-align: right; margin: 0 0 10mm 0;">Date : &nbsp;&nbsp;{{ $receipt->date->translatedFormat('d F Y') }}</p>
 
         <table class="info-table">
             <tr><td style="width: 20%;" class="label">No.</td><td>: {{ $receipt->receipt_number }}</td></tr>
@@ -89,16 +78,6 @@
             <div style="height: 18mm;"></div>
             <p style="margin: 0;">{{ $receipt->recipient_name ?? '________________________' }}</p>
         </div>
-    </div>
-
-    <div class="footer">
-        <table>
-            <tr>
-                <td style="border: none; width: 33%;">contact@jcdigital.co.id</td>
-                <td style="border: none; width: 34%; text-align: center;">www.jcdigital.co.id</td>
-                <td style="border: none; width: 33%; text-align: right;">Phone +62 878-8279-2511</td>
-            </tr>
-        </table>
     </div>
 </body>
 </html>

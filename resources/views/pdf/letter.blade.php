@@ -4,6 +4,17 @@
     <meta charset="utf-8">
     @include('pdf.partials.style-letterhead')
     <style>
+        /* The letterhead background (header, side-stripe tagline, watermark,
+           footer) is a flattened image now -- picked per-letter from the
+           template field -- rather than redrawn with CSS, so it matches the
+           design team's reference PDFs pixel-for-pixel. Content padding is
+           widened on top to clear the taller header text in that image.
+           Explicit A4 mm dimensions (not width/height:100%) keep the fixed
+           background sized to the actual page regardless of the image's
+           own intrinsic pixel dimensions. */
+        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; }
+        .page { padding: 48mm 16mm 32mm 26mm; }
+
         .body-content table { width: 100%; border-collapse: collapse; margin: 3mm 0; }
         .body-content table td, .body-content table th { border: 1px solid #94a3b8; padding: 4px 6px; }
         .body-content table th { background-color: #eef2ff; font-weight: bold; }
@@ -12,23 +23,12 @@
     </style>
 </head>
 <body>
-    <div class="side-stripe"></div>
-    <img class="watermark" src="{{ public_path('images/jcd-only-color.png') }}">
-    <div class="footer">+62 878 8279 2511 | contact@jcdigital.co.id | www.jcdigital.co.id</div>
+    <img class="letterhead" src="{{ public_path('images/template-letter-'.($letter->template ?: 'primary').'.png') }}">
     @if($letter->status === 'cancelled')
         <div class="cancelled-stamp">DIBATALKAN</div>
     @endif
 
     <div class="page">
-        <table class="letterhead-right">
-            <tr>
-                <td style="border: none; text-align: right; padding: 0;">
-                    <p class="company-name">PT. JENDELA CAKRA DIGITAL</p>
-                    <p class="company-address">Jl. Pd. Cabe Raya No.7, Pd. Cabe Udik, Kec. Pamulang,<br>Kota Tangerang Selatan, Banten 15418</p>
-                </td>
-            </tr>
-        </table>
-
         <p style="margin: 0 0 6mm 0;">Tangerang Selatan, {{ $letter->date->locale('id')->translatedFormat('d F Y') }}</p>
 
         <table style="margin-bottom: 6mm;">

@@ -42,7 +42,7 @@
     </style>
 </head>
 <body>
-    <img class="letterhead" src="{{ public_path('images/official-memo-letterhead.png') }}">
+    <img class="letterhead" src="{{ public_path('images/template-letter-secondary.png') }}">
 
     <div class="page">
         <p class="title">NOTA DINAS</p>

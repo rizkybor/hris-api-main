@@ -3,21 +3,23 @@
 <head>
     <meta charset="utf-8">
     @include('pdf.partials.style-letterhead')
+    <style>
+        /* The header, watermark, and footer are baked into this flattened
+           letterhead image (matching the design team's
+           template-letter-secondary.png reference) rather than redrawn with
+           CSS. It's position:fixed, so dompdf repeats it on both pages of
+           this document without needing to be re-included per page. */
+        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; }
+        .page { padding: 48mm 16mm 32mm 26mm; }
+    </style>
 </head>
 <body>
-    <div class="side-stripe"></div>
-    <img class="watermark" src="{{ public_path('images/jcd-only-color.png') }}">
-    <div class="footer">+62 878 8279 2511 | contact@jcdigital.co.id | www.jcdigital.co.id</div>
+    <img class="letterhead" src="{{ public_path('images/template-letter-secondary.png') }}">
     @if($order->status === 'cancelled')
         <div class="cancelled-stamp">DIBATALKAN</div>
     @endif
 
     <div class="page">
-        <div class="letterhead-center">
-            <p class="company-name">PT. JENDELA CAKRA DIGITAL</p>
-            <p class="company-address">Jl. Pd. Cabe Raya No.7, Pd. Cabe Udik, Kec. Pamulang, Kota<br>Tangerang Selatan, Banten 15418</p>
-        </div>
-
         <div style="text-align: center; margin-bottom: 8mm;">
             <p style="font-size: 16px; font-weight: bold; margin: 0;">PURCHASE ORDER (PO)</p>
             <p style="font-size: 11px; margin: 2px 0 0 0;">{{ $order->title }}</p>
@@ -84,11 +86,6 @@
     </div>
 
     <div class="page" style="page-break-before: always;">
-        <div class="letterhead-center">
-            <p class="company-name">PT. JENDELA CAKRA DIGITAL</p>
-            <p class="company-address">Jl. Pd. Cabe Raya No.7, Pd. Cabe Udik, Kec. Pamulang, Kota<br>Tangerang Selatan, Banten 15418</p>
-        </div>
-
         @if(!empty($order->payment_terms))
             <p class="section-title">C. SKEMA PEMBAYARAN</p>
             <table class="doc-table">

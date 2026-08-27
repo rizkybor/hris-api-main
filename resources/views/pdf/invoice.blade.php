@@ -5,14 +5,13 @@
     <style>
         @page { margin: 0; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11px; }
-        .top-bar { position: fixed; top: 0; left: 0; right: 0; height: 10mm; background-color: #0b1d51; }
-        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 5mm; background-color: #0b1d51; }
-        .watermark { position: fixed; top: 110mm; left: 50mm; width: 110mm; height: 93mm; opacity: 0.08; }
-        .page { padding: 18mm 15mm 18mm 15mm; }
-        .header-row { width: 100%; }
-        .header-row td { border: none; vertical-align: top; }
-        .brand { font-size: 22px; font-weight: bold; color: #0b1d51; margin: 0; }
-        .doc-title { font-size: 28px; font-weight: bold; color: #0b1d51; text-align: right; margin: 0; }
+        /* Top/bottom bars, brand name, doc title, watermark, and footer are
+           all baked into this flattened letterhead image (matching the
+           design team's template-invoice.png reference) rather than
+           redrawn with CSS. Explicit A4 mm dimensions keep it sized to the
+           page regardless of the image's own intrinsic pixel size. */
+        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; }
+        .page { padding: 42mm 15mm 30mm 15mm; }
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
         .info-table td { border: none; padding: 1px 0; font-size: 10.5px; }
@@ -28,22 +27,13 @@
     </style>
 </head>
 <body>
-    <div class="top-bar"></div>
-    <div class="bottom-bar"></div>
-    <img class="watermark" src="{{ public_path('images/jcd-only-color.png') }}">
+    <img class="letterhead" src="{{ public_path('images/template-invoice.png') }}">
     @if($invoice->status === 'cancelled')
         <div class="cancelled-stamp">DIBATALKAN</div>
     @endif
 
     <div class="page">
-        <table class="header-row">
-            <tr>
-                <td style="width: 50%;"><p class="brand">JENDELA CAKRA<br>DIGITAL</p></td>
-                <td style="width: 50%;"><p class="doc-title">INVOICE</p></td>
-            </tr>
-        </table>
-
-        <table style="margin-top: 6mm;">
+        <table style="margin-top: 0;">
             <tr>
                 <td style="width: 50%; border: none; vertical-align: top;">
                     <p class="label" style="margin: 0 0 2px 0;">Bill To:</p>
@@ -136,16 +126,6 @@
                 <p style="margin: 0; white-space: pre-line;">{{ $invoice->terms }}</p>
             </div>
         @endif
-    </div>
-
-    <div class="footer">
-        <table>
-            <tr>
-                <td style="border: none; width: 33%;">contact@jcdigital.co.id</td>
-                <td style="border: none; width: 34%; text-align: center;">www.jcdigital.co.id</td>
-                <td style="border: none; width: 33%; text-align: right;">Phone +62 878-8279-2511</td>
-            </tr>
-        </table>
     </div>
 </body>
 </html>
