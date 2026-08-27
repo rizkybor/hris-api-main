@@ -33,6 +33,7 @@ class LetterUpdateRequest extends FormRequest
             'second_party_name' => ['nullable', 'string', 'max:255'],
             'second_party_signatory_name' => ['nullable', 'string', 'max:255'],
             'second_party_signatory_title' => ['nullable', 'string', 'max:255'],
+            'template' => ['sometimes', 'in:primary,secondary'],
         ];
     }
 }

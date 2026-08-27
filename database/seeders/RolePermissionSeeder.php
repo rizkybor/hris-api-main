@@ -61,6 +61,21 @@ class RolePermissionSeeder extends Seeder
             // hasRole('finance') so this holds even if permissions drift.
             $officialMemoApproveOnly = ['document-letter-approve'];
 
+            // Editing an already-issued business document (Letter, Invoice,
+            // Payment Receipt, Purchase Order, Official Memo) is restricted
+            // to Super Admin/Manager only, per spec -- everyone else keeps
+            // menu/list/create/delete for these modules, just not edit.
+            // This list is the only place that default lives, so toggling
+            // it for a role later is just a checkbox in Roles & Permissions,
+            // no code change needed.
+            $documentEditRestricted = [
+                'purchase-order-edit',
+                'invoice-edit',
+                'payment-receipt-edit',
+                'letter-edit',
+                'document-letter-edit',
+            ];
+
             // Default dashboard widget sets, matching each role's original
             // hardcoded Overview.vue exactly (before the widget permission/
             // drag-drop system existed) -- kept as named lists here so the
@@ -160,7 +175,7 @@ class RolePermissionSeeder extends Seeder
                     'asset-',
                     'performance-review-',
                     'staff-permission-',
-                ], array_merge($employeeSpecific, $officialMemoApproveOnly))
+                ], array_merge($employeeSpecific, $officialMemoApproveOnly, $documentEditRestricted))
                     // HR's original dashboard: Pending Leave Requests, Sticky
                     // Notes, Key Metrics, Project Budget, Quick Access,
                     // Latest Employees -- not the full widget catalog.
@@ -211,7 +226,7 @@ class RolePermissionSeeder extends Seeder
                     'asset-',
                     'performance-review-',
                     'staff-permission-',
-                ], array_merge($employeeSpecific, $officialMemoApproveOnly))
+                ], array_merge($employeeSpecific, $officialMemoApproveOnly, $documentEditRestricted))
                     // Operational Director's original dashboard matched
                     // Manager's exactly: Projects at Risk, Sticky Notes, Key
                     // Metrics, Project Budget, Project Realized, Latest
@@ -365,29 +380,26 @@ class RolePermissionSeeder extends Seeder
                     'purchase-order-menu',
                     'purchase-order-list',
                     'purchase-order-create',
-                    'purchase-order-edit',
                     'purchase-order-delete',
                     'invoice-menu',
                     'invoice-list',
                     'invoice-create',
-                    'invoice-edit',
                     'invoice-delete',
                     'payment-receipt-menu',
                     'payment-receipt-list',
                     'payment-receipt-create',
-                    'payment-receipt-edit',
                     'payment-receipt-delete',
                     'letter-menu',
                     'letter-list',
                     'letter-create',
-                    'letter-edit',
                     'letter-delete',
                     // Finance Manager is the sole approver of Official Memos,
                     // and can also author its own like any non-Staff role.
+                    // Edit itself is Super Admin/Manager only (see
+                    // $documentEditRestricted above).
                     'document-letter-menu',
                     'document-letter-list',
                     'document-letter-create',
-                    'document-letter-edit',
                     'document-letter-delete',
                     'document-letter-approve',
                     // Finance Manager is one of the 4 roles allowed into
