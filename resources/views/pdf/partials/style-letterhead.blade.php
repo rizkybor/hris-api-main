@@ -24,6 +24,27 @@
         background-color: #0c51d9;
     }
 
+    /* Built as a horizontal box the height of the page and rotated
+       -90deg around its own center: translate(-50%, -50%) first
+       re-centers the box on the stripe's midpoint (left: 5px is the
+       stripe's horizontal center, top: 50% its vertical center),
+       then the rotation swings its long axis vertical without
+       needing to hand-compute rotated offsets. */
+    .side-stripe-label {
+        position: fixed;
+        top: 50%;
+        left: 5px;
+        width: 297mm;
+        transform: translate(-50%, -50%) rotate(-90deg);
+        transform-origin: center;
+        text-align: center;
+        color: #ffffff;
+        font-size: 7.5px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        white-space: nowrap;
+    }
+
     .watermark {
         position: fixed;
         bottom: 40mm;

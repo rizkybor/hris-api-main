@@ -4,34 +4,12 @@
     <meta charset="utf-8">
     @include('pdf.partials.style-letterhead')
     <style>
-        /* Overrides for the BAST-specific letterhead: centered company
-           block (vs. right-aligned on other letters) plus a rotated
-           tagline running the length of the blue side stripe, matching
-           the design team's reference (TEMPLATE-BAST.pdf). */
+        /* Override for the BAST-specific letterhead: centered company
+           block (vs. right-aligned on other letters). The rotated side-stripe
+           tagline itself now lives in the shared style-letterhead partial. */
         .letterhead-center-bast {
             text-align: center;
             margin-bottom: 8mm;
-        }
-
-        /* Built as a horizontal box the height of the page and rotated
-           -90deg around its own center: translate(-50%, -50%) first
-           re-centers the box on the stripe's midpoint (left: 5px is the
-           stripe's horizontal center, top: 50% its vertical center),
-           then the rotation swings its long axis vertical without
-           needing to hand-compute rotated offsets. */
-        .side-stripe-label {
-            position: fixed;
-            top: 50%;
-            left: 5px;
-            width: 297mm;
-            transform: translate(-50%, -50%) rotate(-90deg);
-            transform-origin: center;
-            text-align: center;
-            color: #ffffff;
-            font-size: 7.5px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            white-space: nowrap;
         }
 
         .body-content table { width: 100%; border-collapse: collapse; margin: 3mm 0; }

@@ -39,6 +39,7 @@ class Letter extends Model
         'second_party_signatory_name',
         'second_party_signatory_title',
         'status',
+        'template',
         'created_by',
     ];
 

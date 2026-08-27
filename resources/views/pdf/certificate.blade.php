@@ -172,7 +172,10 @@
             border-top: 1px solid #1f2937;
             padding-top: 2mm;
             min-width: 65mm;
-            margin: 0 0 1mm 0;
+            /* Blank space above the line for an actual signature to be
+               placed, not just a hairline sitting right under the last
+               paragraph of text. */
+            margin: 18mm 0 1mm 0;
         }
 
         .signature-title {
