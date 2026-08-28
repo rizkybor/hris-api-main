@@ -8,9 +8,9 @@
            page a memo spans, not just the first -- but a fixed element
            needs a negative offset equal to the margin to still reach the
            physical page edge from within the new, inset content box. */
-        @page { margin: 48mm 0 12mm 0; }
+        @page { margin: 48mm 25mm 12mm 25mm; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11px; }
-        .letterhead { position: fixed; top: -48mm; left: 0; width: 210mm; height: 297mm; z-index: -1; }
+        .letterhead { position: fixed; top: -48mm; left: -25mm; width: 210mm; height: 297mm; z-index: -1; }
         /* Unlike letter.blade.php / purchase-order.blade.php, this template
            doesn't pull in the shared style-letterhead partial (which sets
            its own @page{margin:0} before this file's @page override) --
