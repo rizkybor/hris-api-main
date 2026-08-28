@@ -218,6 +218,8 @@ class RolePermissionSeeder extends Seeder
                     'letter-',
                     'document-letter-',
                     'meeting-note-',
+                    'staff-task-',
+                    'staff-raport-',
                     'certificate-',
                     'payslip-',
                     'backup-',
@@ -434,6 +436,20 @@ class RolePermissionSeeder extends Seeder
                     'meeting-note-edit',
                     'meeting-note-delete',
                     'meeting-note-pin',
+                    // Finance Manager is also one of the roles allowed to
+                    // hand out Staff Tasks (Superadmin/Manager/Finance
+                    // Manager/Operational Director -- not HR this time).
+                    'staff-task-menu',
+                    'staff-task-list',
+                    'staff-task-create',
+                    'staff-task-edit',
+                    'staff-task-delete',
+                    // Finance Manager is also one of the roles allowed to
+                    // view the Staff Raport (Superadmin/Manager/Finance
+                    // Manager/Operational Director -- not HR).
+                    'staff-raport-menu',
+                    'staff-raport-list',
+                    'staff-raport-export',
                     'certificate-menu',
                     'certificate-list',
                     'certificate-create',

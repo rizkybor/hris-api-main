@@ -27,6 +27,8 @@ use App\Http\Controllers\OptionController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PayslipController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\StaffTaskCommentController;
+use App\Http\Controllers\StaffTaskController;
 use App\Http\Controllers\LandingPageRateSettingController;
 use App\Http\Controllers\ProjectCalculationController;
 use App\Http\Controllers\ProjectRateSettingController;
@@ -257,6 +259,9 @@ Route::prefix('v1')
             Route::get('reports/project', [ReportController::class, 'project']);
             Route::get('reports/pph23', [ReportController::class, 'pph23']);
             Route::get('reports/project-expense', [ReportController::class, 'projectExpense']);
+            Route::get('reports/staff-raport', [ReportController::class, 'staffRaport']);
+            Route::get('reports/staff-raport/{employeeId}/pdf', [ReportController::class, 'staffRaportPdf']);
+            Route::get('reports/staff-raport/{employeeId}', [ReportController::class, 'staffRaportDetail']);
             Route::get('reports/export', [ReportController::class, 'export']);
 
             // Settings: Roles & Permissions
@@ -382,6 +387,19 @@ Route::prefix('v1')
             Route::get('meeting-notes/{meetingNoteId}/comments', [MeetingNoteCommentController::class, 'index']);
             Route::post('meeting-notes/{meetingNoteId}/comments', [MeetingNoteCommentController::class, 'store']);
             Route::delete('meeting-note-comments/{id}', [MeetingNoteCommentController::class, 'destroy']);
+
+            // Document Letters: Staff Tasks -- shared repository restricted
+            // to Superadmin/Manager/Finance Manager/Operational Director,
+            // assignable to all staff or hand-picked staff, with each
+            // assignee tracking their own status.
+            Route::get('my-staff-tasks', [StaffTaskController::class, 'myTasks']);
+            Route::get('staff-tasks/staff-options', [StaffTaskController::class, 'staffOptions']);
+            Route::patch('staff-tasks/{id}/status', [StaffTaskController::class, 'updateMyStatus']);
+            Route::apiResource('staff-tasks', StaffTaskController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+
+            Route::get('staff-tasks/{staffTaskId}/comments', [StaffTaskCommentController::class, 'index']);
+            Route::post('staff-tasks/{staffTaskId}/comments', [StaffTaskCommentController::class, 'store']);
+            Route::delete('staff-task-comments/{id}', [StaffTaskCommentController::class, 'destroy']);
 
             // Document Letters: Certificates
             Route::get('certificate-setting', [CertificateSettingController::class, 'show']);

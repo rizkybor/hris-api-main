@@ -13,6 +13,9 @@ use App\Exports\ProjectExpenseReportExport;
 use App\Exports\ProjectReportExport;
 use App\Helpers\ResponseHelper;
 use App\Interfaces\ReportRepositoryInterface;
+use App\Models\EmployeeProfile;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -33,6 +36,8 @@ class ReportController extends Controller implements HasMiddleware
         return [
             new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project', 'pph23', 'projectExpense']),
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
+            new Middleware(PermissionMiddleware::using(['staff-raport-menu|staff-raport-list']), only: ['staffRaport', 'staffRaportDetail']),
+            new Middleware(PermissionMiddleware::using(['staff-raport-export']), only: ['staffRaportPdf']),
         ];
     }
 
@@ -154,6 +159,76 @@ class ReportController extends Controller implements HasMiddleware
             );
 
             return ResponseHelper::jsonResponse(true, 'Project Cash Ledger Report Retrieved Successfully', $data, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    public function staffRaport(Request $request)
+    {
+        try {
+            $data = $this->reportRepository->getStaffRaportList(
+                $request->search,
+                $request->employment_type,
+                $request->start_date,
+                $request->end_date,
+                (int) ($request->page ?? 1),
+                (int) ($request->row_per_page ?? 15)
+            );
+
+            return ResponseHelper::jsonResponse(true, 'Staff Raport Retrieved Successfully', $data, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    public function staffRaportDetail(Request $request, string $employeeId)
+    {
+        try {
+            $data = $this->reportRepository->getStaffRaportDetail((int) $employeeId, $request->start_date, $request->end_date);
+
+            return ResponseHelper::jsonResponse(true, 'Staff Raport Detail Retrieved Successfully', $data, 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Employee Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * PDF download with its own period picker (week/month/all), separate
+     * from whatever date range is currently applied on the list -- per
+     * spec, downloading a raport is a deliberate "give me this employee's
+     * week/month/all-time summary" action, not tied to the list's filters.
+     */
+    public function staffRaportPdf(Request $request, string $employeeId)
+    {
+        $period = $request->query('period', 'month');
+
+        try {
+            $employee = EmployeeProfile::with('jobInformation')->findOrFail($employeeId);
+
+            [$startDate, $endDate, $periodLabel] = match ($period) {
+                'week' => [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString(), 'This Week'],
+                'all' => [
+                    $employee->jobInformation?->start_date?->toDateString() ?? '2000-01-01',
+                    now()->toDateString(),
+                    'All Time',
+                ],
+                default => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString(), 'This Month'],
+            };
+
+            $data = $this->reportRepository->getStaffRaportDetail((int) $employeeId, $startDate, $endDate);
+            $data['period_label'] = $periodLabel;
+            $data['generated_at'] = now();
+
+            $pdf = Pdf::loadView('pdf.staff-raport', $data)->setPaper('a4');
+
+            $filename = str_replace(' ', '-', $data['employee']['name'] ?? 'staff-raport').'-'.$period.'.pdf';
+
+            return $pdf->download($filename);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Employee Not Found', null, 404);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

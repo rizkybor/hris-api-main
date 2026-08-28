@@ -261,6 +261,20 @@ class PermissionSeeder extends Seeder
             'pin',
         ],
 
+        'staff-task' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
+        'staff-raport' => [
+            'menu',
+            'list',
+            'export',
+        ],
+
         'certificate' => [
             'menu',
             'list',
