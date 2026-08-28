@@ -16,13 +16,25 @@
            fixed element needs a negative offset equal to the margin to
            still reach the physical page edge from within the new, inset
            content box. */
-        @page { margin: 48mm 26mm 32mm 26mm; }
-        .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
+        @page { margin: 48mm 0 35mm 0; }
+        .letterhead { position: fixed; top: -48mm; left: 0; width: 210mm; height: 297mm; z-index: -1; }
         .page { position: relative; z-index: 1; }
+        /* dompdf quirk (measured via pdftotext -bbox on letter.blade.php,
+           same DOM shape here): the page where .letterhead is declared gets
+           ~25mm more top clearance than @page margin alone accounts for --
+           likely the fixed img's own flow box still being counted there.
+           A block's own margin-top only ever applies on the page where
+           that block starts, so it's the right tool to correct *only* the
+           first .page div below (right after .letterhead in the DOM) --
+           the second .page (page-break-before) starts on a later page
+           where the img was already "consumed" from the flow, so it must
+           NOT get this same correction or it would push into its own
+           header instead. */
+        .page-first { margin-top: -25mm; }
         /* .cancelled-stamp (shared partial) is also position:fixed, so its
            top/left need the same margin-box correction to land in the same
            physical spot as before (was centered on the raw page). */
-        .cancelled-stamp { top: 72mm; left: 14mm; }
+        .cancelled-stamp { top: 72mm; left: 40mm; }
     </style>
 </head>
 <body>
@@ -31,7 +43,7 @@
         <div class="cancelled-stamp">DIBATALKAN</div>
     @endif
 
-    <div class="page">
+    <div class="page page-first">
         <div style="text-align: center; margin-bottom: 8mm;">
             <p style="font-size: 16px; font-weight: bold; margin: 0;">PURCHASE ORDER (PO)</p>
             <p style="font-size: 11px; margin: 2px 0 0 0;">{{ $order->title }}</p>
@@ -97,7 +109,7 @@
         </table>
     </div>
 
-    <div class="page" style="page-break-before: always;">
+    <div class="page" style="page-break-before: always; margin-top: -30mm;">
         @if(!empty($order->payment_terms))
             <p class="section-title">C. SKEMA PEMBAYARAN</p>
             <table class="doc-table">
@@ -132,7 +144,7 @@
             <li style="margin-bottom: 3px;">Jika terdapat ketidaksesuaian unit, vendor wajib melakukan penggantian dalam waktu [{{ $order->replacement_days ?? '___' }}] hari kerja.</li>
         </ol>
 
-        <table style="margin-top: 20mm;">
+        <table style="margin-top: 20mm; page-break-inside: avoid;">
             <tr>
                 <td style="width: 50%; border: none; text-align: center;">
                     <p style="margin: 0;">PIHAK PEMBELI</p>

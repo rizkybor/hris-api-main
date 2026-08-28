@@ -20,13 +20,22 @@
            corner (ignoring the new margin box entirely); a fixed element
            needs a negative offset equal to the margin to reach back out
            to the physical page edge from within the now-inset content box. */
-        @page { margin: 48mm 26mm 32mm 26mm; }
-        .page { position: relative; z-index: 1; }
-        .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
+        @page { margin: 42mm 0 6mm 0; }
+        /* dompdf quirk: page 1 renders with ~25mm more top clearance than
+           continuation pages, measured via pdftotext -bbox (page 1's first
+           line sat at 68.76mm from the top vs page 2's 43.71mm, despite
+           identical @page margin) -- likely the fixed .letterhead img's own
+           flow box still being counted on the one page where it's declared.
+           A plain margin-top on .page only ever applies on the page where
+           that block starts (page 1), never repeating on overflow pages,
+           so it's the correct tool to correct page 1 alone without
+           affecting page 2+. */
+        .page { position: relative; z-index: 1; margin-top: -25mm; }
+        .letterhead { position: fixed; top: -42mm; left: 0; width: 210mm; height: 297mm; z-index: -1; }
         /* .cancelled-stamp (shared partial) is also position:fixed, so its
            top/left need the same margin-box correction to land in the same
            physical spot as before (was centered on the raw page). */
-        .cancelled-stamp { top: 72mm; left: 14mm; }
+        .cancelled-stamp { top: 78mm; left: 40mm; }
 
         /* Paragraph indentation is an explicit choice made in the editor
            (Tab, or its Align/Indent controls) and preserved as-authored --
@@ -127,7 +136,7 @@
         @endif
 
         @if($letter->second_party_name)
-            <table>
+            <table style="page-break-inside: avoid;">
                 <tr>
                     <td style="border: none; width: 50%; text-align: center;">
                         <p style="margin: 0;">PIHAK PERTAMA</p>
@@ -146,7 +155,7 @@
                 </tr>
             </table>
         @else
-            <div style="text-align: left;">
+            <div style="text-align: left; page-break-inside: avoid;">
                 <p style="margin: 0;">Hormat kami,</p>
                 <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
                 <div style="height: 20mm;"></div>
