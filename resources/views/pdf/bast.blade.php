@@ -17,6 +17,12 @@
         .body-content table th { background-color: #eef2ff; font-weight: bold; }
         .body-content ul, .body-content ol { margin: 0 0 3mm 0; padding-left: 18px; }
         .body-content blockquote { margin: 3mm 0; padding-left: 8px; border-left: 3px solid #cbd5e1; color: #475569; }
+        /* Matches the Rich Text Editor's own Title/Subtitle/Heading/Sub
+           Heading style menu so the PDF output is WYSIWYG. */
+        .body-content h1 { font-size: 18px; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h2 { font-size: 13px; font-weight: normal; color: #6b7280; margin: -2mm 0 3mm 0; }
+        .body-content h3 { font-size: 13px; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h4 { font-size: 12px; font-weight: bold; color: #374151; margin: 0 0 3mm 0; }
     </style>
 </head>
 <body>
