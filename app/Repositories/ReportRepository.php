@@ -12,13 +12,19 @@ use App\Models\Invoice;
 use App\Models\PaymentReceipt;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Models\PerformanceReview;
 use App\Models\Project;
 use App\Models\ProjectCashTransaction;
+use App\Models\ProjectTask;
 use App\Models\SdmResource;
+use App\Models\StaffTaskAssignee;
+use App\Services\StaffPerformanceCalculator;
 use Carbon\Carbon;
 
 class ReportRepository implements ReportRepositoryInterface
 {
+    public function __construct(private StaffPerformanceCalculator $performanceCalculator) {}
+
     public function getAttendanceReport(?string $startDate, ?string $endDate, ?int $employeeId, ?string $status, int $page = 1, int $rowPerPage = 15)
     {
         $startDate = $startDate ?: now()->startOfMonth()->toDateString();
@@ -382,6 +388,140 @@ class ReportRepository implements ReportRepositoryInterface
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
             'summary' => $summary,
             'rows' => $rows,
+        ];
+    }
+
+    public function getStaffRaportList(?string $search, ?string $employmentType, ?string $startDate, ?string $endDate, int $page = 1, int $rowPerPage = 15)
+    {
+        $startDate = $startDate ?: now()->startOfMonth()->toDateString();
+        $endDate = $endDate ?: now()->endOfMonth()->toDateString();
+
+        $query = EmployeeProfile::query()->with(['user', 'jobInformation.team']);
+
+        if ($search) {
+            $query->whereHas('user', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+        }
+
+        if ($employmentType) {
+            $query->whereHas('jobInformation', fn ($q) => $q->where('employment_type', $employmentType));
+        }
+
+        $employees = $query->orderBy('created_at', 'desc')->get();
+        $total = $employees->count();
+
+        // The score itself is computed per-employee below, so pagination
+        // slices the already-loaded collection rather than the query --
+        // there's no way to paginate at the SQL level when the sort/filter
+        // criteria (the computed score) doesn't exist as a column.
+        $paged = $employees->slice(($page - 1) * $rowPerPage, $rowPerPage)->values();
+
+        $rows = $paged->map(function (EmployeeProfile $employee) use ($startDate, $endDate) {
+            $performance = $this->performanceCalculator->calculate($employee->id, $startDate, $endDate);
+
+            return [
+                'employee_id' => $employee->id,
+                'name' => $employee->user?->name,
+                'code' => $employee->code,
+                'job_title' => $employee->jobInformation?->job_title,
+                'employment_type' => $employee->jobInformation?->employment_type,
+                'team' => $employee->jobInformation?->team?->name,
+                'attendance_rate' => $performance['attendance_rate'],
+                'task_completion_rate' => $performance['task_completion_rate'],
+                'overall_score' => $performance['overall_score'],
+                'stars' => $performance['stars'],
+            ];
+        });
+
+        return [
+            'period' => ['start_date' => $startDate, 'end_date' => $endDate],
+            'rows' => $rows,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => (int) max(1, ceil($total / $rowPerPage)),
+                'per_page' => $rowPerPage,
+                'total' => $total,
+                'from' => $total === 0 ? null : ($page - 1) * $rowPerPage + 1,
+                'to' => $total === 0 ? null : min($page * $rowPerPage, $total),
+            ],
+        ];
+    }
+
+    public function getStaffRaportDetail(int $employeeId, ?string $startDate, ?string $endDate)
+    {
+        $startDate = $startDate ?: now()->startOfMonth()->toDateString();
+        $endDate = $endDate ?: now()->endOfMonth()->toDateString();
+
+        $employee = EmployeeProfile::with(['user', 'jobInformation.team'])->findOrFail($employeeId);
+        $performance = $this->performanceCalculator->calculate($employeeId, $startDate, $endDate);
+
+        $completedProjectTasks = ProjectTask::where('assignee_id', $employeeId)
+            ->where('status', 'done')
+            ->whereBetween('due_date', [$startDate, $endDate])
+            ->with('project:id,name')
+            ->orderByDesc('due_date')
+            ->get()
+            ->map(fn ($t) => [
+                'source' => 'project_task',
+                'title' => $t->name,
+                'project_name' => $t->project?->name,
+                'due_date' => $t->due_date,
+            ]);
+
+        $completedStaffTasks = StaffTaskAssignee::where('employee_id', $employeeId)
+            ->where('status', 'done')
+            ->whereHas('task', fn ($q) => $q->whereBetween('due_date', [$startDate, $endDate]))
+            ->with('task:id,title,due_date')
+            ->get()
+            ->map(fn ($a) => [
+                'source' => 'staff_task',
+                'title' => $a->task?->title,
+                'project_name' => null,
+                'due_date' => $a->task?->due_date,
+            ]);
+
+        $completedTasks = $completedProjectTasks->concat($completedStaffTasks)
+            ->sortByDesc('due_date')
+            ->values();
+
+        // Latest submitted review regardless of this raport's own date
+        // range -- Performance Review runs on its own (quarterly/annual)
+        // cadence, not the week/month/all window picked for the raport.
+        $latestReview = PerformanceReview::where('employee_id', $employeeId)
+            ->with('reviewer:id,name')
+            ->orderByDesc('period_end')
+            ->first();
+
+        return [
+            'employee' => [
+                'id' => $employee->id,
+                'name' => $employee->user?->name,
+                'code' => $employee->code,
+                'profile_photo' => $employee->user?->profile_photo,
+                'job_title' => $employee->jobInformation?->job_title,
+                'employment_type' => $employee->jobInformation?->employment_type,
+                'team' => $employee->jobInformation?->team?->name,
+                'start_date' => $employee->jobInformation?->start_date,
+            ],
+            'period' => ['start_date' => $startDate, 'end_date' => $endDate],
+            'attendance' => $performance['attendance'],
+            'attendance_rate' => $performance['attendance_rate'],
+            'tasks' => $performance['tasks'],
+            'task_completion_rate' => $performance['task_completion_rate'],
+            'completed_tasks' => $completedTasks,
+            'overall_score' => $performance['overall_score'],
+            'stars' => $performance['stars'],
+            'performance_review' => $latestReview ? [
+                'period' => $latestReview->period,
+                'period_start' => $latestReview->period_start,
+                'period_end' => $latestReview->period_end,
+                'overall_rating' => (float) $latestReview->overall_rating,
+                'category_scores' => $latestReview->category_scores,
+                'strengths' => $latestReview->strengths,
+                'areas_for_improvement' => $latestReview->areas_for_improvement,
+                'goals_next_period' => $latestReview->goals_next_period,
+                'status' => $latestReview->status,
+                'reviewer_name' => $latestReview->reviewer?->name,
+            ] : null,
         ];
     }
 }

@@ -18,4 +18,8 @@ interface ReportRepositoryInterface
     public function getPph23Report(?string $startDate, ?string $endDate);
 
     public function getProjectExpenseReport(?string $startDate, ?string $endDate, ?int $projectId, int $page = 1, int $rowPerPage = 15);
+
+    public function getStaffRaportList(?string $search, ?string $employmentType, ?string $startDate, ?string $endDate, int $page = 1, int $rowPerPage = 15);
+
+    public function getStaffRaportDetail(int $employeeId, ?string $startDate, ?string $endDate);
 }
