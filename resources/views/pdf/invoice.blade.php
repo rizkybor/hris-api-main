@@ -3,15 +3,20 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 0; }
+        /* @page margin (not .page's own padding) is what dompdf reliably
+           repeats as clearance from the fixed letterhead image on every
+           page an invoice spans, not just the first -- but a fixed element
+           needs a negative offset equal to the margin to still reach the
+           physical page edge from within the new, inset content box. */
+        @page { margin: 42mm 15mm 30mm 15mm; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11px; }
         /* Top/bottom bars, brand name, doc title, watermark, and footer are
            all baked into this flattened letterhead image (matching the
            design team's template-invoice.png reference) rather than
            redrawn with CSS. Explicit A4 mm dimensions keep it sized to the
            page regardless of the image's own intrinsic pixel size. */
-        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; z-index: -1; }
-        .page { position: relative; z-index: 1; padding: 42mm 15mm 30mm 15mm; }
+        .letterhead { position: fixed; top: -42mm; left: -15mm; width: 210mm; height: 297mm; z-index: -1; }
+        .page { position: relative; z-index: 1; }
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
         .info-table td { border: none; padding: 1px 0; font-size: 10.5px; }
@@ -20,7 +25,7 @@
         .totals-table td { border: none; padding: 2px 0; font-size: 10.5px; }
         .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 9.5px; color: #0b1d51; }
         .cancelled-stamp {
-            position: fixed; top: 120mm; left: 40mm; width: 130mm; text-align: center;
+            position: fixed; top: 78mm; left: 25mm; width: 130mm; text-align: center;
             font-size: 42px; font-weight: bold; color: #dc2626; opacity: 0.35;
             transform: rotate(-25deg); border: 6px solid #dc2626; padding: 6px 0;
         }

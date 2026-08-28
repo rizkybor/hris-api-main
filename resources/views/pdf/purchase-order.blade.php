@@ -7,10 +7,22 @@
         /* The header, watermark, and footer are baked into this flattened
            letterhead image (matching the design team's
            template-letter-secondary.png reference) rather than redrawn with
-           CSS. It's position:fixed, so dompdf repeats it on both pages of
-           this document without needing to be re-included per page. */
-        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; z-index: -1; }
-        .page { position: relative; z-index: 1; padding: 48mm 16mm 32mm 26mm; }
+           CSS. It's position:fixed, so dompdf repeats it on every page
+           this document spans without needing to be re-included per page.
+           @page margin (not .page's own padding) is what dompdf reliably
+           repeats as clearance from that image on every page, including
+           pages produced by content overflowing past one page on its own
+           (not just the two page-break-before sections below) -- but a
+           fixed element needs a negative offset equal to the margin to
+           still reach the physical page edge from within the new, inset
+           content box. */
+        @page { margin: 48mm 16mm 32mm 26mm; }
+        .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
+        .page { position: relative; z-index: 1; }
+        /* .cancelled-stamp (shared partial) is also position:fixed, so its
+           top/left need the same margin-box correction to land in the same
+           physical spot as before (was centered on the raw page). */
+        .cancelled-stamp { top: 72mm; left: 14mm; }
     </style>
 </head>
 <body>

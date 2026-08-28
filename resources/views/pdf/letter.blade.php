@@ -12,8 +12,21 @@
            Explicit A4 mm dimensions (not width/height:100%) keep the fixed
            background sized to the actual page regardless of the image's
            own intrinsic pixel dimensions. */
-        .page { position: relative; z-index: 1; padding: 48mm 16mm 32mm 26mm; }
-        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; z-index: -1; }
+        /* @page margin (not .page's own padding) defines dompdf's actual
+           repeating margin box -- reliable on every page, unlike a plain
+           block's padding which only holds on the page where that block
+           starts. The earlier attempt at this failed because the
+           letterhead image stayed positioned at the physical page's 0,0
+           corner (ignoring the new margin box entirely); a fixed element
+           needs a negative offset equal to the margin to reach back out
+           to the physical page edge from within the now-inset content box. */
+        @page { margin: 48mm 16mm 32mm 26mm; }
+        .page { position: relative; z-index: 1; }
+        .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
+        /* .cancelled-stamp (shared partial) is also position:fixed, so its
+           top/left need the same margin-box correction to land in the same
+           physical spot as before (was centered on the raw page). */
+        .cancelled-stamp { top: 72mm; left: 14mm; }
 
         /* The rich text editor's Enter key produces <p>, but Chrome's
            contenteditable default (before that was pinned) produced <div>

@@ -3,10 +3,15 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 0; }
+        /* @page margin (not .page's own padding) is what dompdf reliably
+           repeats as clearance from the fixed letterhead image on every
+           page a memo spans, not just the first -- but a fixed element
+           needs a negative offset equal to the margin to still reach the
+           physical page edge from within the new, inset content box. */
+        @page { margin: 48mm 16mm 32mm 26mm; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11px; }
-        .letterhead { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
-        .page { padding: 48mm 16mm 32mm 26mm; position: relative; z-index: 1; }
+        .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
+        .page { position: relative; z-index: 1; }
 
         .title {
             text-align: center; font-size: 16px; font-weight: bold; color: #0b1d51;
