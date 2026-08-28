@@ -59,6 +59,21 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
+        // Company-wide cash book -- real debit/credit transactions as they
+        // actually happen (distinct from Company Finance, which tracks
+        // planned/budgeted costs). 'create' also gates setting the ledger's
+        // opening balance. Auto-synced entries mirrored in from a
+        // project's own cash ledger can only be edited/deleted from that
+        // project (see CompanyCashTransactionController), regardless of
+        // this permission.
+        'company-cash-book' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
         'task' => [
             'menu',
             'list',

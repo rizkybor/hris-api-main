@@ -7,6 +7,7 @@ use App\Http\Resources\ProjectCashTransactionResource;
 use App\Models\Project;
 use App\Models\ProjectCashTransaction;
 use App\Models\User;
+use App\Services\CompanyCashLedgerSyncService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -15,6 +16,10 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProjectCashTransactionController extends Controller implements HasMiddleware
 {
+    public function __construct(private CompanyCashLedgerSyncService $companyCashSync)
+    {
+    }
+
     public static function middleware()
     {
         return [
@@ -108,6 +113,10 @@ class ProjectCashTransactionController extends Controller implements HasMiddlewa
                 'created_by' => $request->user()->id,
             ]);
 
+            // Mirror into the company-wide cash book so it's recorded
+            // once, not twice by hand -- see CompanyCashLedgerSyncService.
+            $this->companyCashSync->sync($transaction);
+
             return ResponseHelper::jsonResponse(true, 'Cash Transaction Recorded Successfully', new ProjectCashTransactionResource($transaction->load('creator')), 201);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Project Not Found', null, 404);
@@ -134,6 +143,7 @@ class ProjectCashTransactionController extends Controller implements HasMiddlewa
             }
 
             $transaction->update($validated);
+            $this->companyCashSync->sync($transaction);
 
             return ResponseHelper::jsonResponse(true, 'Cash Transaction Updated Successfully', new ProjectCashTransactionResource($transaction->load('creator')), 200);
         } catch (ModelNotFoundException $e) {
@@ -152,6 +162,7 @@ class ProjectCashTransactionController extends Controller implements HasMiddlewa
                 return ResponseHelper::jsonResponse(false, 'Only the Project Leader can delete this transaction.', null, 403);
             }
 
+            $this->companyCashSync->remove($transaction);
             $transaction->delete();
 
             return ResponseHelper::jsonResponse(true, 'Cash Transaction Deleted Successfully', null, 200);

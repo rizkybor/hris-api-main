@@ -331,6 +331,15 @@ class RolePermissionSeeder extends Seeder
                     'company-finance-edit',
                     'company-finance-delete',
                     'company-finance-statistic',
+                    // Company Cash Book (real transactions) is scoped the
+                    // same as Company Finance (planned costs) above --
+                    // Finance Manager, plus Manager/Super Admin via their
+                    // broader grants elsewhere in this file.
+                    'company-cash-book-menu',
+                    'company-cash-book-list',
+                    'company-cash-book-create',
+                    'company-cash-book-edit',
+                    'company-cash-book-delete',
                     // Finance Manager needs to view projects and pull the
                     // client-facing progress report, but not create/edit/
                     // delete them -- that stays with PM-facing roles.
