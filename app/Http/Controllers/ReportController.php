@@ -148,6 +148,7 @@ class ReportController extends Controller implements HasMiddleware
             $data = $this->reportRepository->getProjectExpenseReport(
                 $request->start_date,
                 $request->end_date,
+                $request->project_id ? (int) $request->project_id : null,
                 (int) ($request->page ?? 1),
                 (int) ($request->row_per_page ?? 15)
             );
@@ -175,7 +176,7 @@ class ReportController extends Controller implements HasMiddleware
                 'ppn' => new PpnReportExport($startDate, $endDate),
                 'project' => new ProjectReportExport($startDate, $endDate, $request->query('status')),
                 'pph23' => new Pph23ReportExport($startDate, $endDate),
-                'project_expense' => new ProjectExpenseReportExport($startDate, $endDate),
+                'project_expense' => new ProjectExpenseReportExport($startDate, $endDate, $request->query('project_id') ? (int) $request->query('project_id') : null),
                 default => null,
             };
 

@@ -2,7 +2,6 @@
 
 namespace App\Exports;
 
-use App\Models\Project;
 use App\Models\ProjectCashTransaction;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -19,6 +18,7 @@ class ProjectExpenseReportExport implements FromCollection, ShouldAutoSize, With
     public function __construct(
         protected ?string $startDate = null,
         protected ?string $endDate = null,
+        protected ?int $projectId = null,
     ) {
         $this->startDate = $startDate ?: now()->startOfYear()->toDateString();
         $this->endDate = $endDate ?: now()->endOfYear()->toDateString();
@@ -26,47 +26,38 @@ class ProjectExpenseReportExport implements FromCollection, ShouldAutoSize, With
 
     public function collection()
     {
-        $projectIds = ProjectCashTransaction::whereBetween('transaction_date', [$this->startDate, $this->endDate])
-            ->distinct()
-            ->pluck('project_id');
+        $query = ProjectCashTransaction::query()
+            ->with('project:id,name')
+            ->whereBetween('transaction_date', [$this->startDate, $this->endDate]);
 
-        return Project::query()
-            ->whereIn('id', $projectIds)
-            ->with('projectLeader.user')
-            ->withSum(['cashTransactions as debit_sum' => function ($q) {
-                $q->where('type', 'debit')->whereBetween('transaction_date', [$this->startDate, $this->endDate]);
-            }], 'amount')
-            ->withSum(['cashTransactions as credit_sum' => function ($q) {
-                $q->where('type', 'credit')->whereBetween('transaction_date', [$this->startDate, $this->endDate]);
-            }], 'amount')
-            ->orderBy('name')
-            ->get();
+        if ($this->projectId) {
+            $query->where('project_id', $this->projectId);
+        }
+
+        return $query->orderBy('transaction_date', 'desc')->orderBy('id', 'desc')->get();
     }
 
     public function headings(): array
     {
-        return ['No', 'Nama Project', 'Project Leader', 'Budget (Saldo Awal)', 'Total Debit', 'Total Kredit', 'Saldo Akhir'];
+        return ['No', 'Tanggal', 'Nama Project', 'Keterangan', 'Debit', 'Kredit'];
     }
 
-    public function map($project): array
+    public function map($transaction): array
     {
         static $rowNumber = 0;
         $rowNumber++;
 
-        $budget = (float) ($project->budget ?? 0);
-        $debit = (float) ($project->debit_sum ?? 0);
-        $credit = (float) ($project->credit_sum ?? 0);
+        $amount = (float) $transaction->amount;
 
         return [
             $rowNumber,
-            $project->name,
-            $project->projectLeader?->user?->name ?? 'N/A',
-            $budget,
-            $debit,
-            $credit,
+            optional($transaction->transaction_date)->format('d M Y'),
+            $transaction->project?->name ?? 'N/A',
+            $transaction->description,
             // Debit = money in, Credit = money out (Indonesian "buku kas"
             // convention -- see ProjectCashTransactionController).
-            $budget + $debit - $credit,
+            $transaction->type === 'debit' ? $amount : 0,
+            $transaction->type === 'credit' ? $amount : 0,
         ];
     }
 
