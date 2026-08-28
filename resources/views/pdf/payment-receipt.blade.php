@@ -10,8 +10,8 @@
            design team's template-payment-receipt.png reference) rather than
            redrawn with CSS. Explicit A4 mm dimensions keep it sized to the
            page regardless of the image's own intrinsic pixel size. */
-        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; }
-        .page { padding: 42mm 15mm 30mm 15mm; }
+        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; z-index: -1; }
+        .page { position: relative; z-index: 1; padding: 42mm 15mm 30mm 15mm; }
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
         .info-table td { border: none; padding: 6px 0; font-size: 11px; vertical-align: top; }
