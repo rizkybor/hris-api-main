@@ -16,7 +16,7 @@
            fixed element needs a negative offset equal to the margin to
            still reach the physical page edge from within the new, inset
            content box. */
-        @page { margin: 48mm 16mm 32mm 26mm; }
+        @page { margin: 48mm 26mm 32mm 26mm; }
         .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
         .page { position: relative; z-index: 1; }
         /* .cancelled-stamp (shared partial) is also position:fixed, so its
