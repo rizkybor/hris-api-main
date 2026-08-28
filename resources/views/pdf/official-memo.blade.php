@@ -5,8 +5,8 @@
     <style>
         @page { margin: 0; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11px; }
-        .letterhead { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
-        .page { padding: 48mm 16mm 32mm 26mm; position: relative; }
+        .letterhead { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        .page { padding: 48mm 16mm 32mm 26mm; position: relative; z-index: 1; }
 
         .title {
             text-align: center; font-size: 16px; font-weight: bold; color: #0b1d51;

@@ -12,9 +12,14 @@
            Explicit A4 mm dimensions (not width/height:100%) keep the fixed
            background sized to the actual page regardless of the image's
            own intrinsic pixel dimensions. */
-        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; }
-        .page { padding: 48mm 16mm 32mm 26mm; }
+        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; z-index: -1; }
+        .page { position: relative; z-index: 1; padding: 48mm 16mm 32mm 26mm; }
 
+        /* The rich text editor's Enter key produces <p>, but Chrome's
+           contenteditable default (before that was pinned) produced <div>
+           per line for older saved letters -- indent both so existing
+           content isn't left flat. */
+        .body-content p, .body-content > div { text-indent: 10mm; margin: 0 0 3mm 0; }
         .body-content table { width: 100%; border-collapse: collapse; margin: 3mm 0; }
         .body-content table td, .body-content table th { border: 1px solid #94a3b8; padding: 4px 6px; }
         .body-content table th { background-color: #eef2ff; font-weight: bold; }
@@ -29,7 +34,7 @@
     @endif
 
     <div class="page">
-        <p style="margin: 0 0 6mm 0;">Tangerang Selatan, {{ $letter->date->locale('id')->translatedFormat('d F Y') }}</p>
+        <p style="margin: 0 0 6mm 0; text-align: right;">Tangerang Selatan, {{ $letter->date->locale('id')->translatedFormat('d F Y') }}</p>
 
         <table style="margin-bottom: 6mm;">
             <tr>
@@ -121,18 +126,13 @@
                 </tr>
             </table>
         @else
-            <table>
-                <tr>
-                    <td style="border: none; width: 55%;"></td>
-                    <td style="border: none; width: 45%; text-align: center;">
-                        <p style="margin: 0;">Hormat kami,</p>
-                        <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
-                        <div style="height: 20mm;"></div>
-                        <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
-                        <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
-                    </td>
-                </tr>
-            </table>
+            <div style="text-align: left;">
+                <p style="margin: 0;">Hormat kami,</p>
+                <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
+                <div style="height: 20mm;"></div>
+                <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
+                <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
+            </div>
         @endif
     </div>
 </body>
