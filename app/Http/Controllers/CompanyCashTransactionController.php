@@ -25,47 +25,77 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
     }
 
     /**
-     * The company-wide cash book, oldest first, with a running balance
+     * The company-wide cash book, newest first, with a running balance
      * computed against the configured opening balance -- includes both
      * manual entries and every project's cash ledger entry, auto-mirrored
      * in (see CompanyCashLedgerSyncService), so nothing needs recording
      * twice by hand.
+     *
+     * Optionally narrowed to one project via `project_id`, but the balance
+     * math always walks the FULL chronological history first -- each row's
+     * `balance` is the true company-wide running total at that point in
+     * time, not a value recomputed in isolation from only that project's
+     * entries (which would be a different, less meaningful number). Only
+     * the *displayed* rows are filtered down, plus the total_debit/
+     * total_credit summary, which does reflect just the filtered set.
      */
     public function index(Request $request)
     {
+        $validated = $request->validate([
+            'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'row_per_page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
         try {
-            $transactions = CompanyCashTransaction::with(['creator', 'project'])
+            $page = (int) ($validated['page'] ?? 1);
+            $rowPerPage = (int) ($validated['row_per_page'] ?? 15);
+
+            $allTransactions = CompanyCashTransaction::with(['creator', 'project'])
                 ->orderBy('transaction_date')
                 ->orderBy('id')
                 ->get();
 
             $openingBalance = (float) CompanyCashBalance::current()->opening_balance;
             $runningBalance = $openingBalance;
-            $totalDebit = 0.0;
-            $totalCredit = 0.0;
 
             // Indonesian "buku kas" convention: Debit = uang masuk, Kredit
             // = uang keluar/pemakaian -- matches the project cash ledger.
-            foreach ($transactions as $transaction) {
+            foreach ($allTransactions as $transaction) {
                 $amount = (float) $transaction->amount;
-
-                if ($transaction->type === 'debit') {
-                    $runningBalance += $amount;
-                    $totalDebit += $amount;
-                } else {
-                    $runningBalance -= $amount;
-                    $totalCredit += $amount;
-                }
-
+                $runningBalance += $transaction->type === 'debit' ? $amount : -$amount;
                 $transaction->running_balance = $runningBalance;
             }
 
+            $closingBalance = $runningBalance;
+
+            $filtered = $allTransactions;
+            if (! empty($validated['project_id'])) {
+                $filtered = $filtered->where('project_id', $validated['project_id'])->values();
+            }
+
+            $totalDebit = (float) $filtered->where('type', 'debit')->sum(fn ($t) => (float) $t->amount);
+            $totalCredit = (float) $filtered->where('type', 'credit')->sum(fn ($t) => (float) $t->amount);
+
+            $newestFirst = $filtered->reverse()->values();
+            $total = $newestFirst->count();
+            $page = min($page, (int) max(1, ceil($total / $rowPerPage)));
+            $paged = $newestFirst->slice(($page - 1) * $rowPerPage, $rowPerPage)->values();
+
             return ResponseHelper::jsonResponse(true, 'Company Cash Transactions Retrieved Successfully', [
-                'items' => CompanyCashTransactionResource::collection($transactions),
+                'items' => CompanyCashTransactionResource::collection($paged),
                 'opening_balance' => $openingBalance,
                 'total_debit' => $totalDebit,
                 'total_credit' => $totalCredit,
-                'closing_balance' => $runningBalance,
+                'closing_balance' => $closingBalance,
+                'meta' => [
+                    'current_page' => $page,
+                    'last_page' => (int) max(1, ceil($total / $rowPerPage)),
+                    'per_page' => $rowPerPage,
+                    'total' => $total,
+                    'from' => $total === 0 ? null : ($page - 1) * $rowPerPage + 1,
+                    'to' => $total === 0 ? null : min($page * $rowPerPage, $total),
+                ],
             ], 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
