@@ -31,6 +31,8 @@ use App\Http\Controllers\LandingPageRateSettingController;
 use App\Http\Controllers\ProjectCalculationController;
 use App\Http\Controllers\ProjectRateSettingController;
 use App\Http\Controllers\ProjectDocumentController;
+use App\Http\Controllers\ProjectCashTransactionController;
+use App\Http\Controllers\CompanyCashTransactionController;
 use App\Http\Controllers\ProjectTaskController;
 use App\Http\Controllers\ProjectTaskCommentController;
 use App\Http\Controllers\ReportController;
@@ -112,6 +114,15 @@ Route::prefix('v1')
 
             // Project Documents
             Route::apiResource('project-documents', ProjectDocumentController::class);
+
+            // Project Cash Ledger (debit/credit against the project's budget)
+            Route::apiResource('project-cash-transactions', ProjectCashTransactionController::class)->except(['show']);
+
+            // Company Cash Book (debit/credit across the whole company --
+            // auto-synced from every project's own ledger above, plus
+            // manual entries)
+            Route::put('company-cash-book/opening-balance', [CompanyCashTransactionController::class, 'updateOpeningBalance']);
+            Route::apiResource('company-cash-transactions', CompanyCashTransactionController::class)->except(['show']);
 
             // Project Calculator
             Route::get('project-calculator/rate-setting', [ProjectRateSettingController::class, 'show']);
@@ -245,6 +256,7 @@ Route::prefix('v1')
             Route::get('reports/ppn', [ReportController::class, 'ppn']);
             Route::get('reports/project', [ReportController::class, 'project']);
             Route::get('reports/pph23', [ReportController::class, 'pph23']);
+            Route::get('reports/project-expense', [ReportController::class, 'projectExpense']);
             Route::get('reports/export', [ReportController::class, 'export']);
 
             // Settings: Roles & Permissions

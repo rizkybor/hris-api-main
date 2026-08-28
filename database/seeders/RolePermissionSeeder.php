@@ -262,6 +262,17 @@ class RolePermissionSeeder extends Seeder
                     'project-menu',
                     'project-list',
                     'project-export',
+                    // View-only: the cash ledger's create/edit/delete are
+                    // additionally restricted to the project's own Project
+                    // Leader in ProjectCashTransactionController, regardless
+                    // of role -- a staff member who happens to be assigned
+                    // as leader on a given project still needs the create/
+                    // edit/delete permissions themselves to pass the
+                    // permission gate before that leader check even runs.
+                    'project-expense-list',
+                    'project-expense-create',
+                    'project-expense-edit',
+                    'project-expense-delete',
                     'task-menu',
                     'task-create',
                     'task-list',
@@ -320,12 +331,25 @@ class RolePermissionSeeder extends Seeder
                     'company-finance-edit',
                     'company-finance-delete',
                     'company-finance-statistic',
+                    // Company Cash Book (real transactions) is scoped the
+                    // same as Company Finance (planned costs) above --
+                    // Finance Manager, plus Manager/Super Admin via their
+                    // broader grants elsewhere in this file.
+                    'company-cash-book-menu',
+                    'company-cash-book-list',
+                    'company-cash-book-create',
+                    'company-cash-book-edit',
+                    'company-cash-book-delete',
                     // Finance Manager needs to view projects and pull the
                     // client-facing progress report, but not create/edit/
                     // delete them -- that stays with PM-facing roles.
                     'project-menu',
                     'project-list',
                     'project-export',
+                    // View-only visibility into each project's cash
+                    // ledger -- recording/editing/deleting stays with the
+                    // project's own Project Leader (or manager/superadmin).
+                    'project-expense-list',
                     // Finance Manager can be individually assigned onto a
                     // project as a Team Assignment member (Project's
                     // "employee" mode) and comment on its tasks -- needs

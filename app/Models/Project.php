@@ -183,4 +183,14 @@ class Project extends Model
     {
         return $this->hasMany(Invoice::class);
     }
+
+    /**
+     * Cash ledger (debit/credit) transactions logged against this project's
+     * budget -- only the Project Leader (or a manager/superadmin) may
+     * create/edit/delete these, see ProjectCashTransactionController::canManage().
+     */
+    public function cashTransactions()
+    {
+        return $this->hasMany(ProjectCashTransaction::class);
+    }
 }
