@@ -3,10 +3,15 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 0; }
+        /* @page margin (not .page's own padding) is what dompdf reliably
+           repeats as clearance from the fixed letterhead image on every
+           page a memo spans, not just the first -- but a fixed element
+           needs a negative offset equal to the margin to still reach the
+           physical page edge from within the new, inset content box. */
+        @page { margin: 48mm 16mm 32mm 26mm; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11px; }
-        .letterhead { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
-        .page { padding: 48mm 16mm 32mm 26mm; position: relative; z-index: 1; }
+        .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
+        .page { position: relative; z-index: 1; }
 
         .title {
             text-align: center; font-size: 16px; font-weight: bold; color: #0b1d51;
@@ -27,6 +32,12 @@
         .body-content table th { background-color: #eef2ff; font-weight: bold; }
         .body-content ul, .body-content ol { margin: 0 0 3mm 0; padding-left: 18px; }
         .body-content blockquote { margin: 3mm 0; padding-left: 8px; border-left: 3px solid #cbd5e1; color: #475569; }
+        /* Matches the Rich Text Editor's own Title/Subtitle/Heading/Sub
+           Heading style menu so the PDF output is WYSIWYG. */
+        .body-content h1 { font-size: 18px; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h2 { font-size: 13px; font-weight: normal; color: #6b7280; margin: -2mm 0 3mm 0; }
+        .body-content h3 { font-size: 13px; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h4 { font-size: 12px; font-weight: bold; color: #374151; margin: 0 0 3mm 0; }
 
         .signature-block { margin-top: 10mm; width: 60mm; }
         .signature-block p { margin: 0; line-height: 1.5; }

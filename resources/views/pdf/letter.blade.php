@@ -12,8 +12,21 @@
            Explicit A4 mm dimensions (not width/height:100%) keep the fixed
            background sized to the actual page regardless of the image's
            own intrinsic pixel dimensions. */
-        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; z-index: -1; }
-        .page { position: relative; z-index: 1; padding: 48mm 16mm 32mm 26mm; }
+        /* @page margin (not .page's own padding) defines dompdf's actual
+           repeating margin box -- reliable on every page, unlike a plain
+           block's padding which only holds on the page where that block
+           starts. The earlier attempt at this failed because the
+           letterhead image stayed positioned at the physical page's 0,0
+           corner (ignoring the new margin box entirely); a fixed element
+           needs a negative offset equal to the margin to reach back out
+           to the physical page edge from within the now-inset content box. */
+        @page { margin: 48mm 16mm 32mm 26mm; }
+        .page { position: relative; z-index: 1; }
+        .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
+        /* .cancelled-stamp (shared partial) is also position:fixed, so its
+           top/left need the same margin-box correction to land in the same
+           physical spot as before (was centered on the raw page). */
+        .cancelled-stamp { top: 72mm; left: 14mm; }
 
         /* The rich text editor's Enter key produces <p>, but Chrome's
            contenteditable default (before that was pinned) produced <div>
@@ -25,6 +38,12 @@
         .body-content table th { background-color: #eef2ff; font-weight: bold; }
         .body-content ul, .body-content ol { margin: 0 0 3mm 0; padding-left: 18px; }
         .body-content blockquote { margin: 3mm 0; padding-left: 8px; border-left: 3px solid #cbd5e1; color: #475569; }
+        /* Matches the Rich Text Editor's own Title/Subtitle/Heading/Sub
+           Heading style menu so the PDF output is WYSIWYG. */
+        .body-content h1 { font-size: 18px; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h2 { font-size: 13px; font-weight: normal; color: #6b7280; margin: -2mm 0 3mm 0; }
+        .body-content h3 { font-size: 13px; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h4 { font-size: 12px; font-weight: bold; color: #374151; margin: 0 0 3mm 0; }
     </style>
 </head>
 <body>
