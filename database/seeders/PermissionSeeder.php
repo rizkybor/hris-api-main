@@ -45,6 +45,20 @@ class PermissionSeeder extends Seeder
             'export',
         ],
 
+        // Cash ledger (debit/credit) recorded against a project's budget --
+        // 'list' gates viewing it (open to anyone who can view the
+        // project), while create/edit/delete are additionally restricted
+        // in ProjectCashTransactionController to that project's own
+        // Project Leader (or manager/superadmin), since "leader" is
+        // per-project and can't be expressed as a role permission alone.
+        'project-expense' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
+
         'task' => [
             'menu',
             'list',

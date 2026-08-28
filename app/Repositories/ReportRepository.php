@@ -13,6 +13,7 @@ use App\Models\PaymentReceipt;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\Project;
+use App\Models\ProjectCashTransaction;
 use App\Models\SdmResource;
 use Carbon\Carbon;
 
@@ -278,6 +279,85 @@ class ReportRepository implements ReportRepositoryInterface
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
             'summary' => $summary,
             'rows' => $paginated->items(),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'to' => $paginated->lastItem(),
+            ],
+        ];
+    }
+
+    /**
+     * One row per project that had at least one cash ledger entry (debit/
+     * credit against its budget) within the period -- budget itself isn't
+     * date-scoped (it's a fixed figure on the project), only the debit/
+     * credit sums are filtered by transaction_date.
+     */
+    public function getProjectExpenseReport(?string $startDate, ?string $endDate, int $page = 1, int $rowPerPage = 15)
+    {
+        $startDate = $startDate ?: now()->startOfYear()->toDateString();
+        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+
+        $projectIds = ProjectCashTransaction::whereBetween('transaction_date', [$startDate, $endDate])
+            ->distinct()
+            ->pluck('project_id');
+
+        $baseQuery = Project::query()->whereIn('id', $projectIds);
+
+        $totalBudget = (float) (clone $baseQuery)->sum('budget');
+        $totalDebit = (float) ProjectCashTransaction::whereIn('project_id', $projectIds)
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->where('type', 'debit')
+            ->sum('amount');
+        $totalCredit = (float) ProjectCashTransaction::whereIn('project_id', $projectIds)
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->where('type', 'credit')
+            ->sum('amount');
+
+        $summary = [
+            'total_projects' => (clone $baseQuery)->count(),
+            'total_budget' => $totalBudget,
+            'total_debit' => $totalDebit,
+            'total_credit' => $totalCredit,
+            // Debit = money in, Credit = money out (Indonesian "buku kas"
+            // convention -- see ProjectCashTransactionController).
+            'total_balance' => $totalBudget + $totalDebit - $totalCredit,
+        ];
+
+        $paginated = (clone $baseQuery)
+            ->with('projectLeader.user')
+            ->withSum(['cashTransactions as debit_sum' => function ($q) use ($startDate, $endDate) {
+                $q->where('type', 'debit')->whereBetween('transaction_date', [$startDate, $endDate]);
+            }], 'amount')
+            ->withSum(['cashTransactions as credit_sum' => function ($q) use ($startDate, $endDate) {
+                $q->where('type', 'credit')->whereBetween('transaction_date', [$startDate, $endDate]);
+            }], 'amount')
+            ->orderBy('name')
+            ->paginate($rowPerPage, ['*'], 'page', $page);
+
+        $rows = collect($paginated->items())->map(function ($project) {
+            $debit = (float) ($project->debit_sum ?? 0);
+            $credit = (float) ($project->credit_sum ?? 0);
+            $budget = (float) $project->budget;
+
+            return [
+                'id' => $project->id,
+                'name' => $project->name,
+                'leader' => $project->projectLeader?->user?->name,
+                'budget' => $budget,
+                'total_debit' => $debit,
+                'total_credit' => $credit,
+                'balance' => $budget + $debit - $credit,
+            ];
+        });
+
+        return [
+            'period' => ['start_date' => $startDate, 'end_date' => $endDate],
+            'summary' => $summary,
+            'rows' => $rows,
             'meta' => [
                 'current_page' => $paginated->currentPage(),
                 'last_page' => $paginated->lastPage(),

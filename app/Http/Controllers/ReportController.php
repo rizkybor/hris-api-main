@@ -9,6 +9,7 @@ use App\Exports\PayrollReportExport;
 use App\Exports\Pph21ReportExport;
 use App\Exports\Pph23ReportExport;
 use App\Exports\PpnReportExport;
+use App\Exports\ProjectExpenseReportExport;
 use App\Exports\ProjectReportExport;
 use App\Helpers\ResponseHelper;
 use App\Interfaces\ReportRepositoryInterface;
@@ -30,7 +31,7 @@ class ReportController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project', 'pph23']),
+            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project', 'pph23', 'projectExpense']),
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
         ];
     }
@@ -141,6 +142,22 @@ class ReportController extends Controller implements HasMiddleware
         }
     }
 
+    public function projectExpense(Request $request)
+    {
+        try {
+            $data = $this->reportRepository->getProjectExpenseReport(
+                $request->start_date,
+                $request->end_date,
+                (int) ($request->page ?? 1),
+                (int) ($request->row_per_page ?? 15)
+            );
+
+            return ResponseHelper::jsonResponse(true, 'Project Cash Ledger Report Retrieved Successfully', $data, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
     public function export(Request $request)
     {
         $type = $request->query('type', 'attendance');
@@ -158,6 +175,7 @@ class ReportController extends Controller implements HasMiddleware
                 'ppn' => new PpnReportExport($startDate, $endDate),
                 'project' => new ProjectReportExport($startDate, $endDate, $request->query('status')),
                 'pph23' => new Pph23ReportExport($startDate, $endDate),
+                'project_expense' => new ProjectExpenseReportExport($startDate, $endDate),
                 default => null,
             };
 
