@@ -9,8 +9,8 @@
            template-letter-secondary.png reference) rather than redrawn with
            CSS. It's position:fixed, so dompdf repeats it on both pages of
            this document without needing to be re-included per page. */
-        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; }
-        .page { padding: 48mm 16mm 32mm 26mm; }
+        .letterhead { position: fixed; top: 0; left: 0; width: 210mm; height: 297mm; z-index: -1; }
+        .page { position: relative; z-index: 1; padding: 48mm 16mm 32mm 26mm; }
     </style>
 </head>
 <body>
