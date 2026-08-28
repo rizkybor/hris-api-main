@@ -301,6 +301,7 @@ Route::prefix('v1')
             // Company Assets
             Route::get('my-assets', [CompanyAssetController::class, 'myAssets']);
             Route::get('company-assets/statistics', [CompanyAssetController::class, 'statistics']);
+            Route::get('company-assets/next-code', [CompanyAssetController::class, 'nextCode']);
             Route::post('company-assets/{id}/assign', [CompanyAssetController::class, 'assign']);
             Route::post('company-assets/{id}/return', [CompanyAssetController::class, 'returnAsset']);
             Route::apiResource('company-assets', CompanyAssetController::class)->except(['show']);

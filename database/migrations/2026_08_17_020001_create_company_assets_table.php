@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('asset_code')->unique();
             $table->string('name');
-            $table->string('category'); // laptop, phone, vehicle, furniture, other
+            $table->string('category'); // IT-HW, IT-SW, OF-EQ, OF-FN, M-VEH, M-MISC (see CompanyAssetController::CATEGORIES)
             $table->string('brand')->nullable();
             $table->string('model')->nullable();
             $table->string('serial_number')->nullable();
