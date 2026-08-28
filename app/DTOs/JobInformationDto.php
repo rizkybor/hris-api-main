@@ -17,6 +17,10 @@ class JobInformationDto
         public readonly string $start_date,
         public readonly ?float $monthly_salary,
         public readonly string $skill_level,
+        public readonly ?string $ptkp_status,
+        public readonly ?int $annual_leave_quota,
+        public readonly ?string $probation_end_date,
+        public readonly ?string $contract_end_date,
     ) {}
 
     public function toArray(): array
@@ -32,6 +36,10 @@ class JobInformationDto
             'start_date' => $this->start_date,
             'monthly_salary' => $this->monthly_salary,
             'skill_level' => $this->skill_level,
+            'ptkp_status' => $this->ptkp_status,
+            'annual_leave_quota' => $this->annual_leave_quota,
+            'probation_end_date' => $this->probation_end_date,
+            'contract_end_date' => $this->contract_end_date,
         ];
     }
 
@@ -48,6 +56,13 @@ class JobInformationDto
             start_date: $data['start_date'],
             monthly_salary: isset($data['monthly_salary']) ? (float) $data['monthly_salary'] : null,
             skill_level: $data['skill_level'],
+            ptkp_status: $data['ptkp_status'] ?? 'TK/0',
+            // array_key_exists (not ??) so a genuine 0 quota is kept --
+            // ?? would be safe here too since 0 isn't null, but matching
+            // the explicit style used below for the other nullable fields.
+            annual_leave_quota: array_key_exists('annual_leave_quota', $data) ? (is_null($data['annual_leave_quota']) ? null : (int) $data['annual_leave_quota']) : 12,
+            probation_end_date: $data['probation_end_date'] ?? null,
+            contract_end_date: $data['contract_end_date'] ?? null,
         );
     }
 
@@ -67,6 +82,13 @@ class JobInformationDto
             // keeping the previous salary.
             monthly_salary: array_key_exists('monthly_salary', $data) ? (is_null($data['monthly_salary']) ? null : (float) $data['monthly_salary']) : $existingJob->monthly_salary,
             skill_level: $data['skill_level'] ?? $existingJob->skill_level ?? 'beginner',
+            ptkp_status: $data['ptkp_status'] ?? $existingJob->ptkp_status ?? 'TK/0',
+            // Same array_key_exists reasoning as monthly_salary above --
+            // this is the exact bug being fixed: 0 is a valid quota and
+            // must not fall through to the existing/default value.
+            annual_leave_quota: array_key_exists('annual_leave_quota', $data) ? (is_null($data['annual_leave_quota']) ? null : (int) $data['annual_leave_quota']) : $existingJob->annual_leave_quota,
+            probation_end_date: array_key_exists('probation_end_date', $data) ? $data['probation_end_date'] : ($existingJob->probation_end_date ? $existingJob->probation_end_date->format('Y-m-d') : null),
+            contract_end_date: array_key_exists('contract_end_date', $data) ? $data['contract_end_date'] : ($existingJob->contract_end_date ? $existingJob->contract_end_date->format('Y-m-d') : null),
         );
     }
 }
