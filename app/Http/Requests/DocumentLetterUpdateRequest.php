@@ -15,7 +15,7 @@ class DocumentLetterUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document_number' => ['sometimes', 'nullable', 'string', 'max:255', Rule::unique('document_letters', 'document_number')->ignore($this->route('id'))],
+            'document_number' => ['sometimes', 'nullable', 'string', 'max:255', Rule::unique('document_letters', 'document_number')->ignore($this->route('document_letter'))],
             'subject' => ['sometimes', 'required', 'string', 'max:255'],
             'document_date' => ['sometimes', 'required', 'date'],
             'body' => ['sometimes', 'required', 'string'],

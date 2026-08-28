@@ -15,7 +15,7 @@ class MeetingNoteUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document_number' => ['sometimes', 'nullable', 'string', 'max:255', Rule::unique('meeting_notes', 'document_number')->ignore($this->route('id'))],
+            'document_number' => ['sometimes', 'nullable', 'string', 'max:255', Rule::unique('meeting_notes', 'document_number')->ignore($this->route('meeting_note'))],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'meeting_type' => ['sometimes', 'required', 'in:internal,external'],
             'meeting_date' => ['sometimes', 'required', 'date'],
