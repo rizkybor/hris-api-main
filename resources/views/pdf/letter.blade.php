@@ -20,7 +20,7 @@
            corner (ignoring the new margin box entirely); a fixed element
            needs a negative offset equal to the margin to reach back out
            to the physical page edge from within the now-inset content box. */
-        @page { margin: 48mm 16mm 32mm 26mm; }
+        @page { margin: 48mm 26mm 32mm 26mm; }
         .page { position: relative; z-index: 1; }
         .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
         /* .cancelled-stamp (shared partial) is also position:fixed, so its
@@ -28,11 +28,12 @@
            physical spot as before (was centered on the raw page). */
         .cancelled-stamp { top: 72mm; left: 14mm; }
 
-        /* The rich text editor's Enter key produces <p>, but Chrome's
-           contenteditable default (before that was pinned) produced <div>
-           per line for older saved letters -- indent both so existing
-           content isn't left flat. */
-        .body-content p, .body-content > div { text-indent: 10mm; margin: 0 0 3mm 0; }
+        /* Paragraph indentation is an explicit choice made in the editor
+           (Tab, or its Align/Indent controls) and preserved as-authored --
+           not auto-applied here, so a letter's indentation matches what
+           was actually typed instead of forcing every paragraph to indent
+           whether the author wanted that or not. */
+        .body-content p, .body-content > div { margin: 0 0 3mm 0; }
         .body-content table { width: 100%; border-collapse: collapse; margin: 3mm 0; }
         .body-content table td, .body-content table th { border: 1px solid #94a3b8; padding: 4px 6px; }
         .body-content table th { background-color: #eef2ff; font-weight: bold; }
