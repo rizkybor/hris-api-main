@@ -7,6 +7,7 @@ use App\Http\Resources\CompanyAssetResource;
 use App\Http\Resources\PaginateResource;
 use App\Models\AssetAssignmentHistory;
 use App\Models\CompanyAsset;
+use App\Services\AssetCodeGenerator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -16,10 +17,24 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class CompanyAssetController extends Controller implements HasMiddleware
 {
+    /**
+     * Kept in sync with the category dropdown on the frontend
+     * (AssetDashboard.vue) -- code prefix, category label, example items.
+     */
+    public const CATEGORIES = ['IT-HW', 'IT-SW', 'OF-EQ', 'OF-FN', 'M-VEH', 'M-MISC'];
+
+    private AssetCodeGenerator $codeGenerator;
+
+    public function __construct(AssetCodeGenerator $codeGenerator)
+    {
+        $this->codeGenerator = $codeGenerator;
+    }
+
     public static function middleware()
     {
         return [
             new Middleware(PermissionMiddleware::using(['asset-list']), only: ['index', 'show', 'statistics']),
+            new Middleware(PermissionMiddleware::using(['asset-create', 'asset-edit']), only: ['nextCode']),
             new Middleware(PermissionMiddleware::using(['asset-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['asset-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['asset-delete']), only: ['destroy']),
@@ -27,6 +42,28 @@ class CompanyAssetController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['asset-assign']), only: ['returnAsset']),
             new Middleware(PermissionMiddleware::using(['asset-my-assets']), only: ['myAssets']),
         ];
+    }
+
+    /**
+     * Suggests the next asset_code for the given category (and optional
+     * purchase date, which decides the year segment) -- the frontend calls
+     * this to prefill the field, but the user may still edit it before
+     * submitting, so nothing here is reserved/consumed.
+     */
+    public function nextCode(Request $request)
+    {
+        $validated = $request->validate([
+            'category' => ['required', 'string', 'in:'.implode(',', self::CATEGORIES)],
+            'purchase_date' => ['nullable', 'date'],
+        ]);
+
+        try {
+            $code = $this->codeGenerator->generate($validated['category'], $validated['purchase_date'] ?? null);
+
+            return ResponseHelper::jsonResponse(true, 'Next Asset Code Generated Successfully', ['asset_code' => $code], 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
     }
 
     public function index(Request $request)
@@ -96,7 +133,7 @@ class CompanyAssetController extends Controller implements HasMiddleware
         $validated = $request->validate([
             'asset_code' => 'required|string|max:100|unique:company_assets,asset_code',
             'name' => 'required|string|max:255',
-            'category' => 'required|string|in:laptop,phone,vehicle,furniture,other',
+            'category' => 'required|string|in:'.implode(',', self::CATEGORIES),
             'brand' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',
             'serial_number' => 'nullable|string|max:100',
@@ -124,7 +161,7 @@ class CompanyAssetController extends Controller implements HasMiddleware
         $validated = $request->validate([
             'asset_code' => 'sometimes|required|string|max:100|unique:company_assets,asset_code,'.$id,
             'name' => 'sometimes|required|string|max:255',
-            'category' => 'sometimes|required|string|in:laptop,phone,vehicle,furniture,other',
+            'category' => 'sometimes|required|string|in:'.implode(',', self::CATEGORIES),
             'brand' => 'nullable|string|max:100',
             'model' => 'nullable|string|max:100',
             'serial_number' => 'nullable|string|max:100',
