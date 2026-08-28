@@ -8,18 +8,19 @@
            negative-offset / page-1-clearance trio. Uses the "secondary"
            template per spec, not the template-picker used by Letters.
 
-           Margins here are wider than letter.blade.php's, measured
-           directly off template-letter-secondary.png (checked which pixel
+           Left/right margins match official-memo.blade.php's 25mm side
+           margins (Official Memo / Purchase Order both use this same
+           template-letter-secondary.png background, per spec). Top/bottom
+           are measured directly off the image itself (checked which pixel
            rows aren't blank): the header graphic (logo/name/tagline) ends
            at ~42.2mm from the top, and the footer graphic (address block)
-           starts at ~277mm, i.e. ~20mm from the bottom. Letter's narrower
-           6mm bottom margin works there only because a letter's own
-           content rarely runs long enough to reach the last few mm of a
-           page -- this report's tables regularly do, so the margin itself
-           has to hold the content back, not just happen not to collide. */
-        @page { margin: 48mm 0 24mm 0; }
-        .page { position: relative; z-index: 1; margin-top: -25mm; }
-        .letterhead { position: fixed; top: -48mm; left: 0; width: 210mm; height: 297mm; z-index: -1; }
+           starts at ~277mm, i.e. ~20mm from the bottom -- so bottom stays
+           at 24mm (not Official Memo's narrower 12mm) since this report's
+           tables regularly run long enough to actually reach that margin,
+           unlike a typical memo. */
+        @page { margin: 48mm 25mm 24mm 25mm; }
+        .page { position: relative; z-index: 1; }
+        .letterhead { position: fixed; top: -48mm; left: -25mm; width: 210mm; height: 297mm; z-index: -1; }
 
         /* A table row that straddles a page break renders its cells'
            borders/background split awkwardly across the gap -- keep each
@@ -30,7 +31,7 @@
 
         .header-row { margin-bottom: 6mm; }
 
-        h1.title { font-size: 16px; margin: 0 0 1mm 0; color: #0c51d9; }
+        h1.title { font-size: 16px; margin: 0 0 1mm 0; color: #070b30; }
         .subtitle { font-size: 10px; color: #6b7280; margin: 0 0 4mm 0; }
 
         .employee-name { font-size: 14px; font-weight: bold; margin: 0; }
@@ -46,7 +47,7 @@
 
         .summary-row { display: table; width: 100%; margin: 4mm 0 6mm 0; }
         .summary-card { display: table-cell; width: 33.33%; padding: 3mm; border: 1px solid #dcdedd; border-radius: 4px; }
-        .summary-card .value { font-size: 15px; font-weight: bold; color: #0c51d9; }
+        .summary-card .value { font-size: 15px; font-weight: bold; color: #070b30; }
         .summary-card .label { font-size: 9px; color: #6b7280; }
 
         table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
@@ -160,7 +161,7 @@
                     &bull; Status: {{ ucfirst($performance_review['status']) }}
                 </p>
                 <p style="margin: 0 0 3mm 0; font-size: 11px;">
-                    Overall Rating: <strong style="color: #0c51d9;">{{ $performance_review['overall_rating'] }} / 5</strong>
+                    Overall Rating: <strong style="color: #070b30;">{{ $performance_review['overall_rating'] }} / 5</strong>
                 </p>
 
                 @if(!empty($performance_review['category_scores']))
