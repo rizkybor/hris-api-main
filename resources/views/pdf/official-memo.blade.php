@@ -8,9 +8,15 @@
            page a memo spans, not just the first -- but a fixed element
            needs a negative offset equal to the margin to still reach the
            physical page edge from within the new, inset content box. */
-        @page { margin: 48mm 26mm 32mm 26mm; }
+        @page { margin: 48mm 0 12mm 0; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11px; }
-        .letterhead { position: fixed; top: -48mm; left: -26mm; width: 210mm; height: 297mm; z-index: -1; }
+        .letterhead { position: fixed; top: -48mm; left: 0; width: 210mm; height: 297mm; z-index: -1; }
+        /* Unlike letter.blade.php / purchase-order.blade.php, this template
+           doesn't pull in the shared style-letterhead partial (which sets
+           its own @page{margin:0} before this file's @page override) --
+           measured via pdftotext -bbox, page 1 here already lines up with
+           page 2 with no extra offset, so no margin-top correction is
+           needed (adding one, as in those two files, overcorrects). */
         .page { position: relative; z-index: 1; }
 
         .title {
@@ -39,7 +45,7 @@
         .body-content h3 { font-size: 13px; font-weight: bold; margin: 0 0 3mm 0; }
         .body-content h4 { font-size: 12px; font-weight: bold; color: #374151; margin: 0 0 3mm 0; }
 
-        .signature-block { margin-top: 10mm; width: 60mm; }
+        .signature-block { margin-top: 10mm; width: 60mm; page-break-inside: avoid; }
         .signature-block p { margin: 0; line-height: 1.5; }
         .signature-space { height: 18mm; }
         .signature-name { font-weight: bold; text-decoration: underline; }
