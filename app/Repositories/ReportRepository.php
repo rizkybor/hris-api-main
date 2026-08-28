@@ -291,34 +291,30 @@ class ReportRepository implements ReportRepositoryInterface
     }
 
     /**
-     * One row per project that had at least one cash ledger entry (debit/
-     * credit against its budget) within the period -- budget itself isn't
-     * date-scoped (it's a fixed figure on the project), only the debit/
-     * credit sums are filtered by transaction_date.
+     * One row per project cash ledger transaction (debit/credit) within
+     * the period, optionally narrowed to a single project -- shows the
+     * actual transaction date, unlike the old per-project-aggregate shape
+     * this replaced (a whole project doesn't have one meaningful date).
      */
-    public function getProjectExpenseReport(?string $startDate, ?string $endDate, int $page = 1, int $rowPerPage = 15)
+    public function getProjectExpenseReport(?string $startDate, ?string $endDate, ?int $projectId, int $page = 1, int $rowPerPage = 15)
     {
         $startDate = $startDate ?: now()->startOfYear()->toDateString();
         $endDate = $endDate ?: now()->endOfYear()->toDateString();
 
-        $projectIds = ProjectCashTransaction::whereBetween('transaction_date', [$startDate, $endDate])
-            ->distinct()
-            ->pluck('project_id');
+        $query = ProjectCashTransaction::query()
+            ->whereBetween('transaction_date', [$startDate, $endDate]);
 
-        $baseQuery = Project::query()->whereIn('id', $projectIds);
+        if ($projectId) {
+            $query->where('project_id', $projectId);
+        }
 
-        $totalBudget = (float) (clone $baseQuery)->sum('budget');
-        $totalDebit = (float) ProjectCashTransaction::whereIn('project_id', $projectIds)
-            ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->where('type', 'debit')
-            ->sum('amount');
-        $totalCredit = (float) ProjectCashTransaction::whereIn('project_id', $projectIds)
-            ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->where('type', 'credit')
-            ->sum('amount');
+        $totalDebit = (float) (clone $query)->where('type', 'debit')->sum('amount');
+        $totalCredit = (float) (clone $query)->where('type', 'credit')->sum('amount');
+        $involvedProjectIds = (clone $query)->distinct()->pluck('project_id');
+        $totalBudget = (float) Project::whereIn('id', $involvedProjectIds)->sum('budget');
 
         $summary = [
-            'total_projects' => (clone $baseQuery)->count(),
+            'total_projects' => $involvedProjectIds->count(),
             'total_budget' => $totalBudget,
             'total_debit' => $totalDebit,
             'total_credit' => $totalCredit,
@@ -327,32 +323,21 @@ class ReportRepository implements ReportRepositoryInterface
             'total_balance' => $totalBudget + $totalDebit - $totalCredit,
         ];
 
-        $paginated = (clone $baseQuery)
-            ->with('projectLeader.user')
-            ->withSum(['cashTransactions as debit_sum' => function ($q) use ($startDate, $endDate) {
-                $q->where('type', 'debit')->whereBetween('transaction_date', [$startDate, $endDate]);
-            }], 'amount')
-            ->withSum(['cashTransactions as credit_sum' => function ($q) use ($startDate, $endDate) {
-                $q->where('type', 'credit')->whereBetween('transaction_date', [$startDate, $endDate]);
-            }], 'amount')
-            ->orderBy('name')
+        $paginated = (clone $query)
+            ->with('project:id,name')
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('id', 'desc')
             ->paginate($rowPerPage, ['*'], 'page', $page);
 
-        $rows = collect($paginated->items())->map(function ($project) {
-            $debit = (float) ($project->debit_sum ?? 0);
-            $credit = (float) ($project->credit_sum ?? 0);
-            $budget = (float) $project->budget;
-
-            return [
-                'id' => $project->id,
-                'name' => $project->name,
-                'leader' => $project->projectLeader?->user?->name,
-                'budget' => $budget,
-                'total_debit' => $debit,
-                'total_credit' => $credit,
-                'balance' => $budget + $debit - $credit,
-            ];
-        });
+        $rows = collect($paginated->items())->map(fn ($transaction) => [
+            'id' => $transaction->id,
+            'transaction_date' => $transaction->transaction_date->toDateString(),
+            'project_id' => $transaction->project_id,
+            'project_name' => $transaction->project?->name,
+            'description' => $transaction->description,
+            'type' => $transaction->type,
+            'amount' => (float) $transaction->amount,
+        ]);
 
         return [
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
