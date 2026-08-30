@@ -96,8 +96,8 @@ class EmployeeProfileUpdateRequest extends FormRequest
             'emergency_contacts' => ['nullable', 'array'],
             'emergency_contacts.*.id' => ['nullable', 'integer', 'exists:emergency_contacts,id'],
             'emergency_contacts.*.full_name' => ['nullable', 'string', 'max:255'],
-            'emergency_contacts.*.relationship' => ['required_with:emergency_contacts.*.full_name,emergency_contacts.*.phone,emergency_contacts.*.email', 'string', 'max:100'],
-            'emergency_contacts.*.phone' => ['required_with:emergency_contacts.*.full_name,emergency_contacts.*.relationship,emergency_contacts.*.email', 'string', 'max:20'],
+            'emergency_contacts.*.relationship' => ['nullable', 'required_with:emergency_contacts.*.full_name,emergency_contacts.*.phone,emergency_contacts.*.email', 'string', 'max:100'],
+            'emergency_contacts.*.phone' => ['nullable', 'required_with:emergency_contacts.*.full_name,emergency_contacts.*.relationship,emergency_contacts.*.email', 'string', 'max:20'],
             'emergency_contacts.*.email' => ['nullable', 'email', 'max:255'],
         ];
     }

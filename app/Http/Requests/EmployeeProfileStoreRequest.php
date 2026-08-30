@@ -88,8 +88,8 @@ class EmployeeProfileStoreRequest extends FormRequest
             // Emergency Contacts fields (array, optional -- e.g. employee hasn't provided one yet)
             'emergency_contacts' => ['nullable', 'array'],
             'emergency_contacts.*.full_name' => ['nullable', 'string', 'max:255'],
-            'emergency_contacts.*.relationship' => ['required_with:emergency_contacts.*.full_name,emergency_contacts.*.phone,emergency_contacts.*.email', 'string', 'max:100'],
-            'emergency_contacts.*.phone' => ['required_with:emergency_contacts.*.full_name,emergency_contacts.*.relationship,emergency_contacts.*.email', 'string', 'max:20'],
+            'emergency_contacts.*.relationship' => ['nullable', 'required_with:emergency_contacts.*.full_name,emergency_contacts.*.phone,emergency_contacts.*.email', 'string', 'max:100'],
+            'emergency_contacts.*.phone' => ['nullable', 'required_with:emergency_contacts.*.full_name,emergency_contacts.*.relationship,emergency_contacts.*.email', 'string', 'max:20'],
             'emergency_contacts.*.email' => ['nullable', 'email', 'max:255'],
         ];
     }
