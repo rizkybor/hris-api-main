@@ -71,13 +71,27 @@ class StaffPerformanceCalculator
     /**
      * @return array{total: int, present: int, late: int, absent: int, sick_leave: int}
      */
+    /**
+     * Saturday/Sunday are excluded outright (DAYOFWEEK: 1=Sunday,
+     * 7=Saturday) -- they aren't scheduled work days, so they never enter
+     * the attendance rate at all, regardless of status. A weekend
+     * clock-in is tagged 'overtime' rather than present/late anyway (see
+     * AttendanceRepository::checkIn()), but this filter is what actually
+     * keeps the rate honest even if that tagging ever changes.
+     */
     private function attendanceBreakdown(int $employeeId, string $startDate, string $endDate): array
     {
         $counts = Attendance::where('employee_id', $employeeId)
             ->whereBetween('date', [$startDate, $endDate])
+            ->whereRaw('DAYOFWEEK(date) NOT IN (1, 7)')
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
+
+        $overtimeDays = (int) Attendance::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->where('status', 'overtime')
+            ->count();
 
         return [
             'total' => (int) $counts->sum(),
@@ -85,6 +99,7 @@ class StaffPerformanceCalculator
             'late' => (int) ($counts['late'] ?? 0),
             'absent' => (int) ($counts['absent'] ?? 0),
             'sick_leave' => (int) ($counts['sick_leave'] ?? 0),
+            'overtime_days' => $overtimeDays,
         ];
     }
 
