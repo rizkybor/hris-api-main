@@ -18,7 +18,13 @@
            content box. */
         @page { margin: 48mm 0 35mm 0; }
         .letterhead { position: fixed; top: -48mm; left: 0; width: 210mm; height: 297mm; z-index: -1; }
-        .page { position: relative; z-index: 1; }
+        /* style-letterhead.blade.php's shared .page padding is asymmetric
+           (26mm left, 18mm right), so the whole content box -- not just
+           centered text like the title above, every table too -- sits
+           shifted right of the physical page center. Overridden here with
+           the average of the two so total content width is unchanged, just
+           actually centered. */
+        .page { position: relative; z-index: 1; padding-left: 22mm; padding-right: 22mm; }
         /* dompdf quirk (measured via pdftotext -bbox on letter.blade.php,
            same DOM shape here): the page where .letterhead is declared gets
            ~25mm more top clearance than @page margin alone accounts for --
@@ -102,8 +108,8 @@
                     <td style="font-weight: bold; background: #f3f4f6;">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
                 </tr>
                 <tr>
-                    <td colspan="4" style="text-align: right; font-weight: bold; background: #0c51d9; color: #fff;">Total</td>
-                    <td style="font-weight: bold; background: #0c51d9; color: #fff;">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
+                    <td colspan="4" style="text-align: right; font-weight: bold; background: #091842; color: #fff;">Total</td>
+                    <td style="font-weight: bold; background: #091842; color: #fff;">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
                 </tr>
             </tbody>
         </table>
