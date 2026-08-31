@@ -7,6 +7,8 @@ use App\DTOs\AttendanceDto;
 use App\Interfaces\AttendanceRepositoryInterface;
 use App\Models\Attendance;
 use App\Models\AttendanceSetting;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,6 +19,8 @@ use Illuminate\Support\Facades\DB;
 class AttendanceRepository implements AttendanceRepositoryInterface
 {
     private const MIN_WORK_MINUTES_BEFORE_CHECK_OUT = 8 * 60;
+
+    public function __construct(private CloudinaryManager $cloudinary) {}
 
     public function getAll(
         ?string $search,
@@ -161,13 +165,43 @@ class AttendanceRepository implements AttendanceRepositoryInterface
      */
     public function checkIn(array $data): Attendance
     {
-        return DB::transaction(function () use ($data) {
-            $employeeId = Auth::user()->employeeProfile?->id;
+        $employeeId = Auth::user()->employeeProfile?->id;
 
-            if (! $employeeId) {
-                throw new \Exception('This account has no employee profile, so it cannot clock in.');
-            }
+        if (! $employeeId) {
+            throw new \Exception('This account has no employee profile, so it cannot clock in.');
+        }
 
+        // Cheap pre-checks before the (comparatively slow, external)
+        // Cloudinary upload below, so a doomed request -- already checked
+        // in, or a blocked weekend clock-in -- fails fast without wasting
+        // an upload on a photo that will never be used. Both are re-checked
+        // inside the transaction too, as the authoritative, race-safe guard.
+        $alreadyCheckedIn = Attendance::where('employee_id', $employeeId)
+            ->where('date', now()->format('Y-m-d'))
+            ->exists();
+
+        if ($alreadyCheckedIn) {
+            throw new \Exception('Employee sudah check in hari ini');
+        }
+
+        $isWeekend = Carbon::now('Asia/Jakarta')->isWeekend();
+
+        if ($isWeekend && ! AttendanceSetting::current()->allow_weekend_check_in) {
+            throw new \Exception('Clock in tidak tersedia pada hari Sabtu/Minggu. Hubungi Superadmin/Manager jika Anda perlu masuk lembur.');
+        }
+
+        // Uploaded before the transaction opens: the photo is required for
+        // check-in to succeed at all (unlike Project's optional photo,
+        // which uploads after commit and tolerates the row existing
+        // without one), so a failed/slow Cloudinary call should fail the
+        // whole request cleanly rather than hold a DB transaction open.
+        $data['check_in_photo'] = $this->cloudinary->uploadBase64Image(
+            $data['check_in_photo'],
+            CloudinaryFolders::companyFiles('attendance'),
+            CloudinaryFolders::filename('checkin-'.$employeeId.'-'.now()->format('Ymd'))
+        );
+
+        return DB::transaction(function () use ($data, $employeeId) {
             $existingAttendance = Attendance::where('employee_id', $employeeId)
                 ->where('date', now()->format('Y-m-d'))
                 ->first();

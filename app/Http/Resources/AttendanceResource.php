@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -21,6 +22,7 @@ class AttendanceResource extends JsonResource
             'check_in' => $this->check_in,
             'check_in_lat' => $this->check_in_lat,
             'check_in_long' => $this->check_in_long,
+            'check_in_photo' => CloudinaryUrl::image($this->check_in_photo),
             'check_out' => $this->check_out,
             'check_out_lat' => $this->check_out_lat,
             'check_out_long' => $this->check_out_long,
