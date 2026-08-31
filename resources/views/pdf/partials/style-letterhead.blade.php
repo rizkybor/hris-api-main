@@ -109,7 +109,7 @@
     }
 
     .doc-table th {
-        background: #0c51d9;
+        background: #091842;
         color: #ffffff;
         text-align: left;
         padding: 6px 8px;
