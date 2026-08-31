@@ -160,11 +160,9 @@ class ReportRepository implements ReportRepositoryInterface
 
         $summary = [
             'company_balance' => (float) ($latestBalance->saldo_company ?? 0),
-            'fixed_cost_budget' => (float) $fixedCosts->sum('budget'),
             'fixed_cost_actual' => (float) $fixedCosts->sum('actual'),
             'infrastructure_monthly_fee' => (float) $infrastructureTools->sum('monthly_fee'),
             'infrastructure_annual_fee' => (float) $infrastructureTools->sum('annual_fee'),
-            'sdm_budget' => (float) $sdmResources->sum('budget'),
             'sdm_actual' => (float) $sdmResources->sum('actual'),
         ];
 

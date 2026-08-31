@@ -18,7 +18,6 @@ class FixedCostResource extends JsonResource
             'id' => $this->id,
             'financial_items' => $this->financial_items,
             'description' => $this->description,
-            'budget' => (float) (string) $this->budget,
             'actual' => (float) (string) $this->actual,
             'notes' => $this->notes,
             'created_at' => $this->created_at,

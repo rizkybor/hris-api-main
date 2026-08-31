@@ -16,6 +16,7 @@ class AttendanceDto
         public readonly ?float $check_out_lat,
         public readonly ?float $check_out_long,
         public readonly string $status,
+        public readonly ?int $late_minutes = null,
         public readonly ?string $notes = null,
     ) {}
 
@@ -31,6 +32,7 @@ class AttendanceDto
             'check_out_lat' => $this->check_out_lat,
             'check_out_long' => $this->check_out_long,
             'status' => $this->status,
+            'late_minutes' => $this->late_minutes,
             'notes' => $this->notes,
         ];
     }
@@ -47,6 +49,7 @@ class AttendanceDto
             check_out_lat: isset($data['check_out_lat']) ? (float) $data['check_out_lat'] : null,
             check_out_long: isset($data['check_out_long']) ? (float) $data['check_out_long'] : null,
             status: $data['status'],
+            late_minutes: isset($data['late_minutes']) ? (int) $data['late_minutes'] : null,
             notes: $data['notes'] ?? null,
         );
     }
@@ -63,6 +66,7 @@ class AttendanceDto
             check_out_lat: isset($data['check_out_lat']) ? (float) $data['check_out_lat'] : $existingAttendance->check_out_lat,
             check_out_long: isset($data['check_out_long']) ? (float) $data['check_out_long'] : $existingAttendance->check_out_long,
             status: $data['status'] ?? $existingAttendance->status,
+            late_minutes: array_key_exists('late_minutes', $data) ? (is_null($data['late_minutes']) ? null : (int) $data['late_minutes']) : $existingAttendance->late_minutes,
             notes: $data['notes'] ?? $existingAttendance->notes,
         );
     }

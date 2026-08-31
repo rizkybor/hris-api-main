@@ -66,24 +66,12 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
 
         $items = $query->get();
 
-        $totalBudget = $items->sum('budget');
         $totalActual = $items->sum('actual');
-        $variance = $totalBudget - $totalActual;
-
-        // Hitung jumlah berdasarkan rag_status
-        $totalStatusGreen = $items->where('rag_status', 'green')->count();
-        $totalStatusAmber = $items->where('rag_status', 'amber')->count();
-        $totalStatusRed = $items->where('rag_status', 'red')->count();
 
         return [
             'items' => $items,
             'summary' => [
-                'total_budget' => $totalBudget,
                 'total_actual' => $totalActual,
-                'variance' => $variance,
-                'total_status_green' => $totalStatusGreen,
-                'total_status_amber' => $totalStatusAmber,
-                'total_status_red' => $totalStatusRed,
             ]
         ];
     }
@@ -92,9 +80,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
     {
         $result = SdmResource::query()
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month')
-            ->selectRaw('SUM(budget) as total_budget')
             ->selectRaw('SUM(actual) as total_actual')
-            ->selectRaw('SUM(budget - actual) as variance')
             ->selectRaw('COUNT(*) as total_items')
             ->groupBy(groups: DB::raw('DATE_FORMAT(created_at, "%Y-%m")'))
             ->orderByDesc('month')
