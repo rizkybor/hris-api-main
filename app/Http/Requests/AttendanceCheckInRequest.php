@@ -18,6 +18,7 @@ class AttendanceCheckInRequest extends FormRequest
             'employee_id' => ['required', 'integer', 'exists:employee_profiles,id'],
             'check_in_lat' => ['required', 'numeric'],
             'check_in_long' => ['required', 'numeric'],
+            'check_in_photo' => ['required', 'string', 'starts_with:data:image/', 'max:5000000'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }
@@ -28,6 +29,7 @@ class AttendanceCheckInRequest extends FormRequest
             'employee_id' => 'Employee',
             'check_in_lat' => 'Latitude',
             'check_in_long' => 'Longitude',
+            'check_in_photo' => 'Photo',
             'notes' => 'Catatan',
         ];
     }
