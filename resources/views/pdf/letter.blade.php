@@ -170,7 +170,7 @@
              with it, staying immediately above the signature it belongs to. --}}
         <div style="page-break-inside: avoid;">
             @if($isSecondaryTemplate)
-                <p style="margin: 0 0 6mm 0; text-align: right;">{{ $dateLine }}</p>
+                <p style="margin: 0 0 6mm 0; text-align: left;">{{ $dateLine }}</p>
             @endif
 
             @if($letter->second_party_name)
