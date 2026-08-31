@@ -62,23 +62,52 @@
         <div class="cancelled-stamp">DIBATALKAN</div>
     @endif
 
+    @php
+        $isSecondaryTemplate = ($letter->template ?: 'primary') === 'secondary';
+        $dateLine = 'Tangerang Selatan, '.$letter->date->locale('id')->translatedFormat('d F Y');
+    @endphp
+
     <div class="page">
-        <p style="margin: 0 0 6mm 0; text-align: right;">Tangerang Selatan, {{ $letter->date->locale('id')->translatedFormat('d F Y') }}</p>
+        {{-- Primary keeps the date at the top (its own established layout).
+             Secondary instead places it right above the closing signature
+             block below, matching a Surat Keterangan's conventional layout. --}}
+        @unless($isSecondaryTemplate)
+            <p style="margin: 0 0 6mm 0; text-align: right;">{{ $dateLine }}</p>
+        @endunless
 
-        <table style="margin-bottom: 6mm;">
-            <tr>
-                <td style="border: none; width: 22%; padding: 1px 0;">Nomor</td>
-                <td style="border: none; width: 3%; padding: 1px 0;">:</td>
-                <td style="border: none; padding: 1px 0;">{{ $letter->letter_number }}</td>
-            </tr>
-            <tr>
-                <td style="border: none; padding: 1px 0;">Perihal</td>
-                <td style="border: none; padding: 1px 0;">:</td>
-                <td style="border: none; padding: 1px 0; font-weight: bold;">{{ $letter->subject }}</td>
-            </tr>
-        </table>
+        @if($isSecondaryTemplate)
+            {{-- The Secondary letterhead's logo/header is center-aligned
+                 (unlike Primary's left-aligned one), so the document title
+                 (from the Letter Code) plus Nomor/Tentang follow suit as a
+                 centered block instead of the left-aligned label/colon/value
+                 table used for Primary. --}}
+            <div style="text-align: center; margin: 5mm 0 6mm 0; word-break: break-word;">
+                <p style="margin: 0 0 2mm 0; font-size: 15px; font-weight: bold;">{{ strtoupper($letter->letterCode->name ?? '') }}</p>
+                <p style="margin: 0; padding: 1px 0;">Nomor : {{ $letter->letter_number }}</p>
+            </div>
 
-        @if($letter->recipient)
+            <div style="text-align: center; margin: 6mm auto; max-width: 100mm; word-break: break-word;">
+                <p style="margin: 0; padding: 1px 0; font-weight: bold;">{{ strtoupper('Tentang '.$letter->subject) }}</p>
+            </div>
+        @else
+            <table style="margin-bottom: 6mm;">
+                <tr>
+                    <td style="border: none; width: 22%; padding: 1px 0;">Nomor</td>
+                    <td style="border: none; width: 3%; padding: 1px 0;">:</td>
+                    <td style="border: none; padding: 1px 0;">{{ $letter->letter_number }}</td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 1px 0;">Perihal</td>
+                    <td style="border: none; padding: 1px 0;">:</td>
+                    <td style="border: none; padding: 1px 0; font-weight: bold;">{{ $letter->subject }}</td>
+                </tr>
+            </table>
+        @endif
+
+        {{-- Secondary is the Surat Keterangan-style layout -- it's a
+             general-purpose statement, not addressed to a specific
+             recipient, so the "Kepada Yth." block is hidden for it. --}}
+        @if($letter->recipient && ! $isSecondaryTemplate)
             <p style="margin: 0 0 8mm 0;">
                 Kepada Yth.<br>
                 {!! nl2br(e($letter->recipient)) !!}<br>
@@ -135,34 +164,44 @@
             </table>
         @endif
 
-        @if($letter->second_party_name)
-            <table style="page-break-inside: avoid;">
-                <tr>
-                    <td style="border: none; width: 50%; text-align: center;">
-                        <p style="margin: 0;">PIHAK PERTAMA</p>
-                        <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
-                        <div style="height: 20mm;"></div>
-                        <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
-                        <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
-                    </td>
-                    <td style="border: none; width: 50%; text-align: center;">
-                        <p style="margin: 0;">PIHAK KEDUA</p>
-                        <p style="margin: 0; font-weight: bold;">{{ $letter->second_party_name }}</p>
-                        <div style="height: 20mm;"></div>
-                        <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->second_party_signatory_name ?? '________________________' }}</p>
-                        <p style="margin: 0;">{{ $letter->second_party_signatory_title ?? '' }}</p>
-                    </td>
-                </tr>
-            </table>
-        @else
-            <div style="text-align: left; page-break-inside: avoid;">
-                <p style="margin: 0;">Hormat kami,</p>
-                <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
-                <div style="height: 20mm;"></div>
-                <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
-                <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
-            </div>
-        @endif
+        {{-- Wrapped together (rather than the date as a separate sibling
+             above) so a page break can never land between the two -- if
+             this whole block gets pushed to the next page, the date goes
+             with it, staying immediately above the signature it belongs to. --}}
+        <div style="page-break-inside: avoid;">
+            @if($isSecondaryTemplate)
+                <p style="margin: 0 0 6mm 0; text-align: right;">{{ $dateLine }}</p>
+            @endif
+
+            @if($letter->second_party_name)
+                <table>
+                    <tr>
+                        <td style="border: none; width: 50%; text-align: center;">
+                            <p style="margin: 0;">PIHAK PERTAMA</p>
+                            <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
+                            <div style="height: 20mm;"></div>
+                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
+                            <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
+                        </td>
+                        <td style="border: none; width: 50%; text-align: center;">
+                            <p style="margin: 0;">PIHAK KEDUA</p>
+                            <p style="margin: 0; font-weight: bold;">{{ $letter->second_party_name }}</p>
+                            <div style="height: 20mm;"></div>
+                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->second_party_signatory_name ?? '________________________' }}</p>
+                            <p style="margin: 0;">{{ $letter->second_party_signatory_title ?? '' }}</p>
+                        </td>
+                    </tr>
+                </table>
+            @else
+                <div style="text-align: left;">
+                    <p style="margin: 0;">Hormat kami,</p>
+                    <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
+                    <div style="height: 20mm;"></div>
+                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
+                    <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
+                </div>
+            @endif
+        </div>
     </div>
 </body>
 </html>
