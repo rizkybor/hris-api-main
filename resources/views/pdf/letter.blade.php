@@ -81,12 +81,20 @@
                  (from the Letter Code) plus Nomor/Tentang follow suit as a
                  centered block instead of the left-aligned label/colon/value
                  table used for Primary. --}}
-            <div style="text-align: center; margin: 5mm 0 6mm 0; word-break: break-word;">
+            {{-- .page's own padding (26mm left, 18mm right -- see
+                 style-letterhead.blade.php) isn't symmetric, so its content
+                 box is centered 4mm right of the PHYSICAL page center where
+                 the letterhead's logo actually sits. text-align:center alone
+                 centers against the (off-center) content box, not the
+                 physical page, so every centered block here is nudged left
+                 by that same 4mm via position:relative to true up with the
+                 logo above it. --}}
+            <div style="text-align: center; margin: 5mm 0 6mm 0; word-break: break-word; position: relative; left: -4mm;">
                 <p style="margin: 0 0 2mm 0; font-size: 15px; font-weight: bold;">{{ strtoupper($letter->letterCode->name ?? '') }}</p>
                 <p style="margin: 0; padding: 1px 0;">Nomor : {{ $letter->letter_number }}</p>
             </div>
 
-            <div style="text-align: center; margin: 6mm auto; max-width: 100mm; word-break: break-word;">
+            <div style="text-align: center; margin: 6mm auto; max-width: 100mm; word-break: break-word; position: relative; left: -4mm;">
                 <p style="margin: 0; padding: 1px 0; font-weight: bold;">{{ strtoupper('Tentang '.$letter->subject) }}</p>
             </div>
         @else
