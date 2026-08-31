@@ -339,7 +339,74 @@ class DocumentLetterController extends Controller implements HasMiddleware
             'senderLine' => $senderName.' — '.$senderTitle,
         ])->setPaper('a4');
 
+        $this->addContinuationMarkers($pdf, $documentLetter);
+
         return $pdf->stream(str_replace('/', '-', $documentLetter->document_number).'.pdf');
+    }
+
+    /**
+     * Same multi-page continuation marker as LetterController's Secondary
+     * template / PurchaseOrderController: page 1 gets a small bottom-right
+     * note when the memo spans more than one page, and every page 2+ gets a
+     * two-line bottom-right note instead. Bottom-right (not top-right)
+     * because this document always uses the secondary letterhead artwork.
+     * Drawn directly on the canvas via Dompdf's page_script Closure -- see
+     * LetterController's own notes for why (no
+     * config('dompdf.options.enable_php') needed, and dompdf has no
+     * reliable "page 1 only" vs "page 2+" CSS selector).
+     */
+    private function addContinuationMarkers($pdf, DocumentLetter $documentLetter): void
+    {
+        $pdf->render();
+
+        $canvas = $pdf->getDomPDF()->getCanvas();
+
+        // official-memo.blade.php has no .page padding of its own -- its
+        // @page margin (25mm left/right) is what actually insets the
+        // content, so that's what this text's right edge has to match
+        // instead of a padding value.
+        $rightEdge = $canvas->get_width() - (25 * 72 / 25.4);
+        $markerGray = [0x99 / 255, 0x99 / 255, 0x99 / 255];
+        $markerSize = 6;
+
+        $tanggal = $documentLetter->document_date->translatedFormat('d F Y');
+        $continuationLine1 = "... Nota Dinas No. {$documentLetter->document_number} - {$tanggal}";
+
+        // Bottom-right, same physical spot as letter.blade.php's Secondary
+        // template (753/765) -- the letterhead image is pinned to the same
+        // absolute page position across every document that uses it, since
+        // .letterhead's top offset always cancels out its own @page margin,
+        // so that footer clearance is reusable here unchanged.
+        $continuationLine1Y = 753;
+        $continuationLine2Y = 765;
+
+        $canvas->page_script(
+            function (int $pageNumber, int $pageCount, $canvas, $fontMetrics) use (
+                $rightEdge, $markerGray, $markerSize,
+                $continuationLine1, $continuationLine1Y, $continuationLine2Y
+            ) {
+                $font = $fontMetrics->getFont('helvetica', 'italic');
+
+                if ($pageNumber === 1) {
+                    if ($pageCount <= 1) {
+                        return;
+                    }
+
+                    $text = "- Page {$pageNumber} of {$pageCount} - ...";
+                    $width = $fontMetrics->getTextWidth($text, $font, $markerSize);
+                    $canvas->text($rightEdge - $width, 765, $text, $font, $markerSize, $markerGray);
+
+                    return;
+                }
+
+                $line2 = "- Page {$pageNumber} of {$pageCount} -";
+                $width1 = $fontMetrics->getTextWidth($continuationLine1, $font, $markerSize);
+                $width2 = $fontMetrics->getTextWidth($line2, $font, $markerSize);
+
+                $canvas->text($rightEdge - $width1, $continuationLine1Y, $continuationLine1, $font, $markerSize, $markerGray);
+                $canvas->text($rightEdge - $width2, $continuationLine2Y, $line2, $font, $markerSize, $markerGray);
+            }
+        );
     }
 
     /**

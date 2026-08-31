@@ -10,8 +10,12 @@
         // .letterhead image, and .cancelled-stamp (both position:fixed,
         // and so keyed off this same margin to stay pinned to their actual
         // physical spot -- see the notes further down) never drift out of
-        // sync when this number changes.
-        $topMargin = $isSecondaryTemplate ? 45 : 34;
+        // sync when this number changes. Raised a bit further than the
+        // previous 34/45mm to leave room for the "Sambungan Surat..."
+        // continuation header LetterController::exportPdf() draws on page
+        // 2+ (two lines of text between the letterhead art and the body) --
+        // must stay in sync with the y-coordinates hardcoded there.
+        $topMargin = $isSecondaryTemplate ? 54 : 44;
     @endphp
     <style>
         /* The letterhead background (header, side-stripe tagline, watermark,
@@ -103,7 +107,12 @@
              Secondary instead places it right above the closing signature
              block below, matching a Surat Keterangan's conventional layout. --}}
         @unless($isSecondaryTemplate)
-            <p style="margin: 0 0 6mm 0; text-align: right;">{{ $dateLine }}</p>
+            {{-- Negative margin-top nudges page 1 up a bit -- like .page's
+                 own -25mm quirk-correction, a block's own margin-top only
+                 ever takes effect on the page where it starts, so this
+                 never touches page 2+ (governed entirely by $topMargin
+                 above, left alone per its own request). --}}
+            <p style="margin: -12mm 0 6mm 0; text-align: right;">{{ $dateLine }}</p>
         @endunless
 
         @if($isSecondaryTemplate)
@@ -112,7 +121,9 @@
                  (from the Letter Code) plus Nomor/Tentang follow suit as a
                  centered block instead of the left-aligned label/colon/value
                  table used for Primary. --}}
-            <div style="text-align: center; margin: 2mm 0 6mm 0; word-break: break-word;">
+            {{-- Same page-1-only nudge as Primary's date paragraph above,
+                 via this block's own margin-top (never touches page 2+). --}}
+            <div style="text-align: center; margin: -7mm 0 6mm 0; word-break: break-word;">
                 <p style="margin: 0 0 2mm 0; font-size: 15px; font-weight: bold;">{{ strtoupper($letter->letterCode->name ?? '') }}</p>
                 <p style="margin: 0; padding: 1px 0;">Nomor : {{ $letter->letter_number }}</p>
             </div>
