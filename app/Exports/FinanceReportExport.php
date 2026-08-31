@@ -33,15 +33,17 @@ class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeading
         $fixedCosts = FixedCost::whereBetween('created_at', $range)->get()->map(fn ($item) => [
             'category' => 'Fixed Cost',
             'name' => $item->financial_items,
-            'budget' => (float) $item->budget,
+            'monthly_fee' => null,
             'actual' => (float) $item->actual,
             'notes' => $item->notes,
         ]);
 
+        // Infrastructure never had a "Budget" concept -- its own pair is
+        // monthly/annual fee, kept as-is (not part of this Budget removal).
         $infrastructure = InfrastructureTool::whereBetween('created_at', $range)->get()->map(fn ($item) => [
             'category' => 'Infrastructure',
             'name' => $item->tech_stack_component,
-            'budget' => (float) $item->monthly_fee,
+            'monthly_fee' => (float) $item->monthly_fee,
             'actual' => (float) $item->annual_fee,
             'notes' => $item->notes,
         ]);
@@ -49,7 +51,7 @@ class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeading
         $sdmResources = SdmResource::whereBetween('created_at', $range)->get()->map(fn ($item) => [
             'category' => 'SDM Resource',
             'name' => $item->sdm_component,
-            'budget' => (float) $item->budget,
+            'monthly_fee' => null,
             'actual' => (float) $item->actual,
             'notes' => $item->notes,
         ]);
@@ -59,7 +61,7 @@ class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeading
 
     public function headings(): array
     {
-        return ['No', 'Kategori', 'Nama Item', 'Budget', 'Actual', 'Catatan'];
+        return ['No', 'Kategori', 'Nama Item', 'Monthly Fee (Infra)', 'Actual / Annual Fee', 'Catatan'];
     }
 
     public function map($row): array
@@ -71,7 +73,7 @@ class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeading
             $rowNumber,
             $row['category'],
             $row['name'],
-            $row['budget'],
+            $row['monthly_fee'],
             $row['actual'],
             $row['notes'] ?? '',
         ];

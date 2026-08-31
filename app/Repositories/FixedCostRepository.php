@@ -66,17 +66,13 @@ class FixedCostRepository implements FixedCostRepositoryInterface
 
         $items = $query->get();
 
-        $totalBudget = $items->sum('budget');
         $totalActual = $items->sum('actual');
-        $variance = $totalBudget - $totalActual;
         $totalItems = $items->count(); // total data
 
         return [
             'items' => $items,
             'summary' => [
-                'total_budget' => $totalBudget,
                 'total_actual' => $totalActual,
-                'variance' => $variance,
                 'total_items' => $totalItems,
             ]
         ];
@@ -87,9 +83,7 @@ class FixedCostRepository implements FixedCostRepositoryInterface
         // Menggunakan FixedCost::query() untuk query Eloquent
         $result = FixedCost::query()
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month')
-            ->selectRaw('SUM(budget) as total_budget')
             ->selectRaw('SUM(actual) as total_actual')
-            ->selectRaw('SUM(budget - actual) as variance')
             ->selectRaw('COUNT(*) as total_items')
             ->groupBy(groups: DB::raw('DATE_FORMAT(created_at, "%Y-%m")'))
             ->orderByDesc('month')

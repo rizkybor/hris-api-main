@@ -22,11 +22,10 @@ class FixedCost extends Model
     }
 
     protected $fillable = [
-        'financial_items', 'description', 'budget', 'actual', 'notes'
+        'financial_items', 'description', 'actual', 'notes'
     ];
 
     protected $casts = [
-        'budget' => 'decimal:2',
         'actual' => 'decimal:2'
     ];
 

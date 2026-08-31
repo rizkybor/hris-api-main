@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Enums\SdmResourceStatus;
 
 class SdmResourceStoreUpdateRequest extends FormRequest
 {
@@ -18,11 +17,8 @@ class SdmResourceStoreUpdateRequest extends FormRequest
             'sdm_field_id' => ['sometimes', 'required', 'integer', 'exists:sdm_fields,id'],
             'productive_hours_per_month' => ['sometimes', 'required', 'numeric', 'min:0'],
             'sdm_component' => ['nullable', 'string', 'max:255'],
-            'metrik' => ['nullable', 'string', 'max:255'],
             'capacity_target' => ['nullable', 'string', 'max:255'],
-            'budget' => ['nullable', 'required', 'numeric', 'min:0'],
             'actual' => ['nullable', 'required', 'numeric', 'min:0'],
-            'rag_status' => ['sometimes','required', 'string', 'in:'.implode(',', array_column(SdmResourceStatus::cases(), 'value'))],
             'notes' => ['nullable', 'string'],
         ];
     }
@@ -33,11 +29,8 @@ class SdmResourceStoreUpdateRequest extends FormRequest
             'sdm_field_id' => 'Bidang',
             'productive_hours_per_month' => 'Jam Produktif / Bulan',
             'sdm_component' => 'SDM Component',
-            'metrik' => 'Metrik',
             'capacity_target' => 'Capacity Target',
-            'budget' => 'Budget',
             'actual' => 'Actual',
-            'rag_status' => 'RAG Status',
         ];
     }
 }
