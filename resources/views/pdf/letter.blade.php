@@ -3,6 +3,16 @@
 <head>
     <meta charset="utf-8">
     @include('pdf.partials.style-letterhead')
+    @php
+        $isSecondaryTemplate = ($letter->template ?: 'primary') === 'secondary';
+        $dateLine = 'Tangerang Selatan, '.$letter->date->locale('id')->translatedFormat('d F Y');
+        // Single source of truth for the page's top clearance, so it, the
+        // .letterhead image, and .cancelled-stamp (both position:fixed,
+        // and so keyed off this same margin to stay pinned to their actual
+        // physical spot -- see the notes further down) never drift out of
+        // sync when this number changes.
+        $topMargin = $isSecondaryTemplate ? 45 : 34;
+    @endphp
     <style>
         /* The letterhead background (header, side-stripe tagline, watermark,
            footer) is a flattened image now -- picked per-letter from the
@@ -20,7 +30,22 @@
            corner (ignoring the new margin box entirely); a fixed element
            needs a negative offset equal to the margin to reach back out
            to the physical page edge from within the now-inset content box. */
-        @page { margin: 42mm 0 6mm 0; }
+        /* $topMargin per template (see the PHP block above) -- raised for
+           Secondary specifically because continuation pages (2+) otherwise
+           started right at the bare @page margin with nothing pushing the
+           CONTENT down, landing the first line of body text almost
+           touching the letterhead's tagline. `@page :first` to give page 1
+           a different (smaller) margin than the rest was tried first and
+           didn't work -- dompdf applied the very first @page rule
+           uniformly to every page regardless of a later rule or a :first
+           pseudo-class -- so this raises the content margin for every page
+           instead. .letterhead and .cancelled-stamp below get their fixed
+           top offset computed off this same $topMargin, so the
+           header/footer background image itself stays pinned to the
+           identical physical spot -- only the flowing content (body text,
+           and page 1's own title block, which still adds its own margin
+           below this) moves with it. */
+        @page { margin: {{ $topMargin }}mm 0 6mm 0; }
         /* dompdf quirk: page 1 renders with ~25mm more top clearance than
            continuation pages, measured via pdftotext -bbox (page 1's first
            line sat at 68.76mm from the top vs page 2's 43.71mm, despite
@@ -29,13 +54,24 @@
            A plain margin-top on .page only ever applies on the page where
            that block starts (page 1), never repeating on overflow pages,
            so it's the correct tool to correct page 1 alone without
-           affecting page 2+. */
-        .page { position: relative; z-index: 1; margin-top: -25mm; }
-        .letterhead { position: fixed; top: -42mm; left: 0; width: 210mm; height: 297mm; z-index: -1; }
+           affecting page 2+. This offset is independent of the @page
+           margin value above (the quirk itself doesn't scale with it), so
+           it's the same for both templates. */
+        /* style-letterhead.blade.php's shared .page padding is asymmetric
+           (26mm left, 18mm right), so the whole content box -- not just
+           centered elements, EVERY paragraph, table, and signature block --
+           sits shifted right of the physical page center. Overridden here
+           (not in the shared partial, which purchase-order/official-memo/
+           bast also use and weren't asked about) with the average of the
+           two so total content width is unchanged, just centered. */
+        .page { position: relative; z-index: 1; margin-top: -25mm; padding-left: 22mm; padding-right: 22mm; }
+        .letterhead { position: fixed; top: -{{ $topMargin }}mm; left: 0; width: 210mm; height: 297mm; z-index: -1; }
         /* .cancelled-stamp (shared partial) is also position:fixed, so its
            top/left need the same margin-box correction to land in the same
-           physical spot as before (was centered on the raw page). */
-        .cancelled-stamp { top: 78mm; left: 40mm; }
+           physical spot as before (was centered on the raw page, at 120mm
+           from the top -- so top = 120 - $topMargin keeps it there
+           regardless of what $topMargin is). */
+        .cancelled-stamp { top: {{ 120 - $topMargin }}mm; left: 40mm; }
 
         /* Paragraph indentation is an explicit choice made in the editor
            (Tab, or its Align/Indent controls) and preserved as-authored --
@@ -62,11 +98,6 @@
         <div class="cancelled-stamp">DIBATALKAN</div>
     @endif
 
-    @php
-        $isSecondaryTemplate = ($letter->template ?: 'primary') === 'secondary';
-        $dateLine = 'Tangerang Selatan, '.$letter->date->locale('id')->translatedFormat('d F Y');
-    @endphp
-
     <div class="page">
         {{-- Primary keeps the date at the top (its own established layout).
              Secondary instead places it right above the closing signature
@@ -81,20 +112,12 @@
                  (from the Letter Code) plus Nomor/Tentang follow suit as a
                  centered block instead of the left-aligned label/colon/value
                  table used for Primary. --}}
-            {{-- .page's own padding (26mm left, 18mm right -- see
-                 style-letterhead.blade.php) isn't symmetric, so its content
-                 box is centered 4mm right of the PHYSICAL page center where
-                 the letterhead's logo actually sits. text-align:center alone
-                 centers against the (off-center) content box, not the
-                 physical page, so every centered block here is nudged left
-                 by that same 4mm via position:relative to true up with the
-                 logo above it. --}}
-            <div style="text-align: center; margin: 5mm 0 6mm 0; word-break: break-word; position: relative; left: -4mm;">
+            <div style="text-align: center; margin: 2mm 0 6mm 0; word-break: break-word;">
                 <p style="margin: 0 0 2mm 0; font-size: 15px; font-weight: bold;">{{ strtoupper($letter->letterCode->name ?? '') }}</p>
                 <p style="margin: 0; padding: 1px 0;">Nomor : {{ $letter->letter_number }}</p>
             </div>
 
-            <div style="text-align: center; margin: 6mm auto; max-width: 100mm; word-break: break-word; position: relative; left: -4mm;">
+            <div style="text-align: center; margin: 6mm auto; max-width: 100mm; word-break: break-word;">
                 <p style="margin: 0; padding: 1px 0; font-weight: bold;">{{ strtoupper('Tentang '.$letter->subject) }}</p>
             </div>
         @else
