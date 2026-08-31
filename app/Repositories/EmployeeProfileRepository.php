@@ -25,6 +25,8 @@ use Illuminate\Support\Facades\DB;
 
 class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 {
+    private const ALWAYS_MENTIONABLE_ROLES = ['manager', 'finance', 'operational_director'];
+
     public function __construct(
         private UserRepositoryInterface $userRepository,
         private JobInformationRepositoryInterface $jobInformationRepository,
@@ -40,7 +42,8 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
         ?string $workLocation,
         ?string $projectId,
         ?int $limit,
-        bool $execute
+        bool $execute,
+        ?string $roles = null
     ): Builder|Collection {
         // If search is provided, use Scout for full-text search
         if ($search) {
@@ -72,7 +75,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
         }
 
         // Apply filters (extracted to avoid duplication)
-        $this->applyFilters($query, $status, $type, $workLocation, $projectId);
+        $this->applyFilters($query, $status, $type, $workLocation, $projectId, $roles);
 
         $query->orderByDesc('created_at');
 
@@ -90,8 +93,17 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
     /**
      * Apply common filters to employee query
      */
-    private function applyFilters($query, ?string $status, ?string $type, ?string $workLocation, ?string $projectId): void
+    private function applyFilters($query, ?string $status, ?string $type, ?string $workLocation, ?string $projectId, ?string $roles = null): void
     {
+        if ($roles) {
+            $roleNames = array_filter(array_map('trim', explode(',', $roles)));
+            if ($roleNames) {
+                $query->whereHas('user.roles', function ($roleQ) use ($roleNames) {
+                    $roleQ->whereIn('name', $roleNames);
+                });
+            }
+        }
+
         if ($status) {
             $query->whereHas('jobInformation', function ($q) use ($status) {
                 $q->where('status', $status);
@@ -127,6 +139,15 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
                 // aren't on any Team, so the clause above misses them.
                 $q->orWhereHas('memberProjects', function ($memberQ) use ($projectId) {
                     $memberQ->where('projects.id', $projectId);
+                });
+
+                // Manager, Finance Manager, and Operational Director are
+                // always mentionable in a task's comments regardless of
+                // whether they're actually on the project -- they oversee
+                // work across every project, not just the ones they're a
+                // formal member of.
+                $q->orWhereHas('user.roles', function ($roleQ) {
+                    $roleQ->whereIn('name', self::ALWAYS_MENTIONABLE_ROLES);
                 });
             });
         }

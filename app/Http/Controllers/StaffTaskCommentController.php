@@ -18,6 +18,10 @@ class StaffTaskCommentController extends Controller
 {
     private const ALLOWED_ROLES = ['superadmin', 'manager', 'finance', 'operational_director'];
 
+    // Manager, Finance Manager, and Operational Director are always
+    // mentionable on a task's comments, regardless of assignment.
+    private const ALWAYS_MENTIONABLE_ROLES = ['manager', 'finance', 'operational_director'];
+
     public function index(Request $request, string $staffTaskId)
     {
         try {
@@ -72,9 +76,15 @@ class StaffTaskCommentController extends Controller
                     $allowedMentionIds->push($creatorEmployeeId);
                 }
 
+                $alwaysMentionableIds = EmployeeProfile::whereHas(
+                    'user.roles',
+                    fn ($roleQ) => $roleQ->whereIn('name', self::ALWAYS_MENTIONABLE_ROLES)
+                )->pluck('id');
+                $allowedMentionIds = $allowedMentionIds->merge($alwaysMentionableIds);
+
                 $invalidMentions = collect($mentionedIds)->diff($allowedMentionIds);
                 if ($invalidMentions->isNotEmpty()) {
-                    return ResponseHelper::jsonResponse(false, 'You can only mention this task\'s assignees or its creator', null, 422);
+                    return ResponseHelper::jsonResponse(false, 'You can only mention this task\'s assignees, its creator, or a Manager/Finance Manager/Operational Director', null, 422);
                 }
 
                 if ($employeeId && in_array($employeeId, $mentionedIds, true)) {

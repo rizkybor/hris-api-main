@@ -19,6 +19,10 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProjectTaskCommentController extends Controller implements HasMiddleware
 {
+    // Manager, Finance Manager, and Operational Director are always
+    // mentionable on a task's comments, regardless of project membership.
+    private const ALWAYS_MENTIONABLE_ROLES = ['manager', 'finance', 'operational_director'];
+
     public static function middleware()
     {
         return [
@@ -78,11 +82,15 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
 
             $mentionedIds = $validated['mentioned_employee_ids'] ?? [];
             $participantIds = $task->project->getParticipantEmployeeIds();
+            $alwaysMentionableIds = EmployeeProfile::whereHas(
+                'user.roles',
+                fn ($roleQ) => $roleQ->whereIn('name', self::ALWAYS_MENTIONABLE_ROLES)
+            )->pluck('id');
             $invalidMentions = collect($mentionedIds)->reject(
-                fn ($id) => $task->assignee_id === $id || $participantIds->contains($id)
+                fn ($id) => $task->assignee_id === $id || $participantIds->contains($id) || $alwaysMentionableIds->contains($id)
             );
             if ($invalidMentions->isNotEmpty()) {
-                return ResponseHelper::jsonResponse(false, 'You can only mention the project leader, the task\'s assignee, or employees assigned to this project\'s teams', null, 422);
+                return ResponseHelper::jsonResponse(false, 'You can only mention the project leader, the task\'s assignee, employees assigned to this project\'s teams, or a Manager/Finance Manager/Operational Director', null, 422);
             }
 
             if ($employeeId && in_array($employeeId, $mentionedIds, true)) {

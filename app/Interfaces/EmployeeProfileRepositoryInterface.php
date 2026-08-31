@@ -11,7 +11,8 @@ interface EmployeeProfileRepositoryInterface
         ?string $workLocation,
         ?string $projectId,
         ?int $limit,
-        bool $execute
+        bool $execute,
+        ?string $roles = null
     );
 
     public function getAllPaginated(
