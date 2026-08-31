@@ -12,6 +12,14 @@
             margin-bottom: 8mm;
         }
 
+        /* style-letterhead.blade.php's shared .page padding is asymmetric
+           (26mm left, 18mm right), so the whole content box -- not just
+           centered text like the title/company block above, every
+           paragraph and table too -- sits shifted right of the physical
+           page center. Overridden here with the average of the two so
+           total content width is unchanged, just actually centered. */
+        .page { padding-left: 22mm; padding-right: 22mm; }
+
         .body-content table { width: 100%; border-collapse: collapse; margin: 3mm 0; }
         .body-content table td, .body-content table th { border: 1px solid #94a3b8; padding: 4px 6px; }
         .body-content table th { background-color: #eef2ff; font-weight: bold; }
