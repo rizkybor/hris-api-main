@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialAccountController;
 use App\Http\Controllers\DashboardController;
@@ -143,6 +144,9 @@ Route::prefix('v1')
             Route::post('attendances/check-in', [AttendanceController::class, 'checkIn']);
             Route::post('attendances/check-out', [AttendanceController::class, 'checkOut']);
             Route::apiResource('attendances', AttendanceController::class);
+
+            Route::get('attendance-setting', [AttendanceSettingController::class, 'show']);
+            Route::put('attendance-setting', [AttendanceSettingController::class, 'update']);
 
             Route::apiResource('leave-requests', LeaveRequestController::class);
             Route::get('leave-requests/all/paginated', [LeaveRequestController::class, 'getAllPaginated']);

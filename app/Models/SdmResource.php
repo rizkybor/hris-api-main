@@ -22,11 +22,10 @@ class SdmResource extends Model
     }
 
     protected $fillable = [
-        'sdm_component', 'sdm_field_id', 'productive_hours_per_month', 'metrik', 'capacity_target', 'budget', 'actual', 'rag_status', 'notes'
+        'sdm_component', 'sdm_field_id', 'productive_hours_per_month', 'capacity_target', 'actual', 'notes'
     ];
 
     protected $casts = [
-        'budget' => 'decimal:2',
         'actual' => 'decimal:2',
         'productive_hours_per_month' => 'decimal:2',
     ];
@@ -40,9 +39,7 @@ class SdmResource extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('sdm_component', 'like', '%'.$search.'%')
-                ->orWhere('metrik', 'like', '%'.$search.'%')
                 ->orWhere('capacity_target', 'like', '%'.$search.'%')
-                ->orWhere('rag_status', 'like', '%'.$search.'%')
                 ->orWhereHas('field', fn ($fq) => $fq->where('name', 'like', '%'.$search.'%'));
         });
     }

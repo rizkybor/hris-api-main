@@ -175,7 +175,10 @@ class RolePermissionSeeder extends Seeder
                     'asset-',
                     'performance-review-',
                     'staff-permission-',
-                ], array_merge($employeeSpecific, $officialMemoApproveOnly, $documentEditRestricted))
+                    // attendance-setting-edit is explicitly excluded here despite the
+                    // 'attendance-' prefix above -- only Superadmin/Manager may flip the
+                    // weekend clock-in toggle, per spec.
+                ], array_merge($employeeSpecific, $officialMemoApproveOnly, $documentEditRestricted, ['attendance-setting-edit']))
                     // HR's original dashboard: Pending Leave Requests, Sticky
                     // Notes, Key Metrics, Project Budget, Quick Access,
                     // Latest Employees -- not the full widget catalog.
@@ -228,7 +231,10 @@ class RolePermissionSeeder extends Seeder
                     'asset-',
                     'performance-review-',
                     'staff-permission-',
-                ], array_merge($employeeSpecific, $officialMemoApproveOnly, $documentEditRestricted))
+                    // attendance-setting-edit is explicitly excluded here despite the
+                    // 'attendance-' prefix above -- only Superadmin/Manager may flip the
+                    // weekend clock-in toggle, per spec.
+                ], array_merge($employeeSpecific, $officialMemoApproveOnly, $documentEditRestricted, ['attendance-setting-edit']))
                     // Operational Director's original dashboard matched
                     // Manager's exactly: Projects at Risk, Sticky Notes, Key
                     // Metrics, Project Budget, Project Realized, Latest

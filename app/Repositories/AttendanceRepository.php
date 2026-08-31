@@ -6,6 +6,7 @@ use App\Constants\CacheConstants;
 use App\DTOs\AttendanceDto;
 use App\Interfaces\AttendanceRepositoryInterface;
 use App\Models\Attendance;
+use App\Models\AttendanceSetting;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -147,6 +148,15 @@ class AttendanceRepository implements AttendanceRepositoryInterface
             ->first();
     }
 
+    /**
+     * Saturday/Sunday clock-ins are blocked by default (Sat/Sun aren't
+     * scheduled work days) -- Superadmin/Manager can flip this open in
+     * Settings, in which case a weekend clock-in is recorded as overtime
+     * ("lembur") rather than a normal present/late day, so it never
+     * pollutes the regular attendance rate. On a normal work day, clocking
+     * in after 09:00 WIB is marked late, with how many minutes late
+     * carried on the record for display.
+     */
     public function checkIn(array $data): Attendance
     {
         return DB::transaction(function () use ($data) {
@@ -164,10 +174,31 @@ class AttendanceRepository implements AttendanceRepositoryInterface
                 throw new \Exception('Employee sudah check in hari ini');
             }
 
+            $now = Carbon::now('Asia/Jakarta');
+            $isWeekend = $now->isWeekend();
+
+            if ($isWeekend && ! AttendanceSetting::current()->allow_weekend_check_in) {
+                throw new \Exception('Clock in tidak tersedia pada hari Sabtu/Minggu. Hubungi Superadmin/Manager jika Anda perlu masuk lembur.');
+            }
+
+            $status = 'present';
+            $lateMinutes = null;
+
+            if ($isWeekend) {
+                $status = 'overtime';
+            } else {
+                $lateThreshold = $now->copy()->setTime(9, 0, 0);
+                if ($now->greaterThan($lateThreshold)) {
+                    $status = 'late';
+                    $lateMinutes = $lateThreshold->diffInMinutes($now);
+                }
+            }
+
             $attendanceData = array_merge($data, [
                 'date' => Carbon::now(),
                 'check_in' => Carbon::now(),
-                'status' => 'present',
+                'status' => $status,
+                'late_minutes' => $lateMinutes,
             ]);
 
             $attendanceDto = AttendanceDto::fromArray($attendanceData);

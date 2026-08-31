@@ -275,6 +275,10 @@ class PermissionSeeder extends Seeder
             'export',
         ],
 
+        'attendance-setting' => [
+            'edit',
+        ],
+
         'certificate' => [
             'menu',
             'list',
