@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 class AttendanceRepository implements AttendanceRepositoryInterface
 {
+    private const MIN_WORK_MINUTES_BEFORE_CHECK_OUT = 8 * 60;
+
     public function getAll(
         ?string $search,
         ?string $date,
@@ -226,6 +228,14 @@ class AttendanceRepository implements AttendanceRepositoryInterface
             }
 
             $checkOutTime = Carbon::now();
+
+            $minutesWorked = (int) floor(Carbon::parse($attendance->check_in)->diffInMinutes($checkOutTime));
+            if ($minutesWorked < self::MIN_WORK_MINUTES_BEFORE_CHECK_OUT) {
+                $remainingMinutes = self::MIN_WORK_MINUTES_BEFORE_CHECK_OUT - $minutesWorked;
+                $hours = intdiv($remainingMinutes, 60);
+                $minutes = $remainingMinutes % 60;
+                throw new \Exception("Belum bisa check out. Sisa {$hours} jam {$minutes} menit lagi untuk mencapai 8 jam kerja.");
+            }
 
             $updateData = array_merge($data, [
                 'check_out' => $checkOutTime,

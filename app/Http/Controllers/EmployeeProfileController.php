@@ -54,7 +54,8 @@ class EmployeeProfileController extends Controller implements HasMiddleware
                 $request->work_location,
                 $request->project_id,
                 $request->limit,
-                true
+                true,
+                $request->roles
             );
 
             return ResponseHelper::jsonResponse(true, 'Employee Retrieved Successfully', EmployeeProfileResource::collection($employees), 200);
