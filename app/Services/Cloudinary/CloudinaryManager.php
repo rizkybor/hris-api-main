@@ -62,6 +62,28 @@ class CloudinaryManager
     }
 
     /**
+     * Same as uploadImage(), but for a data URI string (e.g. a webcam
+     * capture's canvas.toDataURL() output) instead of a multipart
+     * UploadedFile -- Cloudinary's upload API accepts a base64 data URI as
+     * the source directly, no temp file needed.
+     *
+     * @return string the public_id to store in place of the old local path
+     */
+    public function uploadBase64Image(string $dataUri, string $folder, string $filename): string
+    {
+        $publicId = $this->buildPublicId($folder, $filename);
+
+        $this->upload($dataUri, [
+            'public_id' => $publicId,
+            'asset_folder' => $folder,
+            'resource_type' => 'image',
+            'overwrite' => true,
+        ]);
+
+        return $publicId;
+    }
+
+    /**
      * For non-image files (PDF, DOC, etc.) -- resource_type "raw" requires
      * the extension to be part of the public_id, unlike images.
      *
