@@ -39,12 +39,15 @@ class AttendanceSettingController extends Controller implements HasMiddleware
     {
         $validated = $request->validate([
             'allow_weekend_check_in' => ['required', 'boolean'],
+            'office_latitude' => ['sometimes', 'numeric', 'between:-90,90'],
+            'office_longitude' => ['sometimes', 'numeric', 'between:-180,180'],
+            'office_radius_meters' => ['sometimes', 'integer', 'min:10', 'max:5000'],
         ]);
 
         try {
             $setting = AttendanceSetting::current();
             $setting->update([
-                'allow_weekend_check_in' => $validated['allow_weekend_check_in'],
+                ...$validated,
                 'updated_by' => $request->user()->id,
             ]);
 

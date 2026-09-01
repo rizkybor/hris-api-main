@@ -79,20 +79,88 @@ class PayrollCalculationService
         $cfg = config('payroll.pph21');
 
         $grossAnnual = $grossMonthlySalary * 12;
-        $biayaJabatanAnnual = min($grossAnnual * $cfg['biaya_jabatan_rate'], $cfg['biaya_jabatan_monthly_cap'] * 12);
         $bpjsDeductibleAnnual = $bpjsEmployeeDeductible * 12;
 
+        $pkp = $this->taxablePkpAnnual($grossAnnual, $bpjsDeductibleAnnual, $ptkpStatus, $cfg);
+
+        return $this->progressiveTaxAnnual($pkp, $cfg) / 12;
+    }
+
+    /**
+     * THR (Tunjangan Hari Raya): mandatory annual religious-holiday bonus
+     * (Permenaker No. 6/2016). An employee with >= 12 months of continuous
+     * service gets a full month's wage; less than that (but >= 1 month) gets
+     * it prorated by months of service / 12. THR is NOT part of the BPJS
+     * wage base (only the fixed monthly wage is), so no BPJS is deducted
+     * here.
+     *
+     * PPh21 on THR uses the incremental method DJP intends for irregular
+     * income: tax owed on (this employee's regular annual income + THR)
+     * minus tax owed on the regular annual income alone -- so THR is taxed
+     * at the marginal bracket(s) it actually pushes the employee into,
+     * rather than being taxed as if it were spread evenly across the year.
+     * This mirrors calculatePph21Monthly's own annualized-bracket approach
+     * rather than DJP's TER lookup tables -- see this class's own
+     * disclaimer.
+     */
+    public function calculateThr(float $monthlySalary, int $monthsOfService, string $ptkpStatus): array
+    {
+        $monthsOfService = max(0, min(12, $monthsOfService));
+        $grossThr = round($monthlySalary * ($monthsOfService / 12), 2);
+
+        $pph21 = round($this->calculateThrPph21($monthlySalary, $grossThr, $ptkpStatus), 2);
+
+        return [
+            'months_of_service' => $monthsOfService,
+            'gross_thr' => $grossThr,
+            'pph21' => $pph21,
+            'net_thr' => round($grossThr - $pph21, 2),
+        ];
+    }
+
+    private function calculateThrPph21(float $monthlySalary, float $grossThr, string $ptkpStatus): float
+    {
+        if ($grossThr <= 0) {
+            return 0.0;
+        }
+
+        $cfg = config('payroll.pph21');
+        $bpjs = $this->calculateBpjs($monthlySalary);
+        $bpjsDeductibleAnnual = ($bpjs['jht_employee'] + $bpjs['jp_employee']) * 12;
+        $regularGrossAnnual = $monthlySalary * 12;
+
+        $pkpWithoutThr = $this->taxablePkpAnnual($regularGrossAnnual, $bpjsDeductibleAnnual, $ptkpStatus, $cfg);
+        $pkpWithThr = $this->taxablePkpAnnual($regularGrossAnnual + $grossThr, $bpjsDeductibleAnnual, $ptkpStatus, $cfg);
+
+        return max(0, $this->progressiveTaxAnnual($pkpWithThr, $cfg) - $this->progressiveTaxAnnual($pkpWithoutThr, $cfg));
+    }
+
+    /**
+     * PKP (Penghasilan Kena Pajak) Tahunan: gross annual income minus biaya
+     * jabatan, BPJS JHT/JP employee contributions, and PTKP -- rounded down
+     * to the nearest Rp 1,000 per Pasal 17 UU HPP.
+     */
+    private function taxablePkpAnnual(float $grossAnnual, float $bpjsDeductibleAnnual, string $ptkpStatus, array $cfg): float
+    {
+        $biayaJabatanAnnual = min($grossAnnual * $cfg['biaya_jabatan_rate'], $cfg['biaya_jabatan_monthly_cap'] * 12);
         $nettoAnnual = max(0, $grossAnnual - $biayaJabatanAnnual - $bpjsDeductibleAnnual);
         $ptkpAnnual = $this->calculatePtkpAnnual($ptkpStatus);
 
-        $pkp = max(0, floor(($nettoAnnual - $ptkpAnnual) / 1000) * 1000);
+        return max(0, floor(($nettoAnnual - $ptkpAnnual) / 1000) * 1000);
+    }
 
-        $pph21Annual = 0;
+    /**
+     * Applies the Pasal 17 UU HPP progressive brackets to an annual PKP.
+     */
+    private function progressiveTaxAnnual(float $pkp, array $cfg): float
+    {
+        $tax = 0;
         $previousCap = 0;
+
         foreach ($cfg['brackets'] as $bracket) {
             $bracketCeiling = $bracket['up_to'] ?? INF;
             $taxableInBracket = max(0, min($pkp, $bracketCeiling) - $previousCap);
-            $pph21Annual += $taxableInBracket * $bracket['rate'];
+            $tax += $taxableInBracket * $bracket['rate'];
             $previousCap = $bracketCeiling;
 
             if ($pkp <= $bracketCeiling) {
@@ -100,6 +168,6 @@ class PayrollCalculationService
             }
         }
 
-        return $pph21Annual / 12;
+        return $tax;
     }
 }

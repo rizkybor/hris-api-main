@@ -312,6 +312,9 @@ class PermissionSeeder extends Seeder
             'task-pivot-create',
             'task-pivot-edit',
             'task-pivot-delete',
+            'evaluation-list',
+            'evaluation-create',
+            'evaluation-delete',
         ],
 
         'backup' => [
@@ -342,6 +345,9 @@ class PermissionSeeder extends Seeder
             'delete',
             'assign',
             'my-assets',
+            'maintenance-list',
+            'maintenance-create',
+            'maintenance-delete',
         ],
 
         'performance-review' => [

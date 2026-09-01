@@ -23,7 +23,21 @@ class VendorsResource extends JsonResource
             'address' => $this->address,
             'type' => $this->type,
             'field' => $this->field,
+            'npwp' => $this->npwp,
+            'siup_number' => $this->siup_number,
+            'nib_number' => $this->nib_number,
             'notes' => $this->notes,
+            // Cheap aggregates from the query's withAvg/withCount -- both
+            // read as plain null when a vendor has zero evaluations (an
+            // isset() check here would wrongly treat that null as "wasn't
+            // loaded" and drop the key), and null when the caller's query
+            // didn't eager-load them at all, which is an equally fine
+            // fallback since there's nothing to report either way.
+            'average_rating' => $this->evaluations_avg_rating !== null ? round((float) $this->evaluations_avg_rating, 2) : null,
+            'evaluations_count' => (int) ($this->evaluations_count ?? 0),
+            'evaluations' => $this->whenLoaded('evaluations', function () {
+                return VendorEvaluationResource::collection($this->evaluations);
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 

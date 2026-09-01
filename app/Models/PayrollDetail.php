@@ -30,6 +30,7 @@ class PayrollDetail extends Model
         'attended_days',
         'sick_days',
         'absent_days',
+        'months_of_service',
         'bpjs_kesehatan_employee',
         'bpjs_jht_employee',
         'bpjs_jp_employee',

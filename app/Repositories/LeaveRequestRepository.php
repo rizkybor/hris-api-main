@@ -7,6 +7,8 @@ use App\Enums\LeaveType;
 use App\Interfaces\LeaveRequestRepositoryInterface;
 use App\Models\EmployeeProfile;
 use App\Models\LeaveRequest;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\EmailService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +17,8 @@ use Illuminate\Support\Facades\DB;
 class LeaveRequestRepository implements LeaveRequestRepositoryInterface
 {
     public function __construct(
-        private EmailService $emailService
+        private EmailService $emailService,
+        private CloudinaryManager $cloudinary
     ) {}
 
     public function getAll(
@@ -84,7 +87,7 @@ class LeaveRequestRepository implements LeaveRequestRepositoryInterface
         $employee = EmployeeProfile::with('jobInformation')->findOrFail($employeeId);
         $quota = $employee->jobInformation->annual_leave_quota ?? 12;
 
-        $used = (int) LeaveRequest::where('employee_id', $employeeId)
+        $used = (float) LeaveRequest::where('employee_id', $employeeId)
             ->where('leave_type', LeaveType::ANNUAL_LEAVE->value)
             ->where('status', 'approved')
             ->whereYear('start_date', $year)
@@ -101,11 +104,27 @@ class LeaveRequestRepository implements LeaveRequestRepositoryInterface
 
     public function store(array $data)
     {
+        // Uploaded before the transaction opens (same reasoning as
+        // Attendance's check-in photo): a slow/failed Cloudinary call
+        // should fail the request cleanly rather than hold a DB
+        // transaction open.
+        if (! empty($data['attachment'])) {
+            $file = $data['attachment'];
+
+            $data['attachment_original_name'] = $file->getClientOriginalName();
+            $data['attachment_mime_type'] = $file->getMimeType();
+            $data['attachment_path'] = $this->cloudinary->uploadAuto(
+                $file,
+                CloudinaryFolders::companyFiles('leave-requests'),
+                CloudinaryFolders::filename('leave-'.$data['employee_id'])
+            );
+        }
+
         return DB::transaction(function () use ($data) {
             $startDate = Carbon::parse($data['start_date']);
             $endDate = Carbon::parse($data['end_date']);
 
-            $data['total_days'] = $startDate->diffInDays($endDate) + 1;
+            $data['total_days'] = ! empty($data['is_half_day']) ? 0.5 : $startDate->diffInDays($endDate) + 1;
 
             if ($data['leave_type'] === LeaveType::ANNUAL_LEAVE->value) {
                 $balance = $this->getLeaveBalance($data['employee_id'], $startDate->year);

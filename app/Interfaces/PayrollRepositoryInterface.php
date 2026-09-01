@@ -25,6 +25,8 @@ interface PayrollRepositoryInterface
 
     public function generatePayroll(string $salaryMonth);
 
+    public function generateThrPayroll(string $salaryMonth);
+
     public function updatePayrollDetail(string $id, array $data);
 
     public function markAsPaid(string $payrollId, string $paymentDate);

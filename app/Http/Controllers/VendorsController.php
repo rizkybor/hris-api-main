@@ -137,6 +137,7 @@ class VendorsController extends Controller implements HasMiddleware
                 'taskPivots.scopeVendor',
                 'attachments',
                 'projects',
+                'evaluations.evaluator',
             ]);
 
             return ResponseHelper::jsonResponse(

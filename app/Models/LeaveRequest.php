@@ -28,8 +28,12 @@ class LeaveRequest extends Model
         'start_date',
         'end_date',
         'total_days',
+        'is_half_day',
         'reason',
         'emergency_contact',
+        'attachment_original_name',
+        'attachment_path',
+        'attachment_mime_type',
         'status',
         'approved_by',
     ];
@@ -40,6 +44,8 @@ class LeaveRequest extends Model
             'leave_type' => LeaveType::class,
             'start_date' => 'date',
             'end_date' => 'date',
+            'total_days' => 'float',
+            'is_half_day' => 'boolean',
         ];
     }
 

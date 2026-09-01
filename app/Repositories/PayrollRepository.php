@@ -127,7 +127,9 @@ class PayrollRepository implements PayrollRepositoryInterface
         return DB::transaction(function () use ($salaryMonth) {
             $month = Carbon::parse($salaryMonth)->startOfMonth();
 
-            $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))->first();
+            $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))
+                ->where('type', 'monthly')
+                ->first();
 
             if ($existingPayroll) {
                 throw new \Exception('Payroll untuk bulan ' . $month->format('F Y') . ' sudah dibuat');
@@ -135,6 +137,7 @@ class PayrollRepository implements PayrollRepositoryInterface
 
             $payroll = Payroll::create([
                 'salary_month' => $month->format('Y-m-d'),
+                'type' => 'monthly',
                 'status' => 'processing',
             ]);
 
@@ -249,6 +252,104 @@ class PayrollRepository implements PayrollRepositoryInterface
         });
     }
 
+    /**
+     * THR (Tunjangan Hari Raya): a separate payroll run from the regular
+     * monthly one (same salary_month is allowed since `type` distinguishes
+     * them -- see the migration). Unlike generatePayroll(), eligibility is
+     * driven by tenure (job_information.start_date), not attendance -- an
+     * employee who has worked at least 1 full month is entitled to a
+     * prorated THR regardless of that month's attendance record.
+     */
+    public function generateThrPayroll(string $salaryMonth): Payroll
+    {
+        return DB::transaction(function () use ($salaryMonth) {
+            $month = Carbon::parse($salaryMonth)->startOfMonth();
+
+            $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))
+                ->where('type', 'thr')
+                ->first();
+
+            if ($existingPayroll) {
+                throw new \Exception('THR untuk bulan '.$month->format('F Y').' sudah dibuat');
+            }
+
+            $payroll = Payroll::create([
+                'salary_month' => $month->format('Y-m-d'),
+                'type' => 'thr',
+                'status' => 'processing',
+            ]);
+
+            $endOfMonth = $month->copy()->endOfMonth();
+
+            $activeEmployees = EmployeeProfile::with(['jobInformation', 'user'])
+                ->whereHas('jobInformation', function ($query) use ($endOfMonth) {
+                    $query->where('status', 'active')
+                        ->whereNotNull('start_date')
+                        ->where('start_date', '<=', $endOfMonth->format('Y-m-d'));
+                })
+                ->get();
+
+            $payrollDetails = [];
+
+            foreach ($activeEmployees as $employee) {
+                $jobInfo = $employee->jobInformation;
+                $monthlySalary = (float) ($jobInfo->monthly_salary ?? 0);
+                $ptkpStatus = $jobInfo->ptkp_status ?? 'TK/0';
+
+                $monthsOfService = (int) Carbon::parse($jobInfo->start_date)->diffInMonths($endOfMonth);
+
+                // Permenaker No. 6/2016: at least 1 full month of continuous
+                // service is required to be eligible for a (prorated) THR.
+                if ($monthsOfService < 1 || $monthlySalary <= 0) {
+                    continue;
+                }
+
+                $calc = $this->payrollCalculationService->calculateThr($monthlySalary, $monthsOfService, $ptkpStatus);
+
+                $payrollDetails[] = [
+                    'payroll_id' => $payroll->id,
+                    'employee_id' => $employee->id,
+                    'original_salary' => $monthlySalary,
+                    'gross_salary' => $calc['gross_thr'],
+                    'final_salary' => $calc['net_thr'],
+                    'attended_days' => 0,
+                    'sick_days' => 0,
+                    'absent_days' => 0,
+                    'months_of_service' => $calc['months_of_service'],
+                    'bpjs_kesehatan_employee' => 0,
+                    'bpjs_jht_employee' => 0,
+                    'bpjs_jp_employee' => 0,
+                    'bpjs_kesehatan_company' => 0,
+                    'bpjs_jht_company' => 0,
+                    'bpjs_jp_company' => 0,
+                    'bpjs_jkk_company' => 0,
+                    'bpjs_jkm_company' => 0,
+                    'pph21' => $calc['pph21'],
+                    'total_deduction' => $calc['pph21'],
+                    'notes' => "THR -- Masa kerja: {$calc['months_of_service']}/12 bulan | Gaji bulanan: Rp ".number_format($monthlySalary, 0, ',', '.')." | THR Kotor: Rp ".number_format($calc['gross_thr'], 0, ',', '.').' | PPh21: Rp '.number_format($calc['pph21'], 0, ',', '.'),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            if (empty($payrollDetails)) {
+                throw new \Exception('Tidak ada karyawan yang memenuhi syarat masa kerja minimal 1 bulan untuk THR bulan ini');
+            }
+
+            foreach (array_chunk($payrollDetails, CacheConstants::PAYROLL_BULK_INSERT_CHUNK_SIZE) as $chunk) {
+                DB::table('payroll_details')->insert($chunk);
+            }
+
+            $payroll->update(['status' => 'pending']);
+
+            return $payroll->load([
+                'payrollDetails.employee.user',
+                'payrollDetails.employee.jobInformation.team',
+                'payrollDetails.employee.bankInformation',
+            ]);
+        });
+    }
+
     public function updatePayrollDetail(string $id, array $data): PayrollDetail
     {
         return DB::transaction(function () use ($id, $data) {
@@ -317,9 +418,10 @@ class PayrollRepository implements PayrollRepositoryInterface
         $currentMonth = now()->startOfMonth();
         $lastMonth = now()->subMonth()->startOfMonth();
 
-        // Current month payroll
-        $currentPayroll = Payroll::where('salary_month', $currentMonth->format('Y-m-d'))->first();
-        $lastPayroll = Payroll::where('salary_month', $lastMonth->format('Y-m-d'))->first();
+        // Current month payroll (regular monthly run only -- a THR run for
+        // the same month, if any, is a separate figure)
+        $currentPayroll = Payroll::where('salary_month', $currentMonth->format('Y-m-d'))->where('type', 'monthly')->first();
+        $lastPayroll = Payroll::where('salary_month', $lastMonth->format('Y-m-d'))->where('type', 'monthly')->first();
 
         $totalEmployeesCurrentMonth = $currentPayroll
             ? $currentPayroll->payrollDetails()->count()

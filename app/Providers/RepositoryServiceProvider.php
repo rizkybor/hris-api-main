@@ -24,6 +24,7 @@ use App\Interfaces\CompanyFinanceRepositoryInterface;
 use App\Interfaces\FixedCostRepositoryInterface;
 use App\Interfaces\InfrastructureToolRepositoryInterface;
 use App\Interfaces\SdmResourceRepositoryInterface;
+use App\Interfaces\VendorEvaluationRepositoryInterface;
 use App\Interfaces\VendorsAttachmentRepositoryInterface;
 use App\Interfaces\VendorsRepositoryInterface;
 use App\Interfaces\VendorsTaskListRepositoryInterface;
@@ -54,6 +55,7 @@ use App\Repositories\FixedCostRepository;
 use App\Repositories\InfrastructureToolRepository;
 use App\Repositories\SdmResourceRepository;
 use App\Repositories\VendorsAttachmentRepository;
+use App\Repositories\VendorEvaluationRepository;
 use App\Repositories\VendorsRepository;
 use App\Repositories\VendorsTaskListRepository;
 use App\Repositories\VendorsTaskPaymentRepository;
@@ -95,6 +97,7 @@ class RepositoryServiceProvider extends ServiceProvider
         // Vendors
         $this->app->bind(VendorsRepositoryInterface::class, VendorsRepository::class);
         $this->app->bind(VendorsAttachmentRepositoryInterface::class, VendorsAttachmentRepository::class);
+        $this->app->bind(VendorEvaluationRepositoryInterface::class, VendorEvaluationRepository::class);
         $this->app->bind(VendorsTaskListRepositoryInterface::class, VendorsTaskListRepository::class);
         $this->app->bind(VendorsTaskPaymentRepositoryInterface::class, VendorsTaskPaymentRepository::class);
         $this->app->bind(VendorsTaskScopeRepositoryInterface::class, VendorsTaskScopeRepository::class);

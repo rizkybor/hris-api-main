@@ -18,6 +18,8 @@ class VendorsRepository implements VendorsRepositoryInterface
         bool $execute
     ): Builder|Collection {
         $query = Vendors::query()
+            ->withAvg('evaluations', 'rating')
+            ->withCount('evaluations')
             ->where(function ($query) use ($search) {
                 if ($search) {
                     $query->search($search);
@@ -52,7 +54,7 @@ class VendorsRepository implements VendorsRepositoryInterface
     public function getById(
         string $id
     ): Vendors {
-        return Vendors::findOrFail($id);
+        return Vendors::withAvg('evaluations', 'rating')->withCount('evaluations')->findOrFail($id);
     }
 
     public function getStatistic(): array

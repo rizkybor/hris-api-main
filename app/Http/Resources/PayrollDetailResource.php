@@ -24,6 +24,7 @@ class PayrollDetailResource extends JsonResource
             'attended_days' => $this->attended_days,
             'sick_days' => $this->sick_days,
             'absent_days' => $this->absent_days,
+            'months_of_service' => $this->months_of_service,
             'bpjs_kesehatan_employee' => (float) $this->bpjs_kesehatan_employee,
             'bpjs_jht_employee' => (float) $this->bpjs_jht_employee,
             'bpjs_jp_employee' => (float) $this->bpjs_jp_employee,

@@ -22,6 +22,8 @@ class PayslipResource extends JsonResource
         return [
             'id' => $this->id,
             'period' => $this->payroll->salary_month,
+            'type' => $this->payroll->type,
+            'months_of_service' => $this->months_of_service,
             'payment_date' => $this->payroll->payment_date,
             'created_at' => $this->created_at,
             'employee_name' => $this->employee?->user?->name,
