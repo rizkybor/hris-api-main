@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,8 +24,11 @@ class LeaveRequestResource extends JsonResource
             'end_date' => $this->end_date,
             'total_days' => $this->total_days,
             'days' => $this->total_days, // alias for frontend compatibility
+            'is_half_day' => (bool) $this->is_half_day,
             'reason' => $this->reason,
             'emergency_contact' => $this->emergency_contact,
+            'attachment_original_name' => $this->attachment_original_name,
+            'attachment_url' => CloudinaryUrl::auto($this->attachment_path, $this->attachment_mime_type),
             'status' => $this->status,
             'approved_by' => $this->approved_by,
             'employee' => new EmployeeProfileResource($this->whenLoaded('employee')),

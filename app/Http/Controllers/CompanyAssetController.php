@@ -77,7 +77,7 @@ class CompanyAssetController extends Controller implements HasMiddleware
         ]);
 
         try {
-            $assets = CompanyAsset::with('assignee.user')
+            $assets = CompanyAsset::with(['assignee.user', 'supplier'])
                 ->when($validated['search'] ?? null, function ($q, $search) {
                     $q->where(function ($q2) use ($search) {
                         $q2->where('name', 'like', "%{$search}%")
@@ -118,7 +118,7 @@ class CompanyAssetController extends Controller implements HasMiddleware
     public function show(string $id)
     {
         try {
-            $asset = CompanyAsset::with(['assignee.user', 'assignmentHistories.employee.user', 'assignmentHistories.assignedBy'])->findOrFail($id);
+            $asset = CompanyAsset::with(['assignee.user', 'assignmentHistories.employee.user', 'assignmentHistories.assignedBy', 'supplier', 'maintenanceLogs.performer'])->findOrFail($id);
 
             return ResponseHelper::jsonResponse(true, 'Asset Retrieved Successfully', new CompanyAssetResource($asset), 200);
         } catch (ModelNotFoundException $e) {
@@ -139,6 +139,10 @@ class CompanyAssetController extends Controller implements HasMiddleware
             'serial_number' => 'nullable|string|max:100',
             'purchase_date' => 'nullable|date',
             'purchase_price' => 'nullable|numeric|min:0',
+            'warranty_expiry_date' => 'nullable|date',
+            'useful_life_months' => 'nullable|integer|min:1',
+            'depreciation_method' => 'nullable|string|in:straight_line',
+            'supplier_vendor_id' => 'nullable|exists:vendors,id',
             'condition' => 'nullable|string|in:good,fair,damaged',
             'notes' => 'nullable|string',
         ]);
@@ -167,6 +171,10 @@ class CompanyAssetController extends Controller implements HasMiddleware
             'serial_number' => 'nullable|string|max:100',
             'purchase_date' => 'nullable|date',
             'purchase_price' => 'nullable|numeric|min:0',
+            'warranty_expiry_date' => 'nullable|date',
+            'useful_life_months' => 'nullable|integer|min:1',
+            'depreciation_method' => 'nullable|string|in:straight_line',
+            'supplier_vendor_id' => 'nullable|exists:vendors,id',
             'condition' => 'nullable|string|in:good,fair,damaged',
             'status' => 'nullable|string|in:available,assigned,maintenance,retired,lost',
             'notes' => 'nullable|string',

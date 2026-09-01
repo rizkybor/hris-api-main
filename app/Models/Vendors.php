@@ -29,6 +29,9 @@ class Vendors extends Model
         'address',
         'type',
         'field',
+        'npwp',
+        'siup_number',
+        'nib_number',
         'notes'
     ];
 
@@ -47,6 +50,14 @@ class Vendors extends Model
 {
     return $this->hasMany(VendorsAttachment::class, 'vendor_id');
 }
+
+    /**
+     * Rating/evaluation history -- optional, a vendor may have none yet.
+     */
+    public function evaluations()
+    {
+        return $this->hasMany(VendorEvaluation::class, 'vendor_id')->orderByDesc('evaluated_at');
+    }
 
     /**
      * Projects owned by this vendor -- optional, a Project may have no

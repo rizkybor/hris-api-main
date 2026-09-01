@@ -16,6 +16,12 @@ class VendorsStoreRequest extends FormRequest
             'address' => ['nullable', 'string'],
             'type' => ['nullable', 'string', 'max:100'],
             'field' => ['nullable', 'string', 'max:100'],
+            // All optional -- a vendor may be an individual (perorangan)
+            // rather than a registered company (PT/CV), so none of these
+            // legal identifiers are guaranteed to exist.
+            'npwp' => ['nullable', 'string', 'max:50'],
+            'siup_number' => ['nullable', 'string', 'max:100'],
+            'nib_number' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string'],
         ];
     }
@@ -30,6 +36,9 @@ class VendorsStoreRequest extends FormRequest
             'address' => 'Address',
             'type' => 'Vendor Type',
             'field' => 'Vendor Field',
+            'npwp' => 'NPWP',
+            'siup_number' => 'Nomor SIUP',
+            'nib_number' => 'Nomor NIB',
             'notes' => 'Notes',
         ];
     }
