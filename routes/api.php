@@ -46,6 +46,7 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\GreetingController;
+use App\Http\Controllers\AssetMaintenanceLogController;
 use App\Http\Controllers\CompanyAssetController;
 use App\Http\Controllers\EmployeeResignationController;
 use App\Http\Controllers\PerformanceReviewController;
@@ -57,6 +58,7 @@ use App\Http\Controllers\CompanyFinanceController;
 use App\Http\Controllers\SdmResourceController;
 use App\Http\Controllers\SdmFieldController;
 use App\Http\Controllers\CompanyAboutController;
+use App\Http\Controllers\VendorEvaluationController;
 use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\VendorsAttachmentController;
 use App\Http\Controllers\VendorsTaskListController;
@@ -160,6 +162,7 @@ Route::prefix('v1')
             Route::get('payrolls/statistics', [PayrollController::class, 'getStatistics']);
             Route::get('payrolls/all/paginated', [PayrollController::class, 'getAllPaginated']);
             Route::post('payrolls/generate', [PayrollController::class, 'generate']);
+            Route::post('payrolls/generate-thr', [PayrollController::class, 'generateThr']);
             Route::get('payrolls/{id}/statistics', [PayrollController::class, 'getPayrollStatistics']);
             Route::get('payrolls/{id}/details', [PayrollController::class, 'getDetails']); // Paginated details
             Route::get('payrolls/{id}/positions', [PayrollController::class, 'getPositions']);
@@ -232,6 +235,11 @@ Route::prefix('v1')
             Route::get('vendors/all/paginated', [VendorsController::class, 'getAllPaginated']);
             Route::get('vendors/statistic', [VendorsController::class, 'getStatistic']);
             Route::apiResource('vendors', VendorsController::class);
+
+            // Vendor Evaluations (rating)
+            Route::get('vendors/{vendorId}/evaluations', [VendorEvaluationController::class, 'index']);
+            Route::post('vendor-evaluations', [VendorEvaluationController::class, 'store']);
+            Route::delete('vendor-evaluations/{id}', [VendorEvaluationController::class, 'destroy']);
 
             // Vendors Attachment
             Route::get('vendors-attachment/all/paginated', [VendorsAttachmentController::class, 'getAllPaginated']);
@@ -315,6 +323,11 @@ Route::prefix('v1')
             Route::post('company-assets/{id}/return', [CompanyAssetController::class, 'returnAsset']);
             Route::apiResource('company-assets', CompanyAssetController::class)->except(['show']);
             Route::get('company-assets/{id}', [CompanyAssetController::class, 'show']);
+
+            // Asset Maintenance Logs
+            Route::get('company-assets/{assetId}/maintenance-logs', [AssetMaintenanceLogController::class, 'index']);
+            Route::post('asset-maintenance-logs', [AssetMaintenanceLogController::class, 'store']);
+            Route::delete('asset-maintenance-logs/{id}', [AssetMaintenanceLogController::class, 'destroy']);
 
             // Resignation / Offboarding
             Route::get('resignations', [EmployeeResignationController::class, 'index']);

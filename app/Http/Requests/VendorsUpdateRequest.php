@@ -16,6 +16,9 @@ class VendorsUpdateRequest extends FormRequest
             'address' => ['nullable', 'string'],
             'type' => ['nullable', 'string', 'max:100'],
             'field' => ['nullable', 'string', 'max:100'],
+            'npwp' => ['nullable', 'string', 'max:50'],
+            'siup_number' => ['nullable', 'string', 'max:100'],
+            'nib_number' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string'],
         ];
     }
@@ -30,6 +33,9 @@ class VendorsUpdateRequest extends FormRequest
             'address' => 'Address',
             'type' => 'Vendor Type',
             'field' => 'Vendor Field',
+            'npwp' => 'NPWP',
+            'siup_number' => 'Nomor SIUP',
+            'nib_number' => 'Nomor NIB',
             'notes' => 'Notes',
         ];
     }

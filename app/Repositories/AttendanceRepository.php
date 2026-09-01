@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Constants\CacheConstants;
 use App\DTOs\AttendanceDto;
+use App\Enums\WorkLocation;
 use App\Interfaces\AttendanceRepositoryInterface;
 use App\Models\Attendance;
 use App\Models\AttendanceSetting;
@@ -190,6 +191,8 @@ class AttendanceRepository implements AttendanceRepositoryInterface
             throw new \Exception('Clock in tidak tersedia pada hari Sabtu/Minggu. Hubungi Superadmin/Manager jika Anda perlu masuk lembur.');
         }
 
+        $this->guardOfficeGeofence($data);
+
         // Uploaded before the transaction opens: the photo is required for
         // check-in to succeed at all (unlike Project's optional photo,
         // which uploads after commit and tolerates the row existing
@@ -241,6 +244,50 @@ class AttendanceRepository implements AttendanceRepositoryInterface
 
             return Attendance::create($attendanceDto->toArray());
         });
+    }
+
+    /**
+     * Only Work Location = Office employees are geofenced -- Remote/Hybrid
+     * are expected to clock in from wherever they actually work, so their
+     * coordinates are recorded but never checked against the office.
+     */
+    private function guardOfficeGeofence(array $data): void
+    {
+        $jobInformation = Auth::user()->employeeProfile?->jobInformation;
+
+        if (! $jobInformation || $jobInformation->work_location !== WorkLocation::OFFICE->value) {
+            return;
+        }
+
+        $setting = AttendanceSetting::current();
+
+        $distanceMeters = $this->haversineDistanceMeters(
+            (float) $setting->office_latitude,
+            (float) $setting->office_longitude,
+            (float) $data['check_in_lat'],
+            (float) $data['check_in_long']
+        );
+
+        if ($distanceMeters > $setting->office_radius_meters) {
+            $distanceKm = round($distanceMeters / 1000, 2);
+            throw new \Exception("Anda berada {$distanceKm} km dari kantor. Check in hanya bisa dilakukan dalam radius {$setting->office_radius_meters} meter dari kantor.");
+        }
+    }
+
+    /**
+     * Great-circle distance between two lat/long points, in meters.
+     */
+    private function haversineDistanceMeters(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $earthRadiusMeters = 6371000;
+
+        $latDelta = deg2rad($lat2 - $lat1);
+        $lonDelta = deg2rad($lon2 - $lon1);
+
+        $a = sin($latDelta / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($lonDelta / 2) ** 2;
+
+        return $earthRadiusMeters * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     public function checkOut(array $data): Attendance

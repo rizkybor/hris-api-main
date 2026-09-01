@@ -4,13 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-class Payroll extends Model
+
+class VendorEvaluation extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -18,26 +17,32 @@ class Payroll extends Model
             ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->useLogName('Payroll');
+            ->useLogName('Vendor Evaluation');
     }
 
     protected $fillable = [
-        'salary_month',
-        'type',
-        'payment_date',
-        'status',
+        'vendor_id',
+        'rating',
+        'notes',
+        'evaluated_at',
+        'evaluated_by',
     ];
 
     protected function casts(): array
     {
         return [
-            'salary_month' => 'date',
-            'payment_date' => 'date',
+            'rating' => 'integer',
+            'evaluated_at' => 'date',
         ];
     }
 
-    public function payrollDetails()
+    public function vendor()
     {
-        return $this->hasMany(PayrollDetail::class);
+        return $this->belongsTo(Vendors::class, 'vendor_id');
+    }
+
+    public function evaluator()
+    {
+        return $this->belongsTo(User::class, 'evaluated_by');
     }
 }

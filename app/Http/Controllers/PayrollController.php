@@ -9,6 +9,7 @@ use App\Http\Resources\PayrollDetailResource;
 use App\Http\Resources\PayrollResource;
 use App\Interfaces\PayrollRepositoryInterface;
 use App\Jobs\GeneratePayrollJob;
+use App\Jobs\GenerateThrPayrollJob;
 use App\Models\Payroll;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -31,7 +32,7 @@ class PayrollController extends Controller implements HasMiddleware
     {
         return [
             new Middleware(PermissionMiddleware::using(['payroll-list']), only: ['index', 'getAllPaginated', 'show', 'getDetails', 'getPositions', 'exportExcel']),
-            new Middleware(PermissionMiddleware::using(['payroll-create']), only: ['generate']),
+            new Middleware(PermissionMiddleware::using(['payroll-create']), only: ['generate', 'generateThr']),
             new Middleware(PermissionMiddleware::using(['payroll-edit']), only: ['updateDetail']),
             new Middleware(PermissionMiddleware::using(['payroll-process']), only: ['markAsPaid']),
             new Middleware(PermissionMiddleware::using(['payroll-statistics']), only: ['getStatistics', 'getPayrollStatistics']),
@@ -160,7 +161,9 @@ class PayrollController extends Controller implements HasMiddleware
             $month = Carbon::parse($validated['salary_month'])->startOfMonth();
 
             // Check if payroll for this month already exists
-            $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))->first();
+            $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))
+                ->where('type', 'monthly')
+                ->first();
 
             if ($existingPayroll) {
                 return ResponseHelper::jsonResponse(
@@ -187,6 +190,51 @@ class PayrollController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 400);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Generate THR (Tunjangan Hari Raya) for a specific month (Queued for
+     * background processing) -- a separate run from the regular monthly
+     * payroll, based on tenure rather than attendance.
+     */
+    public function generateThr(Request $request)
+    {
+        $validated = $request->validate([
+            'salary_month' => 'required|date_format:Y-m',
+        ]);
+
+        try {
+            $month = Carbon::parse($validated['salary_month'])->startOfMonth();
+
+            $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))
+                ->where('type', 'thr')
+                ->first();
+
+            if ($existingPayroll) {
+                return ResponseHelper::jsonResponse(
+                    false,
+                    'THR for '.$month->format('F Y').' already exists',
+                    null,
+                    400
+                );
+            }
+
+            GenerateThrPayrollJob::dispatch($validated['salary_month']);
+
+            return ResponseHelper::jsonResponse(
+                true,
+                'THR generation is being processed in the background. Please check back shortly.',
+                [
+                    'salary_month' => $month->format('F Y'),
+                    'status' => 'processing',
+                ],
+                200
+            );
+        } catch (\Exception $e) {
+            return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 400);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 

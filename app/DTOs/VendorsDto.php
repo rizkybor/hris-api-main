@@ -14,6 +14,9 @@ class VendorsDto
         public readonly ?string $address = null,
         public readonly ?string $type = null,
         public readonly ?string $field = null,
+        public readonly ?string $npwp = null,
+        public readonly ?string $siup_number = null,
+        public readonly ?string $nib_number = null,
         public readonly ?string $notes = null,
     ) {}
 
@@ -30,6 +33,9 @@ class VendorsDto
             'address'    => $this->address,
             'type'       => $this->type,
             'field'      => $this->field,
+            'npwp'       => $this->npwp,
+            'siup_number' => $this->siup_number,
+            'nib_number' => $this->nib_number,
             'notes'      => $this->notes,
         ];
     }
@@ -47,6 +53,9 @@ class VendorsDto
             address: $data['address'] ?? null,
             type: $data['type'] ?? null,
             field: $data['field'] ?? null,
+            npwp: $data['npwp'] ?? null,
+            siup_number: $data['siup_number'] ?? null,
+            nib_number: $data['nib_number'] ?? null,
             notes: $data['notes'] ?? null,
         );
     }
@@ -64,6 +73,9 @@ class VendorsDto
             address: $data['address'] ?? $vendor->address,
             type: $data['type'] ?? $vendor->type,
             field: $data['field'] ?? $vendor->field,
+            npwp: $data['npwp'] ?? $vendor->npwp,
+            siup_number: $data['siup_number'] ?? $vendor->siup_number,
+            nib_number: $data['nib_number'] ?? $vendor->nib_number,
             notes: $data['notes'] ?? $vendor->notes,
         );
     }
