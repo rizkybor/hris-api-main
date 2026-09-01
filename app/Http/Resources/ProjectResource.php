@@ -33,6 +33,8 @@ class ProjectResource extends JsonResource
             'description' => $this->description,
             'photo' => CloudinaryUrl::image($this->photo),
             'budget' => (float) (string) $this->budget,
+            'warranty_period_months' => $this->warranty_period_months,
+            'retention_period_months' => $this->retention_period_months,
             'progress' => $progress,
             'leader' => new EmployeeProfileResource($this->projectLeader),
             'team_assignment_mode' => $this->team_assignment_mode,

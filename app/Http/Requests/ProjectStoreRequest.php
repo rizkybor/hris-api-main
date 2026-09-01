@@ -27,6 +27,8 @@ class ProjectStoreRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'budget' => ['nullable', 'numeric', 'min:0'],
+            'warranty_period_months' => ['nullable', 'integer', 'min:0'],
+            'retention_period_months' => ['nullable', 'integer', 'min:0'],
             'project_leader_id' => ['nullable', 'exists:employee_profiles,id', new NotProtectedEmployee('Project Leader')],
             'vendor_id' => ['nullable', 'exists:vendors,id'],
             // "team": exactly one Team supplies both the leader and the
@@ -63,6 +65,8 @@ class ProjectStoreRequest extends FormRequest
             'description' => 'Description',
             'photo' => 'Project Photo',
             'budget' => 'Budget',
+            'warranty_period_months' => 'Warranty Period',
+            'retention_period_months' => 'Retention Period',
             'project_leader_id' => 'Project Leader',
             'vendor_id' => 'Vendor',
             'team_assignment_mode' => 'Team Assignment Mode',
