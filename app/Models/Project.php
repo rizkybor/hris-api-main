@@ -31,6 +31,8 @@ class Project extends Model
         'description',
         'photo',
         'budget',
+        'warranty_period_months',
+        'retention_period_months',
         'project_leader_id',
         'team_assignment_mode',
         'vendor_id',
