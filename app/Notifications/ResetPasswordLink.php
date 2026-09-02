@@ -21,12 +21,12 @@ class ResetPasswordLink extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Reset Password HRIS')
+            ->subject('Reset Password HRIS+')
             ->greeting('Halo '.$notifiable->name.',')
             ->line('Kami menerima permintaan untuk mereset password akun kamu.')
             ->action('Reset Password', $this->url)
             ->line('Link ini akan kedaluwarsa dalam 60 menit.')
             ->line('Jika kamu tidak meminta reset password, abaikan email ini.')
-            ->salutation('Terima kasih, Tim HRIS');
+            ->salutation('Terima kasih, Tim HRIS+');
     }
 }

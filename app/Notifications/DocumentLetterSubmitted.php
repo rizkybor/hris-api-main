@@ -35,7 +35,7 @@ class DocumentLetterSubmitted extends Notification implements ShouldQueue
             ->line('Perihal: '.$this->documentLetter->subject)
             ->line('Pembuat: '.($this->documentLetter->creator?->name ?? '-'))
             ->action('Tinjau Official Memo', url('/admin/documents/official-memos/'.$this->documentLetter->id))
-            ->salutation('Terima kasih, Tim HRIS');
+            ->salutation('Terima kasih, Tim HRIS+');
     }
 
     public function toArray(object $notifiable): array

@@ -35,7 +35,7 @@ class DocumentLetterApproved extends Notification implements ShouldQueue
             ->line('Perihal: '.$this->documentLetter->subject)
             ->line('Status: **Disetujui**')
             ->action('Lihat Detail', url('/admin/documents/official-memos/'.$this->documentLetter->id))
-            ->salutation('Terima kasih, Tim HRIS');
+            ->salutation('Terima kasih, Tim HRIS+');
     }
 
     public function toArray(object $notifiable): array
