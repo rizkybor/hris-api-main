@@ -132,7 +132,7 @@ class DatabaseBackupService
 
         $write = $gzip ? 'gzwrite' : 'fwrite';
 
-        $write($handle, "-- HRIS Database Backup\n");
+        $write($handle, "-- HRIS+ Database Backup\n");
         $write($handle, '-- Database: '.$database."\n");
         $write($handle, '-- Generated: '.now()->toDateTimeString()."\n\n");
         $write($handle, "SET FOREIGN_KEY_CHECKS=0;\n");
