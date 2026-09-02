@@ -393,6 +393,17 @@ class PermissionSeeder extends Seeder
             'system-stats',
             'recent-activity',
         ],
+
+        // Analytics monitoring page (embedded PostHog / GA4 / Search
+        // Console reports, grouped by category) -- Manager, Finance
+        // Manager, Operational Director, and Super Admin only.
+        'analytics' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+        ],
     ];
 
     /**

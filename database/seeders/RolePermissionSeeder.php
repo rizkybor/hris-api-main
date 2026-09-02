@@ -249,6 +249,10 @@ class RolePermissionSeeder extends Seeder
                         'widget-latest-teams',
                         'widget-quick-links',
                     ])->get())
+                    // Analytics monitoring page (own menu, not a
+                    // dashboard widget) -- Manager, Operational Director,
+                    // Finance Manager, and Super Admin only.
+                    ->merge(Permission::where('name', 'like', 'analytics-%')->get())
             );
 
             $employee->syncPermissions(
@@ -470,6 +474,10 @@ class RolePermissionSeeder extends Seeder
                     'widget-quick-links',
                     'widget-sticky-notes',
                 ])->get()
+                    // Analytics monitoring page (own menu, not a
+                    // dashboard widget) -- Manager, Operational Director,
+                    // Finance Manager, and Super Admin only.
+                    ->merge(Permission::where('name', 'like', 'analytics-%')->get())
             );
         });
     }
