@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AnalyticsSourceController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceSettingController;
 use App\Http\Controllers\AuthController;
@@ -230,6 +231,10 @@ Route::prefix('v1')
 
             // Company About
             Route::apiResource('company-about', CompanyAboutController::class);
+
+            // Analytics Sources (embedded PostHog / GA4 / Search Console
+            // reports, grouped by category)
+            Route::apiResource('analytics-sources', AnalyticsSourceController::class)->except(['show']);
 
             // Vendors
             Route::get('vendors/all/paginated', [VendorsController::class, 'getAllPaginated']);
