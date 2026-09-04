@@ -45,6 +45,11 @@ class DashboardWidgetRegistry
         ['key' => 'employee_statistics', 'permission' => 'widget-employee-statistics', 'size' => 'large'],
         ['key' => 'system_stats', 'permission' => 'widget-system-stats', 'size' => 'large'],
         ['key' => 'recent_activity', 'permission' => 'widget-recent-activity', 'size' => 'medium'],
+        // Merges Project Tasks and the daily Assigned Tasks (Document
+        // Letters > Staff Tasks) into one due-date-sorted list -- not
+        // role-specific, since anyone (Staff through Manager) can have
+        // either kind of task on them.
+        ['key' => 'upcoming_tasks', 'permission' => 'widget-upcoming-tasks', 'size' => 'medium'],
     ];
 
     public const SIZES = ['small', 'medium', 'large'];
@@ -63,11 +68,11 @@ class DashboardWidgetRegistry
      * saves their own layout; after that, DashboardWidgetLayout wins.
      */
     public const ROLE_DEFAULT_ORDER = [
-        'manager' => ['projects_at_risk', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'latest_employees', 'latest_teams'],
-        'operational_director' => ['projects_at_risk', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'latest_employees', 'latest_teams'],
-        'finance' => ['sticky_notes', 'project_budget', 'project_realized', 'key_metrics', 'quick_links'],
-        'hr' => ['pending_leave_requests', 'sticky_notes', 'project_budget', 'key_metrics', 'quick_links', 'latest_employees'],
-        'staff' => ['employee_statistics', 'search_section'],
+        'manager' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'latest_employees', 'latest_teams'],
+        'operational_director' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'latest_employees', 'latest_teams'],
+        'finance' => ['upcoming_tasks', 'sticky_notes', 'project_budget', 'project_realized', 'key_metrics', 'quick_links'],
+        'hr' => ['pending_leave_requests', 'upcoming_tasks', 'sticky_notes', 'project_budget', 'key_metrics', 'quick_links', 'latest_employees'],
+        'staff' => ['upcoming_tasks', 'employee_statistics', 'search_section'],
         'superadmin' => ['system_stats', 'system_settings_links', 'recent_activity'],
     ];
 

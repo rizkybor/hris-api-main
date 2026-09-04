@@ -105,6 +105,7 @@ class RolePermissionSeeder extends Seeder
                 'widget-quick-links',
                 'widget-pending-leave-requests',
                 'widget-employee-statistics',
+                'widget-upcoming-tasks',
             ];
             // Manager/Operational Director's dashboard never showed these
             // (Search, Super Admin's system widgets, HR's Pending Leave
@@ -189,6 +190,7 @@ class RolePermissionSeeder extends Seeder
                         'widget-project-budget',
                         'widget-quick-links',
                         'widget-latest-employees',
+                        'widget-upcoming-tasks',
                     ])->get())
             );
 
@@ -248,6 +250,7 @@ class RolePermissionSeeder extends Seeder
                         'widget-latest-employees',
                         'widget-latest-teams',
                         'widget-quick-links',
+                        'widget-upcoming-tasks',
                     ])->get())
                     // Analytics monitoring page (own menu, not a
                     // dashboard widget) -- Manager, Operational Director,
@@ -301,6 +304,7 @@ class RolePermissionSeeder extends Seeder
                     'document-letter-list',
                     'widget-employee-statistics',
                     'widget-search-section',
+                    'widget-upcoming-tasks',
                 ])->get()
             );
 
@@ -473,6 +477,7 @@ class RolePermissionSeeder extends Seeder
                     'widget-project-realized',
                     'widget-quick-links',
                     'widget-sticky-notes',
+                    'widget-upcoming-tasks',
                 ])->get()
                     // Analytics monitoring page (own menu, not a
                     // dashboard widget) -- Manager, Operational Director,
