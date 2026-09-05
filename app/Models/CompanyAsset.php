@@ -34,7 +34,7 @@ class CompanyAsset extends Model
         'useful_life_months',
         'depreciation_method',
         'next_maintenance_due_date',
-        'supplier_vendor_id',
+        'supplier_id',
         'condition',
         'status',
         'assigned_to',
@@ -70,7 +70,7 @@ class CompanyAsset extends Model
 
     public function supplier()
     {
-        return $this->belongsTo(Vendors::class, 'supplier_vendor_id');
+        return $this->belongsTo(Supplier::class, 'supplier_id');
     }
 
     public function getIsUnderWarrantyAttribute(): ?bool

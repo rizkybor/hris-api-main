@@ -43,7 +43,7 @@ class ProjectResource extends JsonResource
                 'id' => $employee->id,
                 'name' => $employee->user?->name,
             ])),
-            'vendor_id' => $this->vendor_id,
+            'client_id' => $this->client_id,
             // Rich-text note only the Project Leader may write (see
             // ProjectController::update()) -- readable by anyone who can
             // view the project.
@@ -58,12 +58,12 @@ class ProjectResource extends JsonResource
             'access_figma_name' => $this->access_figma_name,
             'access_figma_url' => $this->access_figma_url,
             'additional_access' => $this->additional_access ?? [],
-            'vendor' => $this->whenLoaded('vendor', fn () => $this->vendor ? [
-                'id' => $this->vendor->id,
-                'name' => $this->vendor->name,
-                'pic_name' => $this->vendor->pic_name,
-                'pic_phone' => $this->vendor->pic_phone,
-                'email' => $this->vendor->email,
+            'client' => $this->whenLoaded('client', fn () => $this->client ? [
+                'id' => $this->client->id,
+                'name' => $this->client->name,
+                'pic_name' => $this->client->pic_name,
+                'pic_phone' => $this->client->pic_phone,
+                'email' => $this->client->email,
             ] : null),
             // Optional -- only present when a project has invoices billed
             // against it (see Invoice::project()).

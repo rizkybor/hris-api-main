@@ -24,6 +24,7 @@ class Invoice extends Model
         'invoice_number',
         'faktur_pajak_number',
         'project_id',
+        'subscription_id',
         'client_code',
         'client_name',
         'client_pic',
@@ -73,6 +74,11 @@ class Invoice extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function subscription()
+    {
+        return $this->belongsTo(Subscription::class);
     }
 
     public function scopeSearch($query, $search)

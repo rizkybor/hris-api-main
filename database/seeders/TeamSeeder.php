@@ -199,7 +199,7 @@ class TeamSeeder extends Seeder
             'status' => TeamStatus::ACTIVE,
             'responsibilities' => [
                 'Optimize business processes',
-                'Manage vendor relationships',
+                'Manage client relationships',
                 'Oversee budgets',
                 'Implement operational tools',
                 'Monitor KPIs',

@@ -27,7 +27,7 @@ class ProjectReportExport implements FromCollection, ShouldAutoSize, WithHeading
     public function collection()
     {
         $query = Project::query()
-            ->with(['projectLeader.user', 'vendor'])
+            ->with(['projectLeader.user', 'client'])
             ->withCount([
                 'tasks as tasks_total_count',
                 'tasks as tasks_done_count' => fn ($q) => $q->where('status', 'done'),
@@ -43,7 +43,7 @@ class ProjectReportExport implements FromCollection, ShouldAutoSize, WithHeading
 
     public function headings(): array
     {
-        return ['No', 'Nama Project', 'Project Leader', 'Vendor', 'Status', 'Prioritas', 'Tanggal Mulai', 'Tanggal Selesai', 'Budget', 'Task Selesai'];
+        return ['No', 'Nama Project', 'Project Leader', 'Client', 'Status', 'Prioritas', 'Tanggal Mulai', 'Tanggal Selesai', 'Budget', 'Task Selesai'];
     }
 
     public function map($project): array
@@ -55,7 +55,7 @@ class ProjectReportExport implements FromCollection, ShouldAutoSize, WithHeading
             $rowNumber,
             $project->name,
             $project->projectLeader?->user?->name ?? 'N/A',
-            $project->vendor?->name ?? '-',
+            $project->client?->name ?? '-',
             ucfirst(str_replace('_', ' ', $project->status)),
             ucfirst($project->priority),
             optional($project->start_date)->format('d M Y'),

@@ -142,7 +142,7 @@ class CompanyAssetController extends Controller implements HasMiddleware
             'warranty_expiry_date' => 'nullable|date',
             'useful_life_months' => 'nullable|integer|min:1',
             'depreciation_method' => 'nullable|string|in:straight_line',
-            'supplier_vendor_id' => 'nullable|exists:vendors,id',
+            'supplier_id' => 'nullable|exists:clients,id',
             'condition' => 'nullable|string|in:good,fair,damaged',
             'notes' => 'nullable|string',
         ]);
@@ -174,7 +174,7 @@ class CompanyAssetController extends Controller implements HasMiddleware
             'warranty_expiry_date' => 'nullable|date',
             'useful_life_months' => 'nullable|integer|min:1',
             'depreciation_method' => 'nullable|string|in:straight_line',
-            'supplier_vendor_id' => 'nullable|exists:vendors,id',
+            'supplier_id' => 'nullable|exists:clients,id',
             'condition' => 'nullable|string|in:good,fair,damaged',
             'status' => 'nullable|string|in:available,assigned,maintenance,retired,lost',
             'notes' => 'nullable|string',
