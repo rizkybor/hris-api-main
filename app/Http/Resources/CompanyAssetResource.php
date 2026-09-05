@@ -28,7 +28,7 @@ class CompanyAssetResource extends JsonResource
             'depreciation_method' => $this->depreciation_method,
             'current_book_value' => $this->current_book_value,
             'next_maintenance_due_date' => $this->next_maintenance_due_date,
-            'supplier_vendor_id' => $this->supplier_vendor_id,
+            'supplier_id' => $this->supplier_id,
             'supplier' => $this->when($this->relationLoaded('supplier') && $this->supplier, fn () => [
                 'id' => $this->supplier->id,
                 'name' => $this->supplier->name,

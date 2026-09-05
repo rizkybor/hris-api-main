@@ -143,11 +143,11 @@
         <p class="section-title">D. KETENTUAN UMUM</p>
         <ol style="padding-left: 14px; margin: 0;">
             <li style="margin-bottom: 3px;">PO ini sah setelah ditandatangani oleh kedua belah pihak.</li>
-            <li style="margin-bottom: 3px;">Vendor wajib mengkonfirmasi penerimaan PO maksimal 2x24 jam setelah diterima.</li>
+            <li style="margin-bottom: 3px;">Klien wajib mengkonfirmasi penerimaan PO maksimal 2x24 jam setelah diterima.</li>
             <li style="margin-bottom: 3px;">Unit yang dikirim wajib sesuai spesifikasi yang tercantum dalam PO ini.</li>
-            <li style="margin-bottom: 3px;">Kerusakan yang terjadi selama pengiriman menjadi tanggung jawab vendor.</li>
+            <li style="margin-bottom: 3px;">Kerusakan yang terjadi selama pengiriman menjadi tanggung jawab klien.</li>
             <li style="margin-bottom: 3px;">Garansi unit: [{{ $order->warranty_months ?? '___' }}] bulan sejak tanggal serah terima.</li>
-            <li style="margin-bottom: 3px;">Jika terdapat ketidaksesuaian unit, vendor wajib melakukan penggantian dalam waktu [{{ $order->replacement_days ?? '___' }}] hari kerja.</li>
+            <li style="margin-bottom: 3px;">Jika terdapat ketidaksesuaian unit, klien wajib melakukan penggantian dalam waktu [{{ $order->replacement_days ?? '___' }}] hari kerja.</li>
         </ol>
 
         <table style="margin-top: 20mm; page-break-inside: avoid;">
@@ -160,11 +160,11 @@
                     <p style="margin: 0;">{{ $order->buyer_signatory_title ?? '' }}</p>
                 </td>
                 <td style="width: 50%; border: none; text-align: center;">
-                    <p style="margin: 0;">PIHAK VENDOR</p>
+                    <p style="margin: 0;">PIHAK KLIEN</p>
                     <p style="margin: 0; font-weight: bold;">{{ $order->client_name }}</p>
                     <div style="height: 20mm;"></div>
-                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $order->vendor_signatory_name ?? '________________________' }}</p>
-                    <p style="margin: 0;">{{ $order->vendor_signatory_title ?? '' }}</p>
+                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $order->client_signatory_name ?? '________________________' }}</p>
+                    <p style="margin: 0;">{{ $order->client_signatory_title ?? '' }}</p>
                 </td>
             </tr>
         </table>

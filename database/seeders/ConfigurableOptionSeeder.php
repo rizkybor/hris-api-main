@@ -44,6 +44,14 @@ class ConfigurableOptionSeeder extends Seeder
                 ['value' => 'es', 'label' => 'Spanish'],
                 ['value' => 'fr', 'label' => 'French'],
             ],
+            // Seeded with the categories the Subscription module originally
+            // shipped with -- kept editable here so a new recurring-billing
+            // category doesn't need a migration.
+            'subscription_service_type' => [
+                ['value' => 'website_maintenance', 'label' => 'Website Maintenance'],
+                ['value' => 'domain_renewal', 'label' => 'Domain Renewal'],
+                ['value' => 'saas_subscription', 'label' => 'SaaS Subscription'],
+            ],
         ];
 
         foreach ($categories as $category => $options) {

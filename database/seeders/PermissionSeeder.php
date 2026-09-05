@@ -286,7 +286,19 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
-        'vendors' => [
+        // Manual recurring billing (maintenance/domain/SaaS) -- Manager,
+        // Finance Manager, Operational Director, Superadmin only (see
+        // RolePermissionSeeder; HR is deliberately excluded).
+        'subscription' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'generate-invoice',
+        ],
+
+        'clients' => [
             'menu',
             'list',
             'create',

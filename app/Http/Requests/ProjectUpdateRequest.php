@@ -30,7 +30,7 @@ class ProjectUpdateRequest extends FormRequest
             'warranty_period_months' => ['nullable', 'integer', 'min:0'],
             'retention_period_months' => ['nullable', 'integer', 'min:0'],
             'project_leader_id' => ['nullable', 'exists:employee_profiles,id', new NotProtectedEmployee('Project Leader')],
-            'vendor_id' => ['nullable', 'exists:vendors,id'],
+            'client_id' => ['nullable', 'exists:clients,id'],
             // Free-text HTML from the RichTextEditor -- only the Project
             // Leader may actually change it (enforced in the controller,
             // not here, since that requires the existing Project + auth
@@ -67,7 +67,7 @@ class ProjectUpdateRequest extends FormRequest
             'warranty_period_months' => 'Warranty Period',
             'retention_period_months' => 'Retention Period',
             'project_leader_id' => 'Project Leader',
-            'vendor_id' => 'Vendor',
+            'client_id' => 'Client',
             'team_assignment_mode' => 'Team Assignment Mode',
             'team_id' => 'Team',
             'member_employee_ids' => 'Members',

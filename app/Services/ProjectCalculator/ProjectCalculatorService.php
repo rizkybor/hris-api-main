@@ -35,7 +35,7 @@ class ProjectCalculatorService
      * @param  bool  $includePpn
      * @param  float  $ppnPercent
      * @param  bool  $includePph  PPh is withheld by the client from the
-     *   payment, not added like PPN -- it reduces what the vendor actually
+     *   payment, not added like PPN -- it reduces what the company actually
      *   receives in cash, it does not change what the client is invoiced.
      * @param  float  $pphPercent
      * @return array
@@ -192,7 +192,7 @@ class ProjectCalculatorService
         $totalWithPpn = $includePpn ? round($grandTotal + $ppnAmount, 2) : null;
 
         // PPh's DPP (tax base) is the service fee itself (grand_total),
-        // never the PPN on top of it -- PPN isn't the vendor's income, so
+        // never the PPN on top of it -- PPN isn't the company's income, so
         // it isn't part of what PPh is withheld against.
         $pphAmount = $includePph ? round($grandTotal * ($pphPercent / 100), 2) : 0;
         $netReceived = $includePph ? round(($includePpn ? $totalWithPpn : $grandTotal) - $pphAmount, 2) : null;

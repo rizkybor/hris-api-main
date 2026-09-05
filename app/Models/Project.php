@@ -35,7 +35,7 @@ class Project extends Model
         'retention_period_months',
         'project_leader_id',
         'team_assignment_mode',
-        'vendor_id',
+        'client_id',
         'inspect_note',
         'access_project_name',
         'access_project_url',
@@ -169,12 +169,12 @@ class Project extends Model
     }
 
     /**
-     * The vendor this project is contracted through -- optional, a project
-     * may have no vendor at all.
+     * The client this project is contracted through -- optional, a project
+     * may have no client at all.
      */
-    public function vendor()
+    public function client()
     {
-        return $this->belongsTo(Vendors::class, 'vendor_id');
+        return $this->belongsTo(Client::class, 'client_id');
     }
 
     /**

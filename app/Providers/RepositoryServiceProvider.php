@@ -24,13 +24,13 @@ use App\Interfaces\CompanyFinanceRepositoryInterface;
 use App\Interfaces\FixedCostRepositoryInterface;
 use App\Interfaces\InfrastructureToolRepositoryInterface;
 use App\Interfaces\SdmResourceRepositoryInterface;
-use App\Interfaces\VendorEvaluationRepositoryInterface;
-use App\Interfaces\VendorsAttachmentRepositoryInterface;
-use App\Interfaces\VendorsRepositoryInterface;
-use App\Interfaces\VendorsTaskListRepositoryInterface;
-use App\Interfaces\VendorsTaskPaymentRepositoryInterface;
-use App\Interfaces\VendorsTaskPivotRepositoryInterface;
-use App\Interfaces\VendorsTaskScopeRepositoryInterface;
+use App\Interfaces\ClientEvaluationRepositoryInterface;
+use App\Interfaces\ClientAttachmentRepositoryInterface;
+use App\Interfaces\ClientRepositoryInterface;
+use App\Interfaces\ClientTaskListRepositoryInterface;
+use App\Interfaces\ClientTaskPaymentRepositoryInterface;
+use App\Interfaces\ClientTaskPivotRepositoryInterface;
+use App\Interfaces\ClientTaskScopeRepositoryInterface;
 
 use App\Repositories\AttendanceRepository;
 use App\Repositories\AuthRepository;
@@ -54,13 +54,13 @@ use App\Repositories\CompanyFinanceRepository;
 use App\Repositories\FixedCostRepository;
 use App\Repositories\InfrastructureToolRepository;
 use App\Repositories\SdmResourceRepository;
-use App\Repositories\VendorsAttachmentRepository;
-use App\Repositories\VendorEvaluationRepository;
-use App\Repositories\VendorsRepository;
-use App\Repositories\VendorsTaskListRepository;
-use App\Repositories\VendorsTaskPaymentRepository;
-use App\Repositories\VendorsTaskPivotRepository;
-use App\Repositories\VendorsTaskScopeRepository;
+use App\Repositories\ClientAttachmentRepository;
+use App\Repositories\ClientEvaluationRepository;
+use App\Repositories\ClientRepository;
+use App\Repositories\ClientTaskListRepository;
+use App\Repositories\ClientTaskPaymentRepository;
+use App\Repositories\ClientTaskPivotRepository;
+use App\Repositories\ClientTaskScopeRepository;
 
 use Illuminate\Support\ServiceProvider;
 
@@ -94,14 +94,14 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(ReportRepositoryInterface::class, ReportRepository::class);
         $this->app->bind(ProjectDocumentRepositoryInterface::class, ProjectDocumentRepository::class);
 
-        // Vendors
-        $this->app->bind(VendorsRepositoryInterface::class, VendorsRepository::class);
-        $this->app->bind(VendorsAttachmentRepositoryInterface::class, VendorsAttachmentRepository::class);
-        $this->app->bind(VendorEvaluationRepositoryInterface::class, VendorEvaluationRepository::class);
-        $this->app->bind(VendorsTaskListRepositoryInterface::class, VendorsTaskListRepository::class);
-        $this->app->bind(VendorsTaskPaymentRepositoryInterface::class, VendorsTaskPaymentRepository::class);
-        $this->app->bind(VendorsTaskScopeRepositoryInterface::class, VendorsTaskScopeRepository::class);
-        $this->app->bind(VendorsTaskPivotRepositoryInterface::class, VendorsTaskPivotRepository::class);
+        // Client
+        $this->app->bind(ClientRepositoryInterface::class, ClientRepository::class);
+        $this->app->bind(ClientAttachmentRepositoryInterface::class, ClientAttachmentRepository::class);
+        $this->app->bind(ClientEvaluationRepositoryInterface::class, ClientEvaluationRepository::class);
+        $this->app->bind(ClientTaskListRepositoryInterface::class, ClientTaskListRepository::class);
+        $this->app->bind(ClientTaskPaymentRepositoryInterface::class, ClientTaskPaymentRepository::class);
+        $this->app->bind(ClientTaskScopeRepositoryInterface::class, ClientTaskScopeRepository::class);
+        $this->app->bind(ClientTaskPivotRepositoryInterface::class, ClientTaskPivotRepository::class);
     }
 
     /**
