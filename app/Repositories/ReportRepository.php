@@ -18,6 +18,7 @@ use App\Models\ProjectCashTransaction;
 use App\Models\ProjectTask;
 use App\Models\SdmResource;
 use App\Models\StaffTaskAssignee;
+use App\Models\Subscription;
 use App\Services\StaffPerformanceCalculator;
 use Carbon\Carbon;
 
@@ -271,7 +272,7 @@ class ReportRepository implements ReportRepositoryInterface
         ];
 
         $paginated = (clone $baseQuery)
-            ->with(['projectLeader.user', 'vendor'])
+            ->with(['projectLeader.user', 'client'])
             ->withCount([
                 'tasks as tasks_total_count',
                 'tasks as tasks_done_count' => fn ($q) => $q->where('status', 'done'),
@@ -385,6 +386,60 @@ class ReportRepository implements ReportRepositoryInterface
         return [
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
             'summary' => $summary,
+            'rows' => $rows,
+        ];
+    }
+
+    /**
+     * Recurring-billing snapshot -- unlike every other report here, this
+     * isn't scoped to a date range: MRR/ARR and status counts are a "right
+     * now" snapshot of the subscriptions table, not a recap of what
+     * happened between two dates. Only active subscriptions count toward
+     * MRR/ARR; postponed/cancelled ones are paused or stopped billing.
+     */
+    public function getSubscriptionReport(?string $status = null)
+    {
+        $query = Subscription::query()->with(['client:id,name', 'project:id,name']);
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $rows = $query->orderBy('next_due_date')->get();
+
+        $monthlyValue = fn (Subscription $s) => $s->billing_cycle === 'yearly'
+            ? (float) $s->amount / 12
+            : (float) $s->amount;
+
+        $active = $rows->where('status', 'active');
+        $mrr = (float) $active->sum($monthlyValue);
+
+        $statusCounts = $rows->groupBy('status');
+        $statusBreakdown = collect(['active', 'postponed', 'cancelled'])->map(fn ($key) => [
+            'status' => $key,
+            'count' => $statusCounts->get($key, collect())->count(),
+            'mrr' => $key === 'active' ? $mrr : (float) $statusCounts->get($key, collect())->sum($monthlyValue),
+        ])->values();
+
+        $upcomingRenewals = $active
+            ->filter(fn (Subscription $s) => $s->next_due_date && $s->next_due_date->lte(now()->addDays(30)))
+            ->sortBy('next_due_date')
+            ->values();
+
+        $summary = [
+            'mrr' => $mrr,
+            'arr' => $mrr * 12,
+            'active_count' => $active->count(),
+            'postponed_count' => $rows->where('status', 'postponed')->count(),
+            'cancelled_count' => $rows->where('status', 'cancelled')->count(),
+            'total_count' => $rows->count(),
+            'upcoming_renewals_count' => $upcomingRenewals->count(),
+        ];
+
+        return [
+            'summary' => $summary,
+            'status_breakdown' => $statusBreakdown,
+            'upcoming_renewals' => $upcomingRenewals,
             'rows' => $rows,
         ];
     }

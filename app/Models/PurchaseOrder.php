@@ -37,8 +37,8 @@ class PurchaseOrder extends Model
         'replacement_days',
         'buyer_signatory_name',
         'buyer_signatory_title',
-        'vendor_signatory_name',
-        'vendor_signatory_title',
+        'client_signatory_name',
+        'client_signatory_title',
         'status',
         'created_by',
     ];

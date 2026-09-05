@@ -49,6 +49,8 @@ use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\GreetingController;
 use App\Http\Controllers\AssetMaintenanceLogController;
 use App\Http\Controllers\CompanyAssetController;
+use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\EmployeeResignationController;
 use App\Http\Controllers\PerformanceReviewController;
 use App\Http\Controllers\SearchController;
@@ -59,13 +61,13 @@ use App\Http\Controllers\CompanyFinanceController;
 use App\Http\Controllers\SdmResourceController;
 use App\Http\Controllers\SdmFieldController;
 use App\Http\Controllers\CompanyAboutController;
-use App\Http\Controllers\VendorEvaluationController;
-use App\Http\Controllers\VendorsController;
-use App\Http\Controllers\VendorsAttachmentController;
-use App\Http\Controllers\VendorsTaskListController;
-use App\Http\Controllers\VendorsTaskPaymentController;
-use App\Http\Controllers\VendorsTaskPivotController;
-use App\Http\Controllers\VendorsTaskScopeController;
+use App\Http\Controllers\ClientEvaluationController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ClientAttachmentController;
+use App\Http\Controllers\ClientTaskListController;
+use App\Http\Controllers\ClientTaskPaymentController;
+use App\Http\Controllers\ClientTaskPivotController;
+use App\Http\Controllers\ClientTaskScopeController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
@@ -236,35 +238,40 @@ Route::prefix('v1')
             // reports, grouped by category)
             Route::apiResource('analytics-sources', AnalyticsSourceController::class)->except(['show']);
 
-            // Vendors
-            Route::get('vendors/all/paginated', [VendorsController::class, 'getAllPaginated']);
-            Route::get('vendors/statistic', [VendorsController::class, 'getStatistic']);
-            Route::apiResource('vendors', VendorsController::class);
+            // Subscriptions (manual recurring billing -- maintenance,
+            // domain renewal, SaaS)
+            Route::post('subscriptions/{id}/generate-invoice', [SubscriptionController::class, 'generateInvoice']);
+            Route::apiResource('subscriptions', SubscriptionController::class)->except(['show']);
 
-            // Vendor Evaluations (rating)
-            Route::get('vendors/{vendorId}/evaluations', [VendorEvaluationController::class, 'index']);
-            Route::post('vendor-evaluations', [VendorEvaluationController::class, 'store']);
-            Route::delete('vendor-evaluations/{id}', [VendorEvaluationController::class, 'destroy']);
+            // Client
+            Route::get('clients/all/paginated', [ClientController::class, 'getAllPaginated']);
+            Route::get('clients/statistic', [ClientController::class, 'getStatistic']);
+            Route::apiResource('clients', ClientController::class);
 
-            // Vendors Attachment
-            Route::get('vendors-attachment/all/paginated', [VendorsAttachmentController::class, 'getAllPaginated']);
-            Route::apiResource('vendors-attachment', VendorsAttachmentController::class);
+            // Client Evaluations (rating)
+            Route::get('clients/{clientId}/evaluations', [ClientEvaluationController::class, 'index']);
+            Route::post('client-evaluations', [ClientEvaluationController::class, 'store']);
+            Route::delete('client-evaluations/{id}', [ClientEvaluationController::class, 'destroy']);
 
-            // Vendors Task List
-            Route::get('vendors-task-list/all/paginated', [VendorsTaskListController::class, 'getAllPaginated']);
-            Route::apiResource('vendors-task-list', VendorsTaskListController::class);
+            // Client Attachment
+            Route::get('client-attachments/all/paginated', [ClientAttachmentController::class, 'getAllPaginated']);
+            Route::apiResource('client-attachments', ClientAttachmentController::class);
 
-            // Vendors Task Payment
-            Route::get('vendors-task-payment/all/paginated', [VendorsTaskPaymentController::class, 'getAllPaginated']);
-            Route::apiResource('vendors-task-payment', VendorsTaskPaymentController::class);
+            // Client Task List
+            Route::get('client-task-list/all/paginated', [ClientTaskListController::class, 'getAllPaginated']);
+            Route::apiResource('client-task-list', ClientTaskListController::class);
 
-            // Vendors Task Scope
-            Route::get('vendors-task-scope/all/paginated', [VendorsTaskScopeController::class, 'getAllPaginated']);
-            Route::apiResource('vendors-task-scope', VendorsTaskScopeController::class);
+            // Client Task Payment
+            Route::get('client-task-payment/all/paginated', [ClientTaskPaymentController::class, 'getAllPaginated']);
+            Route::apiResource('client-task-payment', ClientTaskPaymentController::class);
 
-            // Vendors Task Pivot
-            Route::get('vendors-task-pivot/all/paginated', [VendorsTaskPivotController::class, 'getAllPaginated']);
-            Route::apiResource('vendors-task-pivot', VendorsTaskPivotController::class);
+            // Client Task Scope
+            Route::get('client-task-scope/all/paginated', [ClientTaskScopeController::class, 'getAllPaginated']);
+            Route::apiResource('client-task-scope', ClientTaskScopeController::class);
+
+            // Client Task Pivot
+            Route::get('client-task-pivot/all/paginated', [ClientTaskPivotController::class, 'getAllPaginated']);
+            Route::apiResource('client-task-pivot', ClientTaskPivotController::class);
 
             // Reports
             Route::get('reports/attendance', [ReportController::class, 'attendance']);
@@ -276,6 +283,7 @@ Route::prefix('v1')
             Route::get('reports/project', [ReportController::class, 'project']);
             Route::get('reports/pph23', [ReportController::class, 'pph23']);
             Route::get('reports/project-expense', [ReportController::class, 'projectExpense']);
+            Route::get('reports/subscription', [ReportController::class, 'subscription']);
             Route::get('reports/staff-raport', [ReportController::class, 'staffRaport']);
             Route::get('reports/staff-raport/{employeeId}/pdf', [ReportController::class, 'staffRaportPdf']);
             Route::get('reports/staff-raport/{employeeId}', [ReportController::class, 'staffRaportDetail']);
@@ -333,6 +341,11 @@ Route::prefix('v1')
             Route::get('company-assets/{assetId}/maintenance-logs', [AssetMaintenanceLogController::class, 'index']);
             Route::post('asset-maintenance-logs', [AssetMaintenanceLogController::class, 'store']);
             Route::delete('asset-maintenance-logs/{id}', [AssetMaintenanceLogController::class, 'destroy']);
+
+            // Suppliers -- minimal, backs the Company Asset "supplier" quick-add picker only
+            Route::get('suppliers', [SupplierController::class, 'index']);
+            Route::post('suppliers', [SupplierController::class, 'store']);
+            Route::delete('suppliers/{id}', [SupplierController::class, 'destroy']);
 
             // Resignation / Offboarding
             Route::get('resignations', [EmployeeResignationController::class, 'index']);

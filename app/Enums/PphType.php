@@ -5,8 +5,8 @@ namespace App\Enums;
 /**
  * Indonesian withholding income tax (PPh) categories relevant to a B2B
  * software/IT services quotation -- the client withholds this from what
- * they pay the vendor and remits it to the tax office directly, unlike
- * PPN which the vendor collects on top of the price. Deliberately scoped
+ * they pay the company and remits it to the tax office directly, unlike
+ * PPN which the company collects on top of the price. Deliberately scoped
  * to categories that actually apply to jasa teknik/IT services (PPh 23)
  * and foreign counterparties (PPh 26), not e.g. PPh 21 (employee payroll)
  * or PPh 4(2) construction, which don't apply to this kind of invoice.

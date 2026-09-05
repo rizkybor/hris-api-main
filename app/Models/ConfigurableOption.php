@@ -24,6 +24,7 @@ class ConfigurableOption extends Model
         'ptkp_status',
         'bank_name',
         'preferred_language',
+        'subscription_service_type',
     ];
 
     public function scopeCategory($query, string $category)
