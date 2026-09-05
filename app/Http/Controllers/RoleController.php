@@ -44,9 +44,13 @@ class RoleController extends Controller implements HasMiddleware
             $grouped = $permissions
                 ->groupBy(fn ($permission) => PermissionModules::resolve($permission->name))
                 ->map(function ($permissions, $moduleKey) {
+                    $section = PermissionModules::section($moduleKey);
+
                     return [
                         'key' => $moduleKey,
                         'label' => PermissionModules::label($moduleKey),
+                        'section' => $section,
+                        'section_order' => PermissionModules::sectionOrderIndex($section),
                         'permissions' => $permissions->map(fn ($permission) => [
                             'id' => $permission->id,
                             'name' => $permission->name,
@@ -54,7 +58,11 @@ class RoleController extends Controller implements HasMiddleware
                         ])->values(),
                     ];
                 })
-                ->sortBy('label')
+                // Grouped the same way the sidebar itself is grouped (General,
+                // My Workspace, Administration, ...) instead of one flat A-Z
+                // list of ~40 modules, so assigning a role reads the same way
+                // as the app's own navigation.
+                ->sortBy([['section_order', 'asc'], ['label', 'asc']])
                 ->values();
 
             return ResponseHelper::jsonResponse(true, 'Permissions Retrieved Successfully', $grouped, 200);
