@@ -76,6 +76,11 @@ class Subscription extends Model
         return $this->hasMany(Invoice::class);
     }
 
+    public function latestInvoice()
+    {
+        return $this->hasOne(Invoice::class)->latestOfMany();
+    }
+
     public function scopeSearch($query, $search)
     {
         return $query->where('name', 'like', '%'.$search.'%');

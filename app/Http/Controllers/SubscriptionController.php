@@ -37,7 +37,7 @@ class SubscriptionController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
-            $query = Subscription::with(['client', 'project'])
+            $query = Subscription::with(['client', 'project', 'latestInvoice'])
                 ->withCount('invoices')
                 ->orderBy('next_due_date');
 
