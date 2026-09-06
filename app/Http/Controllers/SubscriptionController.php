@@ -37,7 +37,7 @@ class SubscriptionController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
-            $query = Subscription::with(['client', 'project', 'latestInvoice'])
+            $query = Subscription::with(['client', 'project', 'invoices:id,subscription_id,invoice_number,billing_period'])
                 ->withCount('invoices')
                 ->orderBy('next_due_date');
 
@@ -153,6 +153,7 @@ class SubscriptionController extends Controller implements HasMiddleware
                     'invoice_number' => $this->numberService->generateInvoiceNumber($clientCode, $date),
                     'project_id' => $subscription->project_id,
                     'subscription_id' => $subscription->id,
+                    'billing_period' => $periodLabel,
                     'client_code' => $clientCode,
                     'client_name' => $client->name,
                     'client_pic' => $client->pic_name,
