@@ -76,9 +76,22 @@ class Subscription extends Model
         return $this->hasMany(Invoice::class);
     }
 
-    public function latestInvoice()
+    /**
+     * The billing-period label ("September 2026" for monthly, "2026" for
+     * yearly) that the *next* invoice generation would cover -- matches
+     * the label SubscriptionController::generateInvoice() stores on the
+     * Invoice it creates, so it can be used to detect a same-period
+     * duplicate before generating another one.
+     */
+    public function currentPeriodLabel(): ?string
     {
-        return $this->hasOne(Invoice::class)->latestOfMany();
+        if (! $this->next_due_date) {
+            return null;
+        }
+
+        return $this->billing_cycle === 'yearly'
+            ? $this->next_due_date->format('Y')
+            : $this->next_due_date->format('F Y');
     }
 
     public function scopeSearch($query, $search)

@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Models\EmployeeProfile;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Models\Project;
 use App\Services\EmailService;
 use App\Services\PayrollCalculationService;
 use Carbon\Carbon;
@@ -103,6 +104,7 @@ class PayrollRepository implements PayrollRepositoryInterface
             'employee.user',
             'employee.jobInformation.team',
             'employee.bankInformation',
+            'sourceProject',
         ])
             ->where('payroll_id', $payrollId)
             ->when($search, function ($query) use ($search) {
@@ -359,12 +361,43 @@ class PayrollRepository implements PayrollRepositoryInterface
                 throw new \Exception('Tidak dapat mengubah payroll yang sudah dibayar');
             }
 
-            $updateData = [];
-            if (isset($data['notes'])) {
-                $updateData['notes'] = $data['notes'];
-            }
-            if (isset($data['final_salary'])) {
-                $updateData['final_salary'] = $data['final_salary'];
+            $editableFields = [
+                'notes',
+                'gross_salary',
+                'bpjs_kesehatan_employee',
+                'bpjs_jht_employee',
+                'bpjs_jp_employee',
+                'bpjs_kesehatan_company',
+                'bpjs_jht_company',
+                'bpjs_jp_company',
+                'bpjs_jkk_company',
+                'bpjs_jkm_company',
+                'pph21',
+                'total_deduction',
+                'final_salary',
+                'payment_mode',
+                'source_project_id',
+                'project_percentage',
+            ];
+
+            $updateData = array_intersect_key($data, array_flip($editableFields));
+
+            // Percentage-of-project pay bypasses the attendance-based salary
+            // components entirely -- the project's budget cut IS the take-home
+            // figure, so it's derived server-side (never trusted from the
+            // client) and any BPJS/PPh21 breakdown is zeroed out since it
+            // doesn't apply to this payment scheme.
+            if (($data['payment_mode'] ?? null) === 'project_percentage') {
+                $project = Project::findOrFail($data['source_project_id']);
+                $computed = round(((float) $project->budget) * ((float) $data['project_percentage'] / 100), 2);
+
+                $updateData['gross_salary'] = $computed;
+                $updateData['final_salary'] = $computed;
+                $updateData['bpjs_kesehatan_employee'] = 0;
+                $updateData['bpjs_jht_employee'] = 0;
+                $updateData['bpjs_jp_employee'] = 0;
+                $updateData['pph21'] = 0;
+                $updateData['total_deduction'] = 0;
             }
 
             $payrollDetail->update($updateData);
@@ -373,6 +406,7 @@ class PayrollRepository implements PayrollRepositoryInterface
                 'employee.user',
                 'employee.jobInformation.team',
                 'payroll',
+                'sourceProject',
             ]);
         });
     }

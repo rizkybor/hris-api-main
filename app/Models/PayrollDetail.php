@@ -42,6 +42,9 @@ class PayrollDetail extends Model
         'pph21',
         'total_deduction',
         'notes',
+        'payment_mode',
+        'source_project_id',
+        'project_percentage',
     ];
 
     protected function casts(): array
@@ -60,6 +63,7 @@ class PayrollDetail extends Model
             'bpjs_jkm_company' => 'decimal:2',
             'pph21' => 'decimal:2',
             'total_deduction' => 'decimal:2',
+            'project_percentage' => 'decimal:2',
         ];
     }
 
@@ -71,5 +75,10 @@ class PayrollDetail extends Model
     public function employee()
     {
         return $this->belongsTo(EmployeeProfile::class, 'employee_id');
+    }
+
+    public function sourceProject()
+    {
+        return $this->belongsTo(Project::class, 'source_project_id');
     }
 }

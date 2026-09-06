@@ -43,7 +43,17 @@ class SubscriptionResource extends JsonResource
             'pph23_type' => $this->pph23_type,
             'pph23_percent' => $this->pph23_percent !== null ? (float) (string) $this->pph23_percent : null,
             'invoices_count' => $this->whenCounted('invoices'),
-            'latest_invoice_number' => $this->whenLoaded('latestInvoice', fn () => $this->latestInvoice?->invoice_number),
+            // Only set when an invoice already exists for the SAME period
+            // generating now would cover (same month for monthly, same year
+            // for yearly) -- an invoice from a different period doesn't
+            // count as a duplicate, so it's left null.
+            'duplicate_invoice_number' => $this->whenLoaded('invoices', function () {
+                $periodLabel = $this->currentPeriodLabel();
+
+                return $periodLabel
+                    ? $this->invoices->firstWhere('billing_period', $periodLabel)?->invoice_number
+                    : null;
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
