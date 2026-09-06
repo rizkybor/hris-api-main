@@ -19,35 +19,53 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithHe
         protected ?string $status = null,
     ) {}
 
+    /**
+     * One row per bundled service (not per subscription) so the exported
+     * sheet shows the same item-level detail as the Subscription Detail
+     * modal -- a subscription's own columns are repeated on every one of
+     * its service rows.
+     */
     public function collection()
     {
-        return Subscription::query()
+        $subscriptions = Subscription::query()
             ->with(['client:id,name', 'project:id,name', 'services'])
             ->when($this->status, fn ($q) => $q->where('status', $this->status))
             ->orderBy('next_due_date')
             ->get();
+
+        return $subscriptions->flatMap(fn ($subscription) => $subscription->services->isNotEmpty()
+            ? $subscription->services->map(fn ($service) => (object) [
+                'subscription' => $subscription,
+                'service' => $service,
+            ])
+            : collect([(object) ['subscription' => $subscription, 'service' => null]]));
     }
 
     public function headings(): array
     {
-        return ['No', 'Name', 'Client', 'Project', 'Services', 'Billing Cycle', 'Amount', 'Status', 'Next Due Date', 'Last Invoiced'];
+        return [
+            'No', 'Name', 'Client', 'Project',
+            'Service Type', 'Product Name', 'Service Amount',
+            'Billing Cycle', 'Total Amount', 'Status', 'Next Due Date', 'Last Invoiced',
+        ];
     }
 
-    public function map($subscription): array
+    public function map($row): array
     {
         static $rowNumber = 0;
         $rowNumber++;
+
+        $subscription = $row->subscription;
+        $service = $row->service;
 
         return [
             $rowNumber,
             $subscription->name,
             $subscription->client?->name ?? '-',
             $subscription->project?->name ?? '-',
-            // A subscription can bundle several services -- list them all
-            // in one cell rather than a single Service Type column.
-            $subscription->services->map(
-                fn ($service) => $service->product_name ? "{$service->service_type} ({$service->product_name})" : $service->service_type
-            )->implode(', '),
+            $service ? str_replace('_', ' ', $service->service_type) : '-',
+            $service?->product_name ?? '-',
+            $service ? (float) $service->amount : 0,
             $subscription->billing_cycle,
             (float) $subscription->amount,
             $subscription->status === 'cancelled' ? 'Not Active' : ucfirst($subscription->status),
