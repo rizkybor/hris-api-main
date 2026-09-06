@@ -65,6 +65,7 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
                 'employee.user',
                 'employee.jobInformation.team',
                 'employee.bankInformation',
+                'sourceProject',
             ])
             ->orderBy('final_salary', 'desc')
             ->get();
@@ -95,6 +96,7 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
             'BPJS JP',
             'PPh 21',
             'Gaji Bersih',
+            'Skema Pembayaran',
             'Status',
             'Catatan',
         ];
@@ -106,6 +108,7 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
     public function map($detail): array
     {
         $this->rowNumber++;
+        $isProjectPercentage = $detail->payment_mode === 'project_percentage';
 
         return [
             $this->rowNumber,
@@ -121,12 +124,18 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
             $detail->sick_days ?? 0,
             $detail->absent_days ?? 0,
             $detail->original_salary ?? 0,
-            ($detail->original_salary - $detail->gross_salary) ?? 0,
+            // Attendance-based deduction doesn't apply to a percentage-of-project
+            // payout -- original_salary is left over from the automatic
+            // generation baseline and isn't comparable to that scheme.
+            $isProjectPercentage ? 'N/A' : ($detail->original_salary - $detail->gross_salary) ?? 0,
             $detail->bpjs_kesehatan_employee ?? 0,
             $detail->bpjs_jht_employee ?? 0,
             $detail->bpjs_jp_employee ?? 0,
             $detail->pph21 ?? 0,
             $detail->final_salary ?? 0,
+            $isProjectPercentage
+                ? "{$detail->project_percentage}% dari Project ".($detail->sourceProject->name ?? '-')
+                : 'Manual/Otomatis',
             $this->payroll->status === 'paid' ? 'Sudah Dibayar' : 'Menunggu',
             $detail->notes ?? '',
         ];
@@ -191,7 +200,7 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
                 // Center align specific columns
                 $sheet->getStyle("A2:A{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // No
                 $sheet->getStyle("I2:L{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Attendance columns
-                $sheet->getStyle("T2:T{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
+                $sheet->getStyle("U2:U{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Status
 
                 // Right align currency columns
                 $sheet->getStyle("M2:S{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT); // Salary/BPJS/PPh21 columns
@@ -233,9 +242,9 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
                     ],
                 ]);
-                $sheet->mergeCells('A1:U1');
+                $sheet->mergeCells('A1:V1');
 
-                $sheet->getStyle('A2:U5')->applyFromArray([
+                $sheet->getStyle('A2:V5')->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'size' => 11,
