@@ -20,6 +20,13 @@ use Illuminate\Support\Facades\DB;
 
 class PayrollRepository implements PayrollRepositoryInterface
 {
+    /**
+     * Roles exempt from the attendance requirement in generatePayroll() --
+     * they're still paid in full even with zero attendance records for
+     * the month.
+     */
+    private const ATTENDANCE_EXEMPT_ROLES = ['manager', 'finance', 'operational_director'];
+
     protected EmailService $emailService;
 
     protected PayrollCalculationService $payrollCalculationService;
@@ -180,12 +187,22 @@ class PayrollRepository implements PayrollRepositoryInterface
                 ->pluck('employee_id')
                 ->toArray();
 
-            if (empty($employeeIdsWithAttendance)) {
+            // Manager/Finance/Operational Director are exempt from attendance
+            // tracking (no clock-in requirement), so they're still included
+            // -- with full attendance assumed -- even with zero attendance
+            // records for the month.
+            $attendanceExemptEmployeeIds = EmployeeProfile::whereHas('user.roles', function ($query) {
+                $query->whereIn('name', self::ATTENDANCE_EXEMPT_ROLES);
+            })->pluck('id')->toArray();
+
+            $employeeIdsToInclude = array_unique(array_merge($employeeIdsWithAttendance, $attendanceExemptEmployeeIds));
+
+            if (empty($employeeIdsToInclude)) {
                 throw new \Exception('Tidak ada data absensi untuk bulan ini');
             }
 
-            $activeEmployees = EmployeeProfile::with(['jobInformation', 'user'])
-                ->whereIn('id', $employeeIdsWithAttendance)
+            $activeEmployees = EmployeeProfile::with(['jobInformation', 'user.roles'])
+                ->whereIn('id', $employeeIdsToInclude)
                 ->whereHas('jobInformation', function ($query) {
                     $query->where('status', 'active');
                 })
@@ -227,11 +244,28 @@ class PayrollRepository implements PayrollRepositoryInterface
                 $ptkpStatus = $jobInfo->ptkp_status ?? 'TK/0';
 
                 $stats = $attendanceStats->get($employee->id);
-                $attendedDays = $stats->attended_days ?? 0;
-                $lateDays = $stats->late_days ?? 0;
-                $sickDays = $stats->sick_days ?? 0;
-                $absentDays = $stats->absent_days ?? 0;
-                $permissionDays = $stats->permission_days ?? 0;
+
+                if ($stats) {
+                    $attendedDays = $stats->attended_days;
+                    $lateDays = $stats->late_days;
+                    $sickDays = $stats->sick_days;
+                    $absentDays = $stats->absent_days;
+                    $permissionDays = $stats->permission_days;
+                } elseif ($employee->user?->hasAnyRole(self::ATTENDANCE_EXEMPT_ROLES)) {
+                    // No attendance records at all -- exempt role, assume
+                    // full attendance rather than treating it as absence.
+                    $attendedDays = $workingDays;
+                    $lateDays = 0;
+                    $sickDays = 0;
+                    $absentDays = 0;
+                    $permissionDays = 0;
+                } else {
+                    $attendedDays = 0;
+                    $lateDays = 0;
+                    $sickDays = 0;
+                    $absentDays = 0;
+                    $permissionDays = 0;
+                }
 
                 $dailySalary = $workingDays > 0 ? $originalSalary / $workingDays : 0;
 
