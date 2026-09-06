@@ -34,7 +34,7 @@ class PayrollController extends Controller implements HasMiddleware
     {
         return [
             new Middleware(PermissionMiddleware::using(['payroll-list']), only: ['index', 'getAllPaginated', 'show', 'getDetails', 'getPositions', 'exportExcel']),
-            new Middleware(PermissionMiddleware::using(['payroll-create']), only: ['generate', 'generateThr']),
+            new Middleware(PermissionMiddleware::using(['payroll-create']), only: ['generate', 'generateThr', 'checkPeriod']),
             new Middleware(PermissionMiddleware::using(['payroll-edit']), only: ['updateDetail']),
             new Middleware(PermissionMiddleware::using(['payroll-process']), only: ['markAsPaid']),
             new Middleware(PermissionMiddleware::using(['payroll-statistics']), only: ['getStatistics', 'getPayrollStatistics']),
@@ -148,6 +148,33 @@ class PayrollController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * Lets the frontend show a confirm dialog before generating, saying
+     * whether this is a brand-new period or one that already has data
+     * (and would need to be regenerated, replacing it).
+     */
+    public function checkPeriod(Request $request)
+    {
+        $validated = $request->validate([
+            'salary_month' => 'required|date_format:Y-m',
+            'type' => 'required|in:monthly,thr',
+        ]);
+
+        $month = Carbon::parse($validated['salary_month'])->startOfMonth();
+
+        $existing = Payroll::where('salary_month', $month->format('Y-m-d'))
+            ->where('type', $validated['type'])
+            ->first();
+
+        return ResponseHelper::jsonResponse(true, 'OK', [
+            'exists' => (bool) $existing,
+            'id' => $existing?->id,
+            'status' => $existing?->status,
+            'employee_count' => $existing?->payrollDetails()->count(),
+            'can_regenerate' => (bool) Auth::user()?->hasAnyRole(['superadmin', 'manager', 'finance']),
+        ], 200);
     }
 
     /**
