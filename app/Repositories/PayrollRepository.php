@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Models\EmployeeProfile;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Models\PayrollSetting;
 use App\Models\Project;
 use App\Services\EmailService;
 use App\Services\PayrollCalculationService;
@@ -190,10 +191,13 @@ class PayrollRepository implements PayrollRepositoryInterface
             // Manager/Finance/Operational Director are exempt from attendance
             // tracking (no clock-in requirement), so they're still included
             // -- with full attendance assumed -- even with zero attendance
-            // records for the month.
-            $attendanceExemptEmployeeIds = EmployeeProfile::whereHas('user.roles', function ($query) {
-                $query->whereIn('name', self::ATTENDANCE_EXEMPT_ROLES);
-            })->pluck('id')->toArray();
+            // records for the month. Off by default; a Superadmin/Manager
+            // turns it on via Settings > Payroll (see PayrollSettingController).
+            $attendanceExemptEmployeeIds = PayrollSetting::current()->attendance_exempt_roles_enabled
+                ? EmployeeProfile::whereHas('user.roles', function ($query) {
+                    $query->whereIn('name', self::ATTENDANCE_EXEMPT_ROLES);
+                })->pluck('id')->toArray()
+                : [];
 
             $employeeIdsToInclude = array_unique(array_merge($employeeIdsWithAttendance, $attendanceExemptEmployeeIds));
 

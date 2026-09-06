@@ -279,6 +279,14 @@ class PermissionSeeder extends Seeder
             'edit',
         ],
 
+        // Superadmin/Manager only, same restriction as attendance-setting-edit
+        // above (see RolePermissionSeeder -- neither Finance nor HR/Operational
+        // Director's permission grants reference a 'payroll-setting' prefix or
+        // explicit entry, so they never get it).
+        'payroll-setting' => [
+            'edit',
+        ],
+
         'certificate' => [
             'menu',
             'list',

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AnalyticsSourceController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceSettingController;
+use App\Http\Controllers\PayrollSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialAccountController;
 use App\Http\Controllers\DashboardController;
@@ -152,6 +153,8 @@ Route::prefix('v1')
 
             Route::get('attendance-setting', [AttendanceSettingController::class, 'show']);
             Route::put('attendance-setting', [AttendanceSettingController::class, 'update']);
+            Route::get('payroll-setting', [PayrollSettingController::class, 'show']);
+            Route::put('payroll-setting', [PayrollSettingController::class, 'update']);
 
             Route::apiResource('leave-requests', LeaveRequestController::class);
             Route::get('leave-requests/all/paginated', [LeaveRequestController::class, 'getAllPaginated']);
