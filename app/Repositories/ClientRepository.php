@@ -40,13 +40,23 @@ class ClientRepository implements ClientRepositoryInterface
 
     public function getAllPaginated(
         ?string $search,
-        int $rowPerPage
+        int $rowPerPage,
+        ?string $type = null,
+        ?string $field = null
     ): LengthAwarePaginator {
         $query = $this->getAll(
             $search,
             null,
             false
         );
+
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        if ($field) {
+            $query->where('field', $field);
+        }
 
         return $query->paginate($rowPerPage);
     }

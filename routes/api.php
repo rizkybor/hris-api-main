@@ -288,6 +288,8 @@ Route::prefix('v1')
             Route::get('reports/staff-raport/{employeeId}/pdf', [ReportController::class, 'staffRaportPdf']);
             Route::get('reports/staff-raport/{employeeId}', [ReportController::class, 'staffRaportDetail']);
             Route::get('reports/export', [ReportController::class, 'export']);
+            Route::post('reports/delete-row', [ReportController::class, 'deleteRow']);
+            Route::post('reports/delete-range', [ReportController::class, 'deleteByRange']);
 
             // Settings: Roles & Permissions
             Route::get('permissions', [RoleController::class, 'permissions']);
@@ -317,6 +319,8 @@ Route::prefix('v1')
             Route::get('history', [ActivityLogController::class, 'index']);
             Route::get('history/categories', [ActivityLogController::class, 'categories']);
             Route::get('history/statistics', [ActivityLogController::class, 'statistics']);
+            Route::post('history/delete-row', [ActivityLogController::class, 'deleteRow']);
+            Route::post('history/delete-range', [ActivityLogController::class, 'deleteByRange']);
 
             // Announcements
             Route::apiResource('announcements', AnnouncementController::class)->except(['show']);

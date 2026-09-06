@@ -13,8 +13,19 @@ use App\Exports\ProjectExpenseReportExport;
 use App\Exports\ProjectReportExport;
 use App\Exports\SubscriptionReportExport;
 use App\Helpers\ResponseHelper;
+use App\Interfaces\EmployeeProfileRepositoryInterface;
+use App\Interfaces\PayrollRepositoryInterface;
+use App\Interfaces\ProjectRepositoryInterface;
 use App\Interfaces\ReportRepositoryInterface;
+use App\Models\Attendance;
 use App\Models\EmployeeProfile;
+use App\Models\Invoice;
+use App\Models\PaymentReceipt;
+use App\Models\Payroll;
+use App\Models\Project;
+use App\Models\ProjectCashTransaction;
+use App\Models\Subscription;
+use App\Services\CompanyCashLedgerSyncService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -22,15 +33,32 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 class ReportController extends Controller implements HasMiddleware
 {
-    private ReportRepositoryInterface $reportRepository;
+    // Only report types backed by exactly one real, deletable record (not
+    // Finance -- three tables merged into fake rows; not PPh 21 or Staff
+    // Raport -- both purely computed from Payroll/Attendance, no table of
+    // their own). Maps to [Model class, date column used for range delete].
+    private const DELETABLE_TYPES = [
+        'attendance' => [Attendance::class, 'date'],
+        'payroll' => [Payroll::class, 'salary_month'],
+        'employee' => [EmployeeProfile::class, 'created_at'],
+        'ppn' => [Invoice::class, 'date'],
+        'pph23' => [PaymentReceipt::class, 'date'],
+        'project' => [Project::class, 'start_date'],
+        'project_expense' => [ProjectCashTransaction::class, 'transaction_date'],
+        'subscription' => [Subscription::class, 'start_date'],
+    ];
 
-    public function __construct(ReportRepositoryInterface $reportRepository)
-    {
-        $this->reportRepository = $reportRepository;
-    }
+    public function __construct(
+        private ReportRepositoryInterface $reportRepository,
+        private EmployeeProfileRepositoryInterface $employeeProfileRepository,
+        private PayrollRepositoryInterface $payrollRepository,
+        private ProjectRepositoryInterface $projectRepository,
+        private CompanyCashLedgerSyncService $companyCashSync,
+    ) {}
 
     public static function middleware()
     {
@@ -39,6 +67,12 @@ class ReportController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
             new Middleware(PermissionMiddleware::using(['staff-raport-menu|staff-raport-list']), only: ['staffRaport', 'staffRaportDetail']),
             new Middleware(PermissionMiddleware::using(['staff-raport-export']), only: ['staffRaportPdf']),
+            // Deleting from a report deletes the underlying real record
+            // (not just "removes it from the report"), so this is
+            // deliberately gated tighter than the rest of Reports -- by
+            // role, not by the regular permission system, restricted to
+            // Superadmin and Manager only.
+            new Middleware(RoleMiddleware::using('superadmin|manager'), only: ['deleteRow', 'deleteByRange']),
         ];
     }
 
@@ -244,6 +278,107 @@ class ReportController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * Delete a single row's underlying record. Reuses each resource's own
+     * safety-checked delete path (e.g. a paid Payroll can't be deleted, the
+     * Super Admin's own Employee record can't be deleted) rather than a
+     * raw model delete, so this behaves exactly like deleting the same
+     * record from its own dedicated page would.
+     */
+    public function deleteRow(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|string|in:'.implode(',', array_keys(self::DELETABLE_TYPES)),
+            'id' => 'required',
+        ]);
+
+        try {
+            $this->deleteEntityByTypeAndId($validated['type'], $validated['id']);
+
+            return ResponseHelper::jsonResponse(true, 'Record Deleted Successfully', null, 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Record Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 422);
+        }
+    }
+
+    /**
+     * Bulk-delete every row of a type whose date falls within the given
+     * range (inclusive). Deletes row by row through the same safety-checked
+     * path as deleteRow() -- a row that can't legally be deleted (e.g. a
+     * paid Payroll) is skipped and reported back rather than aborting the
+     * whole range.
+     */
+    public function deleteByRange(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|string|in:'.implode(',', array_keys(self::DELETABLE_TYPES)),
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        [$modelClass, $dateColumn] = self::DELETABLE_TYPES[$validated['type']];
+
+        try {
+            $ids = $modelClass::query()
+                ->whereBetween($dateColumn, [$validated['start_date'], $validated['end_date']])
+                ->pluck('id');
+
+            $deleted = 0;
+            $skipped = [];
+
+            foreach ($ids as $id) {
+                try {
+                    $this->deleteEntityByTypeAndId($validated['type'], $id);
+                    $deleted++;
+                } catch (\Throwable $e) {
+                    $skipped[] = ['id' => $id, 'reason' => $e->getMessage()];
+                }
+            }
+
+            return ResponseHelper::jsonResponse(true, "{$deleted} record(s) deleted".(count($skipped) ? ', '.count($skipped).' skipped' : ''), [
+                'deleted' => $deleted,
+                'skipped' => $skipped,
+            ], 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    private function deleteEntityByTypeAndId(string $type, string|int $id): void
+    {
+        match ($type) {
+            'attendance' => Attendance::findOrFail($id)->delete(),
+            'payroll' => $this->payrollRepository->deletePayroll((string) $id),
+            'employee' => $this->deleteEmployeeSafely((string) $id),
+            'ppn' => Invoice::findOrFail($id)->delete(),
+            'pph23' => PaymentReceipt::findOrFail($id)->delete(),
+            'project' => $this->projectRepository->delete((string) $id),
+            'project_expense' => $this->deleteProjectCashTransaction((string) $id),
+            'subscription' => Subscription::findOrFail($id)->delete(),
+            default => throw new \InvalidArgumentException('Unsupported report type for deletion.'),
+        };
+    }
+
+    private function deleteEmployeeSafely(string $id): void
+    {
+        $employee = $this->employeeProfileRepository->getById($id);
+
+        if ($employee->user?->isProtected()) {
+            throw new \Exception('The Super Admin account cannot be deleted.');
+        }
+
+        $this->employeeProfileRepository->delete($id);
+    }
+
+    private function deleteProjectCashTransaction(string $id): void
+    {
+        $transaction = ProjectCashTransaction::findOrFail($id);
+        $this->companyCashSync->remove($transaction);
+        $transaction->delete();
     }
 
     public function export(Request $request)

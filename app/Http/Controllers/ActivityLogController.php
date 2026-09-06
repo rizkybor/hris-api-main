@@ -10,6 +10,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 class ActivityLogController extends Controller implements HasMiddleware
 {
@@ -17,6 +18,9 @@ class ActivityLogController extends Controller implements HasMiddleware
     {
         return [
             new Middleware(PermissionMiddleware::using(['history-menu|history-view']), only: ['index', 'categories', 'statistics']),
+            // Purging audit-log entries is gated by role, not the regular
+            // permission system, restricted to Superadmin and Manager only.
+            new Middleware(RoleMiddleware::using('superadmin|manager'), only: ['deleteRow', 'deleteByRange']),
         ];
     }
 
@@ -112,6 +116,47 @@ class ActivityLogController extends Controller implements HasMiddleware
                 'this_week' => $thisWeek,
                 'by_category' => $byCategory,
             ], 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Delete a single activity log entry. Unlike the report deletions, this
+     * is a plain hard delete -- Activity has no soft-delete column, which
+     * is expected for a log-purge feature.
+     */
+    public function deleteRow(Request $request)
+    {
+        $validated = $request->validate(['id' => 'required|integer']);
+
+        try {
+            Activity::findOrFail($validated['id'])->delete();
+
+            return ResponseHelper::jsonResponse(true, 'Activity Log Entry Deleted Successfully', null, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Bulk-delete every activity log entry created within the given range
+     * (inclusive) -- the log-retention "purge old entries" action.
+     */
+    public function deleteByRange(Request $request)
+    {
+        $validated = $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        try {
+            $deleted = Activity::query()
+                ->whereDate('created_at', '>=', $validated['start_date'])
+                ->whereDate('created_at', '<=', $validated['end_date'])
+                ->delete();
+
+            return ResponseHelper::jsonResponse(true, "{$deleted} activity log entr".($deleted === 1 ? 'y' : 'ies')." deleted", ['deleted' => $deleted], 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
