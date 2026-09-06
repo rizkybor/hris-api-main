@@ -129,6 +129,7 @@ class SubscriptionController extends Controller implements HasMiddleware
                 'product_name' => $service['product_name'] ?? null,
                 'amount' => $service['amount'],
                 'ppn_percentage' => $service['ppn_percentage'] ?? null,
+                'icann_fee' => $service['icann_fee'] ?? null,
                 'notes' => $service['notes'] ?? null,
                 'sort_order' => $index,
             ])->all()
@@ -209,15 +210,32 @@ class SubscriptionController extends Controller implements HasMiddleware
                 // One line item per bundled service so several services
                 // under the same subscription still land on a single
                 // invoice.
-                $items = $subscription->services->map(fn ($service) => [
+                $serviceItems = $subscription->services->map(fn ($service) => [
                     'description' => ($service->product_name ?: $service->service_type)." - {$periodLabel}",
                     'quantity' => '1',
                     'rate' => null,
                     'total' => (float) (string) $service->amount,
                 ])->all();
 
-                $subtotal = array_sum(array_column($items, 'total'));
+                $subtotal = array_sum(array_column($serviceItems, 'total'));
                 $ppnPercentage = (float) (string) $subscription->ppn_percentage;
+
+                // Optional pass-through registrar cost (e.g. ICANN's fee on
+                // a domain service) -- billed as its own line item per
+                // service it applies to, but excluded from subtotal/ppn
+                // (not part of the VAT taxable base), same treatment as
+                // Invoice::admin_fee.
+                $icannFeeTotal = (float) $subscription->services->sum(fn ($service) => (float) ($service->icann_fee ?? 0));
+                $icannItems = $subscription->services
+                    ->filter(fn ($service) => (float) ($service->icann_fee ?? 0) > 0)
+                    ->map(fn ($service) => [
+                        'description' => ($service->product_name ?: $service->service_type)." - ICANN Fee - {$periodLabel}",
+                        'quantity' => '1',
+                        'rate' => null,
+                        'total' => (float) (string) $service->icann_fee,
+                    ])->values()->all();
+
+                $items = array_merge($serviceItems, $icannItems);
 
                 // With several services, ppn_percentage is a blended rate
                 // rounded to 2 decimals (see recalculateAggregatePpn()) --
@@ -251,12 +269,13 @@ class SubscriptionController extends Controller implements HasMiddleware
                     'ppn_percentage' => $ppnPercentage,
                     'ppn_amount' => $ppnAmount,
                     'admin_fee' => $adminFee,
+                    'icann_fee' => $icannFeeTotal,
                     'bank_name' => $subscription->bank_name,
                     'bank_account' => $bankAccount?->account_number,
                     'terms' => $subscription->terms,
                     'pph23_type' => $subscription->pph23_type,
                     'pph23_percent' => $subscription->pph23_percent,
-                    'total' => $subtotal + $ppnAmount + $adminFee,
+                    'total' => $subtotal + $ppnAmount + $adminFee + $icannFeeTotal,
                     'created_by' => Auth::id(),
                 ]);
 

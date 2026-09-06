@@ -23,9 +23,9 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithEv
     // range so the sheet reads as "1 subscription = 1 grouped block" with
     // only the item-specific columns (Service Type/Product Name/Service
     // Amount) varying per row.
-    private const GROUPED_COLUMNS = ['B', 'C', 'D', 'I', 'J', 'K', 'L', 'M', 'N'];
+    private const GROUPED_COLUMNS = ['B', 'C', 'D', 'J', 'K', 'L', 'M', 'N', 'O'];
 
-    private const LAST_COLUMN = 'N';
+    private const LAST_COLUMN = 'O';
 
     public function __construct(
         protected ?string $status = null,
@@ -73,7 +73,7 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithEv
     {
         return [
             'No', 'Name', 'Client', 'Project',
-            'Service Type', 'Product Name', 'Service Amount', 'Service VAT/PPN %',
+            'Service Type', 'Product Name', 'Service Amount', 'Service VAT/PPN %', 'Service ICANN Fee',
             'Billing Cycle', 'Total Amount', 'Total VAT/PPN %', 'Status', 'Next Due Date', 'Last Invoiced',
         ];
     }
@@ -100,6 +100,7 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithEv
                 : '-',
             $service ? self::numberCell($service->amount) : self::numberCell(0),
             self::numberCell($service?->ppn_percentage ?? 0),
+            self::numberCell($service?->icann_fee ?? 0),
             $subscription->billing_cycle,
             self::numberCell($subscription->amount),
             self::numberCell($subscription->ppn_percentage),

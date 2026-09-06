@@ -11,6 +11,7 @@ class SubscriptionService extends Model
         'product_name',
         'amount',
         'ppn_percentage',
+        'icann_fee',
         'notes',
         'sort_order',
     ];
@@ -20,6 +21,7 @@ class SubscriptionService extends Model
         return [
             'amount' => 'decimal:2',
             'ppn_percentage' => 'decimal:2',
+            'icann_fee' => 'decimal:2',
         ];
     }
 

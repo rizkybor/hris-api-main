@@ -110,6 +110,13 @@
                 <td style="text-align: right;">Admin Fee:</td>
                 <td style="text-align: right;">{{ $invoice->admin_fee > 0 ? 'Rp. '.number_format($invoice->admin_fee, 0, ',', '.') : 'Rp. -' }}</td>
             </tr>
+            @if($invoice->icann_fee > 0)
+                <tr>
+                    <td></td>
+                    <td style="text-align: right;">ICANN Fee:</td>
+                    <td style="text-align: right;">Rp. {{ number_format($invoice->icann_fee, 0, ',', '.') }}</td>
+                </tr>
+            @endif
         </table>
 
         <table style="margin-top: 3mm; border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51;">
