@@ -34,7 +34,14 @@ class PpnReportExport implements FromCollection, ShouldAutoSize, WithHeadings, W
 
     public function headings(): array
     {
-        return ['No', 'Tanggal', 'Nomor Faktur Pajak', 'Nomor Invoice', 'Nama Klien', 'NPWP Klien', 'DPP', '% PPN', 'PPN'];
+        return [
+            'No', 'Tanggal', 'Nomor Faktur Pajak', 'Nomor Invoice', 'Nama Klien', 'NPWP Klien',
+            'DPP', '% PPN', 'PPN',
+            // Reference only -- not part of DPP/PPN (the actual tax filing
+            // figures above), same as they're excluded from the invoice's
+            // own subtotal/ppn_amount.
+            'Admin Fee', 'ICANN Fee', 'Total Invoice',
+        ];
     }
 
     public function map($invoice): array
@@ -49,10 +56,23 @@ class PpnReportExport implements FromCollection, ShouldAutoSize, WithHeadings, W
             $invoice->invoice_number,
             $invoice->client_name,
             $invoice->client_npwp ?? '-',
-            (float) $invoice->subtotal,
-            (float) $invoice->ppn_percentage,
-            (float) $invoice->ppn_amount,
+            self::numberCell($invoice->subtotal),
+            self::numberCell($invoice->ppn_percentage),
+            self::numberCell($invoice->ppn_amount),
+            self::numberCell($invoice->admin_fee),
+            self::numberCell($invoice->icann_fee),
+            self::numberCell($invoice->total),
         ];
+    }
+
+    /**
+     * Maatwebsite Excel/PhpSpreadsheet silently drops a literal int/float 0
+     * to a blank cell instead of writing 0 -- cast to string to keep a
+     * legitimate zero (e.g. no Admin Fee/ICANN Fee on this invoice) visible.
+     */
+    private static function numberCell(mixed $value): string
+    {
+        return (string) (float) $value;
     }
 
     public function styles(Worksheet $sheet)
