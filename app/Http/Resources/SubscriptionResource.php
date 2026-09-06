@@ -12,10 +12,17 @@ class SubscriptionResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            // Label for this value comes from Settings -> Dropdown Options
-            // (category "subscription_service_type"), resolved client-side.
-            'service_type' => $this->service_type,
-            'product_name' => $this->product_name,
+            // Bundled services -- each becomes one line item when an
+            // invoice is generated. Labels for service_type come from
+            // Settings -> Dropdown Options (category
+            // "subscription_service_type"), resolved client-side.
+            'services' => $this->whenLoaded('services', fn () => $this->services->map(fn ($service) => [
+                'id' => $service->id,
+                'service_type' => $service->service_type,
+                'product_name' => $service->product_name,
+                'amount' => (float) (string) $service->amount,
+                'notes' => $service->notes,
+            ])),
             'project_id' => $this->project_id,
             'project' => $this->whenLoaded('project', fn () => $this->project ? [
                 'id' => $this->project->id,
