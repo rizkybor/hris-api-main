@@ -12,7 +12,9 @@ interface ClientRepositoryInterface
 
     public function getAllPaginated(
         ?string $search,
-        int $rowPerPage
+        int $rowPerPage,
+        ?string $type = null,
+        ?string $field = null
     );
 
     public function getById(

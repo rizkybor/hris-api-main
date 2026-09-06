@@ -70,12 +70,16 @@ class ClientController extends Controller implements HasMiddleware
         $request = $request->validate([
             'search' => 'nullable|string',
             'row_per_page' => 'required|integer',
+            'type' => 'nullable|string',
+            'field' => 'nullable|string',
         ]);
 
         try {
             $clients = $this->clientsRepository->getAllPaginated(
                 $request['search'] ?? null,
-                $request['row_per_page']
+                $request['row_per_page'],
+                $request['type'] ?? null,
+                $request['field'] ?? null
             );
 
             return ResponseHelper::jsonResponse(true, 'Client Retrieved Successfully', PaginateResource::make($clients, ClientResource::class), 200);
