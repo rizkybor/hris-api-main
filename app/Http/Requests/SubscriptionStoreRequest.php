@@ -26,6 +26,14 @@ class SubscriptionStoreRequest extends FormRequest
             )],
             'services.*.product_name' => ['nullable', 'string', 'max:255'],
             'services.*.amount' => ['required', 'numeric', 'min:0'],
+            // Optional per-service VAT/PPN override -- only meaningful when
+            // a subscription bundles several services taxed at different
+            // rates (see Subscription::ppn_percentage / recalculateAggregatePpn()).
+            'services.*.ppn_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            // Optional pass-through fee (e.g. ICANN's registrar fee on a
+            // domain service) -- not every service has one, and it's not
+            // part of the VAT/PPN taxable base.
+            'services.*.icann_fee' => ['nullable', 'numeric', 'min:0'],
             'services.*.notes' => ['nullable', 'string'],
             'start_date' => ['required', 'date'],
             'next_due_date' => ['required', 'date'],
@@ -50,6 +58,8 @@ class SubscriptionStoreRequest extends FormRequest
             'services.*.service_type' => 'Service Type',
             'services.*.product_name' => 'Product Name',
             'services.*.amount' => 'Amount',
+            'services.*.ppn_percentage' => 'Service VAT / PPN Percentage',
+            'services.*.icann_fee' => 'ICANN Fee',
             'project_id' => 'Project',
             'client_id' => 'Client',
             'billing_cycle' => 'Billing Cycle',

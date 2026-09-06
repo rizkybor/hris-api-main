@@ -21,6 +21,13 @@ class SubscriptionResource extends JsonResource
                 'service_type' => $service->service_type,
                 'product_name' => $service->product_name,
                 'amount' => (float) (string) $service->amount,
+                // Optional per-service VAT/PPN override, only meaningful
+                // when there's more than one service on the subscription
+                // -- see Subscription::ppn_percentage.
+                'ppn_percentage' => $service->ppn_percentage !== null ? (float) (string) $service->ppn_percentage : null,
+                // Optional pass-through fee (e.g. ICANN's registrar fee on
+                // a domain service) -- not every service has one.
+                'icann_fee' => $service->icann_fee !== null ? (float) (string) $service->icann_fee : null,
                 'notes' => $service->notes,
             ])),
             'project_id' => $this->project_id,

@@ -41,6 +41,10 @@ class InvoiceStoreRequest extends FormRequest
             'items.*.total' => ['required', 'numeric', 'min:0'],
             'ppn_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'admin_fee' => ['nullable', 'numeric', 'min:0'],
+            // Optional pass-through fee (e.g. ICANN's registrar fee on a
+            // domain) -- not every invoice has one, and it's not part of
+            // the VAT/PPN taxable base.
+            'icann_fee' => ['nullable', 'numeric', 'min:0'],
             'bank_name' => ['nullable', 'string', 'max:255'],
             'bank_account' => ['nullable', 'string', 'max:100'],
             'terms' => ['nullable', 'string'],

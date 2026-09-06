@@ -32,6 +32,7 @@ class InvoiceUpdateRequest extends FormRequest
             'items.*.total' => ['required', 'numeric', 'min:0'],
             'ppn_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'admin_fee' => ['nullable', 'numeric', 'min:0'],
+            'icann_fee' => ['nullable', 'numeric', 'min:0'],
             'bank_name' => ['nullable', 'string', 'max:255'],
             'bank_account' => ['nullable', 'string', 'max:100'],
             'terms' => ['nullable', 'string'],
