@@ -10,6 +10,7 @@ class SubscriptionService extends Model
         'service_type',
         'product_name',
         'amount',
+        'ppn_percentage',
         'notes',
         'sort_order',
     ];
@@ -18,6 +19,7 @@ class SubscriptionService extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'ppn_percentage' => 'decimal:2',
         ];
     }
 

@@ -128,10 +128,38 @@ class SubscriptionController extends Controller implements HasMiddleware
                 'service_type' => $service['service_type'],
                 'product_name' => $service['product_name'] ?? null,
                 'amount' => $service['amount'],
+                'ppn_percentage' => $service['ppn_percentage'] ?? null,
                 'notes' => $service['notes'] ?? null,
                 'sort_order' => $index,
             ])->all()
         );
+
+        $this->recalculateAggregatePpn($subscription);
+    }
+
+    /**
+     * With a single service, Subscription::ppn_percentage is the one VAT
+     * rate the user set directly -- left as-is. With several services each
+     * optionally carrying their own rate (0% if unset), that field can no
+     * longer be one flat user-entered rate, so it's overwritten here with
+     * the blended "Total VAT/PPN%" (total PPN amount / total amount) that
+     * generateInvoice() later applies to the whole invoice.
+     */
+    private function recalculateAggregatePpn(Subscription $subscription): void
+    {
+        $services = $subscription->services()->get();
+
+        if ($services->count() <= 1) {
+            return;
+        }
+
+        $totalAmount = (float) $services->sum(fn ($service) => (float) $service->amount);
+        $totalPpnAmount = (float) $services->sum(
+            fn ($service) => (float) $service->amount * ((float) ($service->ppn_percentage ?? 0) / 100)
+        );
+
+        $subscription->ppn_percentage = $totalAmount > 0 ? round($totalPpnAmount / $totalAmount * 100, 2) : 0;
+        $subscription->save();
     }
 
     public function destroy(string $id)

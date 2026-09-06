@@ -26,6 +26,10 @@ class SubscriptionStoreRequest extends FormRequest
             )],
             'services.*.product_name' => ['nullable', 'string', 'max:255'],
             'services.*.amount' => ['required', 'numeric', 'min:0'],
+            // Optional per-service VAT/PPN override -- only meaningful when
+            // a subscription bundles several services taxed at different
+            // rates (see Subscription::ppn_percentage / recalculateAggregatePpn()).
+            'services.*.ppn_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'services.*.notes' => ['nullable', 'string'],
             'start_date' => ['required', 'date'],
             'next_due_date' => ['required', 'date'],
@@ -50,6 +54,7 @@ class SubscriptionStoreRequest extends FormRequest
             'services.*.service_type' => 'Service Type',
             'services.*.product_name' => 'Product Name',
             'services.*.amount' => 'Amount',
+            'services.*.ppn_percentage' => 'Service VAT / PPN Percentage',
             'project_id' => 'Project',
             'client_id' => 'Client',
             'billing_cycle' => 'Billing Cycle',

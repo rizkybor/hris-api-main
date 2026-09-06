@@ -21,6 +21,10 @@ class SubscriptionResource extends JsonResource
                 'service_type' => $service->service_type,
                 'product_name' => $service->product_name,
                 'amount' => (float) (string) $service->amount,
+                // Optional per-service VAT/PPN override, only meaningful
+                // when there's more than one service on the subscription
+                // -- see Subscription::ppn_percentage.
+                'ppn_percentage' => $service->ppn_percentage !== null ? (float) (string) $service->ppn_percentage : null,
                 'notes' => $service->notes,
             ])),
             'project_id' => $this->project_id,
