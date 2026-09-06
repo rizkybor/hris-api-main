@@ -134,6 +134,21 @@ class PayrollRepository implements PayrollRepositoryInterface
                 ->where('type', 'monthly')
                 ->first();
 
+            // A previously-deleted Payroll for this period is soft-deleted,
+            // so it's invisible to the query above but still occupies the
+            // (salary_month, type) unique index -- clear it out first or the
+            // create() below collides with it.
+            if (! $existingPayroll) {
+                Payroll::onlyTrashed()
+                    ->where('salary_month', $month->format('Y-m-d'))
+                    ->where('type', 'monthly')
+                    ->get()
+                    ->each(function (Payroll $trashed) {
+                        $trashed->payrollDetails()->forceDelete();
+                        $trashed->forceDelete();
+                    });
+            }
+
             if ($existingPayroll && ! $regenerate) {
                 throw new \Exception('Payroll untuk bulan ' . $month->format('F Y') . ' sudah dibuat');
             }
@@ -284,6 +299,18 @@ class PayrollRepository implements PayrollRepositoryInterface
             $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))
                 ->where('type', 'thr')
                 ->first();
+
+            // See the same guard in generatePayroll() above.
+            if (! $existingPayroll) {
+                Payroll::onlyTrashed()
+                    ->where('salary_month', $month->format('Y-m-d'))
+                    ->where('type', 'thr')
+                    ->get()
+                    ->each(function (Payroll $trashed) {
+                        $trashed->payrollDetails()->forceDelete();
+                        $trashed->forceDelete();
+                    });
+            }
 
             if ($existingPayroll && ! $regenerate) {
                 throw new \Exception('THR untuk bulan '.$month->format('F Y').' sudah dibuat');
