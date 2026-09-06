@@ -23,9 +23,11 @@ interface PayrollRepositoryInterface
 
     public function deletePayroll(string $id);
 
-    public function generatePayroll(string $salaryMonth);
+    public function deletePayrollDetail(string $id);
 
-    public function generateThrPayroll(string $salaryMonth);
+    public function generatePayroll(string $salaryMonth, bool $regenerate = false);
+
+    public function generateThrPayroll(string $salaryMonth, bool $regenerate = false);
 
     public function updatePayrollDetail(string $id, array $data);
 
