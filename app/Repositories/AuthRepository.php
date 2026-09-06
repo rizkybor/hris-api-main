@@ -25,6 +25,13 @@ class AuthRepository implements AuthRepositoryInterface
 
             /** @var User $user */
             $user = Auth::user();
+
+            if (! $user->is_active) {
+                Auth::guard('web')->logout();
+
+                throw new \Exception('Your account has been deactivated. Please contact your administrator.', 403);
+            }
+
             $user->load(['roles', 'permissions']);
             $user->token = $user->createToken('auth_token')->plainTextToken;
 

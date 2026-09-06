@@ -101,6 +101,7 @@ Route::prefix('v1')
             Route::get('employees/statistics', [EmployeeProfileController::class, 'getStatistics']);
             Route::get('employees/contract-alerts', [EmployeeProfileController::class, 'getContractAlerts']);
             Route::get('employees/{id}/performance-statistics', [EmployeeProfileController::class, 'getPerformanceStatistics']);
+            Route::post('employees/{id}/toggle-account-status', [EmployeeProfileController::class, 'toggleAccountStatus']);
             Route::get('employees/all/paginated', [EmployeeProfileController::class, 'getAllPaginated']);
             Route::apiResource('employees', EmployeeProfileController::class);
 
