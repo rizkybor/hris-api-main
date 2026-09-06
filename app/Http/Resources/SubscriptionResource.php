@@ -43,6 +43,7 @@ class SubscriptionResource extends JsonResource
             'pph23_type' => $this->pph23_type,
             'pph23_percent' => $this->pph23_percent !== null ? (float) (string) $this->pph23_percent : null,
             'invoices_count' => $this->whenCounted('invoices'),
+            'latest_invoice_number' => $this->whenLoaded('latestInvoice', fn () => $this->latestInvoice?->invoice_number),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
