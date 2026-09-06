@@ -25,6 +25,7 @@ class Invoice extends Model
         'faktur_pajak_number',
         'project_id',
         'subscription_id',
+        'billing_period',
         'client_code',
         'client_name',
         'client_pic',

@@ -239,13 +239,34 @@ class PayrollController extends Controller implements HasMiddleware
     }
 
     /**
-     * Update payroll detail (notes and final_salary)
+     * Update payroll detail -- lets Superadmin/HR/Finance manually override
+     * one employee's computed figures when their actual situation doesn't
+     * match the automatic generation formula (e.g. an ad-hoc bonus,
+     * deduction, or correction), rather than only being able to accept
+     * whatever the bulk generate produced.
      */
     public function updateDetail(Request $request, string $id)
     {
         $validated = $request->validate([
             'notes' => 'nullable|string',
+            'gross_salary' => 'nullable|numeric|min:0',
+            'bpjs_kesehatan_employee' => 'nullable|numeric|min:0',
+            'bpjs_jht_employee' => 'nullable|numeric|min:0',
+            'bpjs_jp_employee' => 'nullable|numeric|min:0',
+            'bpjs_kesehatan_company' => 'nullable|numeric|min:0',
+            'bpjs_jht_company' => 'nullable|numeric|min:0',
+            'bpjs_jp_company' => 'nullable|numeric|min:0',
+            'bpjs_jkk_company' => 'nullable|numeric|min:0',
+            'bpjs_jkm_company' => 'nullable|numeric|min:0',
+            'pph21' => 'nullable|numeric|min:0',
+            'total_deduction' => 'nullable|numeric|min:0',
             'final_salary' => 'nullable|numeric|min:0',
+            // Some staff (common at a startup) are paid a cut of a project's
+            // budget instead of a fixed figure -- 'project_percentage' mode
+            // derives gross/final salary from source_project_id's budget.
+            'payment_mode' => 'nullable|in:manual,project_percentage',
+            'source_project_id' => 'nullable|integer|exists:projects,id|required_if:payment_mode,project_percentage',
+            'project_percentage' => 'nullable|numeric|min:0|max:100|required_if:payment_mode,project_percentage',
         ]);
 
         try {
