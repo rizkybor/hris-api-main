@@ -23,7 +23,9 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithEv
     // range so the sheet reads as "1 subscription = 1 grouped block" with
     // only the item-specific columns (Service Type/Product Name/Service
     // Amount) varying per row.
-    private const GROUPED_COLUMNS = ['B', 'C', 'D', 'H', 'I', 'J', 'K', 'L'];
+    private const GROUPED_COLUMNS = ['B', 'C', 'D', 'J', 'K', 'L', 'M', 'N', 'O'];
+
+    private const LAST_COLUMN = 'O';
 
     public function __construct(
         protected ?string $status = null,
@@ -71,8 +73,8 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithEv
     {
         return [
             'No', 'Name', 'Client', 'Project',
-            'Service Type', 'Product Name', 'Service Amount',
-            'Billing Cycle', 'Total Amount', 'Status', 'Next Due Date', 'Last Invoiced',
+            'Service Type', 'Product Name', 'Service Amount', 'Service VAT/PPN %', 'Service ICANN Fee',
+            'Billing Cycle', 'Total Amount', 'Total VAT/PPN %', 'Status', 'Next Due Date', 'Last Invoiced',
         ];
     }
 
@@ -96,13 +98,28 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithEv
             $service
                 ? ($service->product_name ?: ($service->service_type === 'saas_subscription' ? '-' : 'Renewable'))
                 : '-',
-            $service ? (float) $service->amount : 0,
+            $service ? self::numberCell($service->amount) : self::numberCell(0),
+            self::numberCell($service?->ppn_percentage ?? 0),
+            self::numberCell($service?->icann_fee ?? 0),
             $subscription->billing_cycle,
-            (float) $subscription->amount,
+            self::numberCell($subscription->amount),
+            self::numberCell($subscription->ppn_percentage),
             $subscription->status === 'cancelled' ? 'Not Active' : ucfirst($subscription->status),
             optional($subscription->next_due_date)->format('d F Y'),
             optional($subscription->last_invoiced_at)->format('d F Y') ?? '-',
         ];
+    }
+
+    /**
+     * Maatwebsite Excel/PhpSpreadsheet silently drops a literal int/float 0
+     * to a blank cell (verified: a plain 0.0 in the row array never makes
+     * it into the written file, while the string "0" does) -- a service
+     * legitimately has 0% PPN whenever it's left unset, so numeric columns
+     * that can land on exactly zero are cast to string to avoid losing it.
+     */
+    private static function numberCell(mixed $value): string
+    {
+        return (string) (float) $value;
     }
 
     public function styles(Worksheet $sheet)
@@ -137,8 +154,7 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithEv
                     // A thin bottom border under the group's last row
                     // marks where one subscription's block ends and the
                     // next begins.
-                    $lastColumn = 'L';
-                    $sheet->getStyle("A{$range['end']}:{$lastColumn}{$range['end']}")
+                    $sheet->getStyle('A'.$range['end'].':'.self::LAST_COLUMN.$range['end'])
                         ->getBorders()->getBottom()
                         ->setBorderStyle(Border::BORDER_THIN);
                 }

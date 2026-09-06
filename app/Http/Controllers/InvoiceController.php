@@ -57,13 +57,16 @@ class InvoiceController extends Controller implements HasMiddleware
         }
     }
 
-    private function calculateTotals(array $items, ?float $ppnPercentage, ?float $adminFee): array
+    private function calculateTotals(array $items, ?float $ppnPercentage, ?float $adminFee, ?float $icannFee = null): array
     {
         $subtotal = collect($items)->sum('total');
         $ppnPercentage = $ppnPercentage ?? 0;
         $ppnAmount = round($subtotal * ($ppnPercentage / 100), 2);
         $adminFee = $adminFee ?? 0;
-        $total = $subtotal + $ppnAmount + $adminFee;
+        // Pass-through registrar fee (e.g. ICANN's fee on a domain) --
+        // added after tax like admin_fee, not part of the VAT taxable base.
+        $icannFee = $icannFee ?? 0;
+        $total = $subtotal + $ppnAmount + $adminFee + $icannFee;
 
         return compact('subtotal', 'ppnAmount', 'total');
     }
@@ -74,7 +77,12 @@ class InvoiceController extends Controller implements HasMiddleware
 
         try {
             $date = Carbon::parse($validated['date']);
-            $totals = $this->calculateTotals($validated['items'], $validated['ppn_percentage'] ?? null, $validated['admin_fee'] ?? null);
+            $totals = $this->calculateTotals(
+                $validated['items'],
+                $validated['ppn_percentage'] ?? null,
+                $validated['admin_fee'] ?? null,
+                $validated['icann_fee'] ?? null
+            );
 
             $invoiceNumber = $validated['numbering_mode'] === 'manual'
                 ? $validated['invoice_number']
@@ -89,6 +97,7 @@ class InvoiceController extends Controller implements HasMiddleware
                 'ppn_percentage' => $validated['ppn_percentage'] ?? 0,
                 'ppn_amount' => $totals['ppnAmount'],
                 'admin_fee' => $validated['admin_fee'] ?? 0,
+                'icann_fee' => $validated['icann_fee'] ?? 0,
                 'total' => $totals['total'],
                 'created_by' => Auth::id(),
             ]);
@@ -135,7 +144,8 @@ class InvoiceController extends Controller implements HasMiddleware
                 $totals = $this->calculateTotals(
                     $validated['items'],
                     $validated['ppn_percentage'] ?? $invoice->ppn_percentage,
-                    $validated['admin_fee'] ?? $invoice->admin_fee
+                    $validated['admin_fee'] ?? $invoice->admin_fee,
+                    $validated['icann_fee'] ?? $invoice->icann_fee
                 );
                 $validated['subtotal'] = $totals['subtotal'];
                 $validated['ppn_amount'] = $totals['ppnAmount'];

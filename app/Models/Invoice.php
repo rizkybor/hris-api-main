@@ -38,6 +38,7 @@ class Invoice extends Model
         'ppn_percentage',
         'ppn_amount',
         'admin_fee',
+        'icann_fee',
         'total',
         'bank_name',
         'bank_account',
@@ -57,6 +58,7 @@ class Invoice extends Model
             'ppn_percentage' => 'decimal:2',
             'ppn_amount' => 'decimal:2',
             'admin_fee' => 'decimal:2',
+            'icann_fee' => 'decimal:2',
             'total' => 'decimal:2',
             'pph23_percent' => 'decimal:2',
         ];
