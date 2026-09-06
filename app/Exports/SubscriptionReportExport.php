@@ -90,7 +90,12 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithEv
             $subscription->client?->name ?? '-',
             $subscription->project?->name ?? '-',
             $service ? str_replace('_', ' ', $service->service_type) : '-',
-            $service?->product_name ?? '-',
+            // Product Name only ever gets filled in for a saas_subscription
+            // service -- other service types (maintenance, domain renewal)
+            // recur as-is each period rather than naming a product.
+            $service
+                ? ($service->product_name ?: ($service->service_type === 'saas_subscription' ? '-' : 'Renewable'))
+                : '-',
             $service ? (float) $service->amount : 0,
             $subscription->billing_cycle,
             (float) $subscription->amount,
