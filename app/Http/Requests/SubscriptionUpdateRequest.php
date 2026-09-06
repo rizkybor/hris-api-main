@@ -13,14 +13,19 @@ class SubscriptionUpdateRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'service_type' => ['sometimes', 'required', 'string', Rule::in(
-                ConfigurableOption::category('subscription_service_type')->active()->pluck('value')
-            )],
-            'product_name' => ['nullable', 'string', 'max:255'],
             'project_id' => ['nullable', 'exists:projects,id'],
             'client_id' => ['sometimes', 'required', 'exists:clients,id'],
             'billing_cycle' => ['sometimes', 'required', 'string', 'in:monthly,yearly'],
-            'amount' => ['sometimes', 'required', 'numeric', 'min:0'],
+            // Omitting `services` entirely leaves existing services
+            // untouched; sending it replaces the full set (see
+            // SubscriptionController::update()).
+            'services' => ['sometimes', 'required', 'array', 'min:1'],
+            'services.*.service_type' => ['required_with:services', 'string', Rule::in(
+                ConfigurableOption::category('subscription_service_type')->active()->pluck('value')
+            )],
+            'services.*.product_name' => ['nullable', 'string', 'max:255'],
+            'services.*.amount' => ['required_with:services', 'numeric', 'min:0'],
+            'services.*.notes' => ['nullable', 'string'],
             'start_date' => ['sometimes', 'required', 'date'],
             'next_due_date' => ['sometimes', 'required', 'date'],
             'status' => ['sometimes', 'string', 'in:active,postponed,cancelled'],
@@ -38,12 +43,13 @@ class SubscriptionUpdateRequest extends FormRequest
     {
         return [
             'name' => 'Name',
-            'service_type' => 'Service Type',
-            'product_name' => 'Product Name',
+            'services' => 'Services',
+            'services.*.service_type' => 'Service Type',
+            'services.*.product_name' => 'Product Name',
+            'services.*.amount' => 'Amount',
             'project_id' => 'Project',
             'client_id' => 'Client',
             'billing_cycle' => 'Billing Cycle',
-            'amount' => 'Amount',
             'start_date' => 'Start Date',
             'next_due_date' => 'Next Due Date',
             'status' => 'Status',

@@ -12,14 +12,17 @@ class Subscription extends Model
 {
     use HasFactory, SoftDeletes, LogsActivity;
 
+    // `amount` is a computed accessor (sum of `services`), not a real
+    // column -- without $appends it silently drops out of toArray()/JSON
+    // for any code that serializes a Subscription model directly instead
+    // of going through SubscriptionResource (e.g. report endpoints).
+    protected $appends = ['amount'];
+
     protected $fillable = [
         'name',
-        'service_type',
-        'product_name',
         'project_id',
         'client_id',
         'billing_cycle',
-        'amount',
         'start_date',
         'next_due_date',
         'status',
@@ -37,7 +40,6 @@ class Subscription extends Model
     protected function casts(): array
     {
         return [
-            'amount' => 'decimal:2',
             'ppn_percentage' => 'decimal:2',
             'admin_fee' => 'decimal:2',
             'pph23_percent' => 'decimal:2',
@@ -74,6 +76,21 @@ class Subscription extends Model
     public function invoices()
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function services()
+    {
+        return $this->hasMany(SubscriptionService::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Total invoice subtotal for this subscription -- the sum of all its
+     * services' amounts, replacing the old single `amount` column now that
+     * a subscription can bundle several services.
+     */
+    public function getAmountAttribute(): float
+    {
+        return (float) $this->services->sum(fn ($service) => (float) $service->amount);
     }
 
     /**
