@@ -20,6 +20,7 @@ class UserResource extends JsonResource
             'profile_photo' => CloudinaryUrl::image($this->profile_photo),
             'name' => $this->name,
             'email' => $this->email,
+            'is_active' => (bool) $this->is_active,
             'employee_profile' => new EmployeeProfileResource($this->whenLoaded('employeeProfile')),
             'roles' => $this->whenLoaded('roles', function () {
                 return $this->roles->pluck('name');

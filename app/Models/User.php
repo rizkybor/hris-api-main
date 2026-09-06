@@ -19,7 +19,7 @@ class User extends Authenticatable
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'email', 'profile_photo'])
+            ->logOnly(['name', 'email', 'profile_photo', 'is_active'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->useLogName('User Management');
@@ -70,6 +70,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 

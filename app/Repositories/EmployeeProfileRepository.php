@@ -268,6 +268,44 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
         });
     }
 
+    /**
+     * Flips whether this employee's User account can log in at all --
+     * distinct from job_information.status, which only affects payroll/
+     * reporting. Manager/Finance/Operational Director accounts can only be
+     * toggled by Superadmin; everyone else can be toggled by any role
+     * gated at the route (see EmployeeProfileController::middleware()).
+     */
+    public function toggleAccountStatus(string $id): EmployeeProfile
+    {
+        return DB::transaction(function () use ($id) {
+            $employee = $this->getById($id);
+            $user = $employee->user;
+
+            if (! $user) {
+                throw new \RuntimeException('This employee has no linked user account.');
+            }
+
+            if ($user->isProtected()) {
+                throw new \RuntimeException('The Super Admin account cannot be deactivated.');
+            }
+
+            $targetIsElevated = $user->hasAnyRole(['manager', 'finance', 'operational_director']);
+
+            if ($targetIsElevated && ! Auth::user()?->hasRole('superadmin')) {
+                throw new \RuntimeException("Only Superadmin can change this account's status.");
+            }
+
+            $user->forceFill(['is_active' => ! $user->is_active])->save();
+
+            if (! $user->is_active) {
+                // Force logout -- revoke every active session token immediately.
+                $user->tokens()->delete();
+            }
+
+            return $employee->fresh(['user.roles', 'jobInformation.team.leader', 'jobInformation.team', 'bankInformation', 'emergencyContacts']);
+        });
+    }
+
     private function createUser(array $data)
     {
         $userData = [
