@@ -173,6 +173,7 @@ Route::prefix('v1')
             Route::post('payrolls/{id}/mark-as-paid', [PayrollController::class, 'markAsPaid']);
             Route::delete('payrolls/{id}', [PayrollController::class, 'destroy']);
             Route::put('payroll-details/{id}', [PayrollController::class, 'updateDetail']);
+            Route::delete('payroll-details/{id}', [PayrollController::class, 'destroyDetail']);
             Route::apiResource('payrolls', PayrollController::class)->only(['index', 'show']);
 
             // My Payslips routes

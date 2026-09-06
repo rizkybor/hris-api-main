@@ -13,12 +13,15 @@ class GeneratePayrollJob implements ShouldQueue
 
     public string $salaryMonth;
 
+    public bool $regenerate;
+
     /**
      * Create a new job instance.
      */
-    public function __construct(string $salaryMonth)
+    public function __construct(string $salaryMonth, bool $regenerate = false)
     {
         $this->salaryMonth = $salaryMonth;
+        $this->regenerate = $regenerate;
     }
 
     /**
@@ -29,9 +32,10 @@ class GeneratePayrollJob implements ShouldQueue
         try {
             Log::info('Starting payroll generation', [
                 'salary_month' => $this->salaryMonth,
+                'regenerate' => $this->regenerate,
             ]);
 
-            $payroll = $payrollRepository->generatePayroll($this->salaryMonth);
+            $payroll = $payrollRepository->generatePayroll($this->salaryMonth, $this->regenerate);
 
             Log::info('Payroll generation completed', [
                 'salary_month' => $this->salaryMonth,

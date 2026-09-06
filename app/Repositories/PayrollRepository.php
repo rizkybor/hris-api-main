@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class PayrollRepository implements PayrollRepositoryInterface
@@ -124,24 +125,37 @@ class PayrollRepository implements PayrollRepositoryInterface
             ->paginate($perPage);
     }
 
-    public function generatePayroll(string $salaryMonth): Payroll
+    public function generatePayroll(string $salaryMonth, bool $regenerate = false): Payroll
     {
-        return DB::transaction(function () use ($salaryMonth) {
+        return DB::transaction(function () use ($salaryMonth, $regenerate) {
             $month = Carbon::parse($salaryMonth)->startOfMonth();
 
             $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))
                 ->where('type', 'monthly')
                 ->first();
 
-            if ($existingPayroll) {
+            if ($existingPayroll && ! $regenerate) {
                 throw new \Exception('Payroll untuk bulan ' . $month->format('F Y') . ' sudah dibuat');
             }
 
-            $payroll = Payroll::create([
-                'salary_month' => $month->format('Y-m-d'),
-                'type' => 'monthly',
-                'status' => 'processing',
-            ]);
+            if ($existingPayroll) {
+                // Re-generate: replace this payroll's existing details with
+                // freshly computed ones instead of creating a second Payroll
+                // row for the same month -- restricted server-side (see
+                // PayrollController::generate()) to Superadmin/Manager/Finance.
+                // forceDelete (not soft-delete) because the fresh insert below
+                // reuses the same (payroll_id, employee_id) pairs, which the
+                // unique index would otherwise collide with a soft-deleted row.
+                $payroll = $existingPayroll;
+                $payroll->payrollDetails()->forceDelete();
+                $payroll->update(['status' => 'processing']);
+            } else {
+                $payroll = Payroll::create([
+                    'salary_month' => $month->format('Y-m-d'),
+                    'type' => 'monthly',
+                    'status' => 'processing',
+                ]);
+            }
 
             $employeeIdsWithAttendance = Attendance::whereBetween('date', [
                 $month->copy()->startOfMonth()->format('Y-m-d H:i:s'),
@@ -262,24 +276,33 @@ class PayrollRepository implements PayrollRepositoryInterface
      * employee who has worked at least 1 full month is entitled to a
      * prorated THR regardless of that month's attendance record.
      */
-    public function generateThrPayroll(string $salaryMonth): Payroll
+    public function generateThrPayroll(string $salaryMonth, bool $regenerate = false): Payroll
     {
-        return DB::transaction(function () use ($salaryMonth) {
+        return DB::transaction(function () use ($salaryMonth, $regenerate) {
             $month = Carbon::parse($salaryMonth)->startOfMonth();
 
             $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))
                 ->where('type', 'thr')
                 ->first();
 
-            if ($existingPayroll) {
+            if ($existingPayroll && ! $regenerate) {
                 throw new \Exception('THR untuk bulan '.$month->format('F Y').' sudah dibuat');
             }
 
-            $payroll = Payroll::create([
-                'salary_month' => $month->format('Y-m-d'),
-                'type' => 'thr',
-                'status' => 'processing',
-            ]);
+            if ($existingPayroll) {
+                // forceDelete for the same reason as generatePayroll() above --
+                // avoids colliding with the (payroll_id, employee_id) unique
+                // index on the fresh insert.
+                $payroll = $existingPayroll;
+                $payroll->payrollDetails()->forceDelete();
+                $payroll->update(['status' => 'processing']);
+            } else {
+                $payroll = Payroll::create([
+                    'salary_month' => $month->format('Y-m-d'),
+                    'type' => 'thr',
+                    'status' => 'processing',
+                ]);
+            }
 
             $endOfMonth = $month->copy()->endOfMonth();
 
@@ -438,12 +461,26 @@ class PayrollRepository implements PayrollRepositoryInterface
         DB::transaction(function () use ($id) {
             $payroll = Payroll::findOrFail($id);
 
-            if ($payroll->status === 'paid') {
+            // A paid payroll can only be removed by Superadmin/Manager/Finance
+            // -- everyone else with payroll-delete permission is still
+            // blocked, same as before.
+            $isPaid = $payroll->status === 'paid';
+            $canForceDelete = Auth::user()?->hasAnyRole(['superadmin', 'manager', 'finance']);
+
+            if ($isPaid && ! $canForceDelete) {
                 throw new \Exception('Tidak dapat menghapus payroll yang sudah dibayar');
             }
 
             $payroll->payrollDetails()->delete();
             $payroll->delete();
+        });
+    }
+
+    public function deletePayrollDetail(string $id): void
+    {
+        DB::transaction(function () use ($id) {
+            $payrollDetail = PayrollDetail::findOrFail($id);
+            $payrollDetail->delete();
         });
     }
 
