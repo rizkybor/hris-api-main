@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 class EmployeeProfileController extends Controller implements HasMiddleware
 {
@@ -36,6 +37,7 @@ class EmployeeProfileController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['employee-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['employee-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['employee-delete']), only: ['destroy']),
+            new Middleware(RoleMiddleware::using('superadmin|manager|finance|operational_director'), only: ['toggleAccountStatus']),
             new Middleware(PermissionMiddleware::using(['profile-view']), only: ['getMyProfile', 'getPerformanceStatistics', 'downloadIdCard']),
             new Middleware(PermissionMiddleware::using(['team-view']), only: ['getMyTeam', 'getMyTeamMembers', 'getMyTeamProjects']),
         ];
@@ -158,6 +160,31 @@ class EmployeeProfileController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(true, 'Employee Deleted Successfully', null, 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Employee Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Toggle whether this employee's account can log in at all --
+     * Superadmin/Manager/Finance/Operational Director only, and Manager/
+     * Finance/Operational Director accounts can only be toggled by
+     * Superadmin (see EmployeeProfileRepository::toggleAccountStatus()).
+     */
+    public function toggleAccountStatus(string $id): JsonResponse
+    {
+        try {
+            $employee = $this->employeeProfileRepository->toggleAccountStatus($id);
+
+            $message = $employee->user->is_active
+                ? 'Account Activated Successfully'
+                : 'Account Deactivated Successfully';
+
+            return ResponseHelper::jsonResponse(true, $message, new EmployeeProfileResource($employee), 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Employee Not Found', null, 404);
+        } catch (\RuntimeException $e) {
+            return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 403);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

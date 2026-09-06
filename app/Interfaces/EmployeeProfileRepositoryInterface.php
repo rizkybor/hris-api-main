@@ -2,6 +2,8 @@
 
 namespace App\Interfaces;
 
+use App\Models\EmployeeProfile;
+
 interface EmployeeProfileRepositoryInterface
 {
     public function getAll(
@@ -42,6 +44,8 @@ interface EmployeeProfileRepositoryInterface
     public function delete(
         string $id
     );
+
+    public function toggleAccountStatus(string $id): EmployeeProfile;
 
     public function getStatistics();
 
