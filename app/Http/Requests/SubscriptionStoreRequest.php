@@ -13,16 +13,20 @@ class SubscriptionStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            // Configurable via Settings -> Dropdown Options rather than a
-            // fixed enum, so a new service type doesn't need a deploy.
-            'service_type' => ['required', 'string', Rule::in(
-                ConfigurableOption::category('subscription_service_type')->active()->pluck('value')
-            )],
-            'product_name' => ['nullable', 'string', 'max:255'],
             'project_id' => ['nullable', 'exists:projects,id'],
             'client_id' => ['required', 'exists:clients,id'],
             'billing_cycle' => ['required', 'string', 'in:monthly,yearly'],
-            'amount' => ['required', 'numeric', 'min:0'],
+            // One subscription can bundle several services -- each is
+            // billed as one line item on the same generated invoice.
+            'services' => ['required', 'array', 'min:1'],
+            // Configurable via Settings -> Dropdown Options rather than a
+            // fixed enum, so a new service type doesn't need a deploy.
+            'services.*.service_type' => ['required', 'string', Rule::in(
+                ConfigurableOption::category('subscription_service_type')->active()->pluck('value')
+            )],
+            'services.*.product_name' => ['nullable', 'string', 'max:255'],
+            'services.*.amount' => ['required', 'numeric', 'min:0'],
+            'services.*.notes' => ['nullable', 'string'],
             'start_date' => ['required', 'date'],
             'next_due_date' => ['required', 'date'],
             'status' => ['sometimes', 'string', 'in:active,postponed,cancelled'],
@@ -42,12 +46,13 @@ class SubscriptionStoreRequest extends FormRequest
     {
         return [
             'name' => 'Name',
-            'service_type' => 'Service Type',
-            'product_name' => 'Product Name',
+            'services' => 'Services',
+            'services.*.service_type' => 'Service Type',
+            'services.*.product_name' => 'Product Name',
+            'services.*.amount' => 'Amount',
             'project_id' => 'Project',
             'client_id' => 'Client',
             'billing_cycle' => 'Billing Cycle',
-            'amount' => 'Amount',
             'start_date' => 'Start Date',
             'next_due_date' => 'Next Due Date',
             'status' => 'Status',

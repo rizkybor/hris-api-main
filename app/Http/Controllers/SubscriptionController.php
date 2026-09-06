@@ -37,7 +37,7 @@ class SubscriptionController extends Controller implements HasMiddleware
     public function index(Request $request)
     {
         try {
-            $query = Subscription::with(['client', 'project', 'invoices:id,subscription_id,invoice_number,billing_period'])
+            $query = Subscription::with(['client', 'project', 'services', 'invoices:id,subscription_id,invoice_number,billing_period'])
                 ->withCount('invoices')
                 ->orderBy('next_due_date');
 
@@ -50,7 +50,7 @@ class SubscriptionController extends Controller implements HasMiddleware
             }
 
             if ($request->service_type) {
-                $query->where('service_type', $request->service_type);
+                $query->whereHas('services', fn ($q) => $q->where('service_type', $request->service_type));
             }
 
             $rowPerPage = (int) ($request->row_per_page ?? 10);
@@ -70,12 +70,19 @@ class SubscriptionController extends Controller implements HasMiddleware
     public function store(SubscriptionStoreRequest $request)
     {
         $validated = $request->validated();
+        $services = $validated['services'];
+        unset($validated['services']);
 
         try {
-            $validated['created_by'] = Auth::id();
-            $validated['status'] = $validated['status'] ?? 'active';
-            $subscription = Subscription::create($validated);
-            $subscription->load(['client', 'project']);
+            $subscription = DB::transaction(function () use ($validated, $services) {
+                $validated['created_by'] = Auth::id();
+                $validated['status'] = $validated['status'] ?? 'active';
+                $subscription = Subscription::create($validated);
+                $this->syncServices($subscription, $services);
+
+                return $subscription;
+            });
+            $subscription->load(['client', 'project', 'services']);
 
             return ResponseHelper::jsonResponse(true, 'Subscription Created Successfully', new SubscriptionResource($subscription), 201);
         } catch (\Throwable $e) {
@@ -86,11 +93,24 @@ class SubscriptionController extends Controller implements HasMiddleware
     public function update(SubscriptionUpdateRequest $request, string $id)
     {
         $validated = $request->validated();
+        $services = $validated['services'] ?? null;
+        unset($validated['services']);
 
         try {
-            $subscription = Subscription::findOrFail($id);
-            $subscription->update($validated);
-            $subscription->load(['client', 'project']);
+            $subscription = DB::transaction(function () use ($validated, $services, $id) {
+                $subscription = Subscription::findOrFail($id);
+                $subscription->update($validated);
+
+                // Omitted entirely -> existing services untouched; sent ->
+                // full replace-all (simplest way to reconcile added/
+                // removed/edited rows without diffing them individually).
+                if ($services !== null) {
+                    $this->syncServices($subscription, $services);
+                }
+
+                return $subscription;
+            });
+            $subscription->load(['client', 'project', 'services']);
 
             return ResponseHelper::jsonResponse(true, 'Subscription Updated Successfully', new SubscriptionResource($subscription), 200);
         } catch (ModelNotFoundException $e) {
@@ -98,6 +118,20 @@ class SubscriptionController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
         }
+    }
+
+    private function syncServices(Subscription $subscription, array $services): void
+    {
+        $subscription->services()->delete();
+        $subscription->services()->createMany(
+            collect($services)->values()->map(fn ($service, $index) => [
+                'service_type' => $service['service_type'],
+                'product_name' => $service['product_name'] ?? null,
+                'amount' => $service['amount'],
+                'notes' => $service['notes'] ?? null,
+                'sort_order' => $index,
+            ])->all()
+        );
     }
 
     public function destroy(string $id)
@@ -126,7 +160,7 @@ class SubscriptionController extends Controller implements HasMiddleware
     {
         try {
             $invoice = DB::transaction(function () use ($id) {
-                $subscription = Subscription::with('client')->lockForUpdate()->findOrFail($id);
+                $subscription = Subscription::with(['client', 'services'])->lockForUpdate()->findOrFail($id);
 
                 if ($subscription->status !== 'active') {
                     abort(422, 'Only active subscriptions can generate an invoice.');
@@ -144,7 +178,17 @@ class SubscriptionController extends Controller implements HasMiddleware
                     ? BankAccount::where('bank_name', $subscription->bank_name)->first()
                     : null;
 
-                $subtotal = (float) (string) $subscription->amount;
+                // One line item per bundled service so several services
+                // under the same subscription still land on a single
+                // invoice.
+                $items = $subscription->services->map(fn ($service) => [
+                    'description' => ($service->product_name ?: $service->service_type)." - {$periodLabel}",
+                    'quantity' => '1',
+                    'rate' => null,
+                    'total' => (float) (string) $service->amount,
+                ])->all();
+
+                $subtotal = array_sum(array_column($items, 'total'));
                 $ppnPercentage = (float) (string) $subscription->ppn_percentage;
                 $ppnAmount = round($subtotal * ($ppnPercentage / 100));
                 $adminFee = (float) (string) $subscription->admin_fee;
@@ -161,12 +205,7 @@ class SubscriptionController extends Controller implements HasMiddleware
                     'client_phone' => $client->pic_phone,
                     'client_npwp' => $client->npwp,
                     'date' => $date,
-                    'items' => [[
-                        'description' => "{$subscription->name} - {$periodLabel}",
-                        'quantity' => '1',
-                        'rate' => null,
-                        'total' => $subtotal,
-                    ]],
+                    'items' => $items,
                     'subtotal' => $subtotal,
                     'ppn_percentage' => $ppnPercentage,
                     'ppn_amount' => $ppnAmount,
