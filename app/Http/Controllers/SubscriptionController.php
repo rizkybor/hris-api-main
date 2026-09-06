@@ -218,7 +218,20 @@ class SubscriptionController extends Controller implements HasMiddleware
 
                 $subtotal = array_sum(array_column($items, 'total'));
                 $ppnPercentage = (float) (string) $subscription->ppn_percentage;
-                $ppnAmount = round($subtotal * ($ppnPercentage / 100));
+
+                // With several services, ppn_percentage is a blended rate
+                // rounded to 2 decimals (see recalculateAggregatePpn()) --
+                // reapplying it to the whole subtotal would drift from what
+                // each service's own rate actually adds up to (which the PPN
+                // report reads straight off this invoice), so sum each
+                // service's exact contribution instead. A single service has
+                // only one rate for the whole subtotal, so both give the
+                // same result.
+                $ppnAmount = $subscription->services->count() > 1
+                    ? round($subscription->services->sum(
+                        fn ($service) => (float) (string) $service->amount * ((float) ($service->ppn_percentage ?? 0) / 100)
+                    ))
+                    : round($subtotal * ($ppnPercentage / 100));
                 $adminFee = (float) (string) $subscription->admin_fee;
 
                 $invoice = Invoice::create([
