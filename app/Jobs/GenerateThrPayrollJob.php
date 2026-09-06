@@ -13,9 +13,12 @@ class GenerateThrPayrollJob implements ShouldQueue
 
     public string $salaryMonth;
 
-    public function __construct(string $salaryMonth)
+    public bool $regenerate;
+
+    public function __construct(string $salaryMonth, bool $regenerate = false)
     {
         $this->salaryMonth = $salaryMonth;
+        $this->regenerate = $regenerate;
     }
 
     public function handle(PayrollRepositoryInterface $payrollRepository): void
@@ -23,9 +26,10 @@ class GenerateThrPayrollJob implements ShouldQueue
         try {
             Log::info('Starting THR payroll generation', [
                 'salary_month' => $this->salaryMonth,
+                'regenerate' => $this->regenerate,
             ]);
 
-            $payroll = $payrollRepository->generateThrPayroll($this->salaryMonth);
+            $payroll = $payrollRepository->generateThrPayroll($this->salaryMonth, $this->regenerate);
 
             Log::info('THR payroll generation completed', [
                 'salary_month' => $this->salaryMonth,

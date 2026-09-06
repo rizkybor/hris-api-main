@@ -16,8 +16,10 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 class PayrollController extends Controller implements HasMiddleware
 {
@@ -37,6 +39,7 @@ class PayrollController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['payroll-process']), only: ['markAsPaid']),
             new Middleware(PermissionMiddleware::using(['payroll-statistics']), only: ['getStatistics', 'getPayrollStatistics']),
             new Middleware(PermissionMiddleware::using(['payroll-delete']), only: ['destroy']),
+            new Middleware(RoleMiddleware::using('superadmin|manager|finance'), only: ['destroyDetail']),
         ];
     }
 
@@ -154,11 +157,13 @@ class PayrollController extends Controller implements HasMiddleware
     {
         $validated = $request->validate([
             'salary_month' => 'required|date_format:Y-m',
+            'regenerate' => 'nullable|boolean',
         ]);
 
         try {
             // Parse salary month
             $month = Carbon::parse($validated['salary_month'])->startOfMonth();
+            $regenerate = (bool) ($validated['regenerate'] ?? false);
 
             // Check if payroll for this month already exists
             $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))
@@ -166,20 +171,35 @@ class PayrollController extends Controller implements HasMiddleware
                 ->first();
 
             if ($existingPayroll) {
-                return ResponseHelper::jsonResponse(
-                    false,
-                    'Payroll for ' . $month->format('F Y') . ' already exists',
-                    null,
-                    400
-                );
+                if (! $regenerate) {
+                    return ResponseHelper::jsonResponse(
+                        false,
+                        'Payroll for ' . $month->format('F Y') . ' already exists',
+                        null,
+                        400
+                    );
+                }
+
+                // Re-generating replaces the existing details -- restricted
+                // to the roles trusted to override an already-processed run.
+                if (! Auth::user()?->hasAnyRole(['superadmin', 'manager', 'finance'])) {
+                    return ResponseHelper::jsonResponse(
+                        false,
+                        'You are not authorized to regenerate an existing payroll.',
+                        null,
+                        403
+                    );
+                }
             }
 
             // Dispatch job to queue for background processing
-            GeneratePayrollJob::dispatch($validated['salary_month']);
+            GeneratePayrollJob::dispatch($validated['salary_month'], $regenerate);
 
             return ResponseHelper::jsonResponse(
                 true,
-                'Payroll generation is being processed in the background. Please check back shortly.',
+                $regenerate
+                    ? 'Payroll regeneration is being processed in the background. Please check back shortly.'
+                    : 'Payroll generation is being processed in the background. Please check back shortly.',
                 [
                     'salary_month' => $month->format('F Y'),
                     'status' => 'processing',
@@ -202,29 +222,44 @@ class PayrollController extends Controller implements HasMiddleware
     {
         $validated = $request->validate([
             'salary_month' => 'required|date_format:Y-m',
+            'regenerate' => 'nullable|boolean',
         ]);
 
         try {
             $month = Carbon::parse($validated['salary_month'])->startOfMonth();
+            $regenerate = (bool) ($validated['regenerate'] ?? false);
 
             $existingPayroll = Payroll::where('salary_month', $month->format('Y-m-d'))
                 ->where('type', 'thr')
                 ->first();
 
             if ($existingPayroll) {
-                return ResponseHelper::jsonResponse(
-                    false,
-                    'THR for '.$month->format('F Y').' already exists',
-                    null,
-                    400
-                );
+                if (! $regenerate) {
+                    return ResponseHelper::jsonResponse(
+                        false,
+                        'THR for '.$month->format('F Y').' already exists',
+                        null,
+                        400
+                    );
+                }
+
+                if (! Auth::user()?->hasAnyRole(['superadmin', 'manager', 'finance'])) {
+                    return ResponseHelper::jsonResponse(
+                        false,
+                        'You are not authorized to regenerate an existing THR payroll.',
+                        null,
+                        403
+                    );
+                }
             }
 
-            GenerateThrPayrollJob::dispatch($validated['salary_month']);
+            GenerateThrPayrollJob::dispatch($validated['salary_month'], $regenerate);
 
             return ResponseHelper::jsonResponse(
                 true,
-                'THR generation is being processed in the background. Please check back shortly.',
+                $regenerate
+                    ? 'THR regeneration is being processed in the background. Please check back shortly.'
+                    : 'THR generation is being processed in the background. Please check back shortly.',
                 [
                     'salary_month' => $month->format('F Y'),
                     'status' => 'processing',
@@ -335,7 +370,8 @@ class PayrollController extends Controller implements HasMiddleware
     }
 
     /**
-     * Delete a payroll run (only allowed while it hasn't been paid yet).
+     * Delete a payroll run. Blocked once paid, unless the caller is
+     * Superadmin/Manager/Finance (see PayrollRepository::deletePayroll()).
      */
     public function destroy(string $id)
     {
@@ -345,6 +381,25 @@ class PayrollController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(true, 'Payroll Deleted Successfully', null, 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Payroll Not Found', null, 404);
+        } catch (\Exception $e) {
+            return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 400);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Delete a single employee's payroll detail row -- Superadmin/Manager/
+     * Finance only (see middleware()).
+     */
+    public function destroyDetail(string $id)
+    {
+        try {
+            $this->payrollRepository->deletePayrollDetail($id);
+
+            return ResponseHelper::jsonResponse(true, 'Payroll Detail Deleted Successfully', null, 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Payroll Detail Not Found', null, 404);
         } catch (\Exception $e) {
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 400);
         } catch (\Throwable $e) {
