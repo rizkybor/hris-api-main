@@ -22,7 +22,7 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithHe
     public function collection()
     {
         return Subscription::query()
-            ->with(['client:id,name', 'project:id,name'])
+            ->with(['client:id,name', 'project:id,name', 'services'])
             ->when($this->status, fn ($q) => $q->where('status', $this->status))
             ->orderBy('next_due_date')
             ->get();
@@ -30,7 +30,7 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithHe
 
     public function headings(): array
     {
-        return ['No', 'Name', 'Client', 'Project', 'Service Type', 'Billing Cycle', 'Amount', 'Status', 'Next Due Date', 'Last Invoiced'];
+        return ['No', 'Name', 'Client', 'Project', 'Services', 'Billing Cycle', 'Amount', 'Status', 'Next Due Date', 'Last Invoiced'];
     }
 
     public function map($subscription): array
@@ -43,7 +43,11 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithHe
             $subscription->name,
             $subscription->client?->name ?? '-',
             $subscription->project?->name ?? '-',
-            $subscription->service_type,
+            // A subscription can bundle several services -- list them all
+            // in one cell rather than a single Service Type column.
+            $subscription->services->map(
+                fn ($service) => $service->product_name ? "{$service->service_type} ({$service->product_name})" : $service->service_type
+            )->implode(', '),
             $subscription->billing_cycle,
             (float) $subscription->amount,
             $subscription->status === 'cancelled' ? 'Not Active' : ucfirst($subscription->status),

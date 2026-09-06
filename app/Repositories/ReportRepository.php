@@ -399,7 +399,7 @@ class ReportRepository implements ReportRepositoryInterface
      */
     public function getSubscriptionReport(?string $status = null)
     {
-        $query = Subscription::query()->with(['client:id,name', 'project:id,name']);
+        $query = Subscription::query()->with(['client:id,name', 'project:id,name', 'services']);
 
         if ($status) {
             $query->where('status', $status);

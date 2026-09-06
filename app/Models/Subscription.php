@@ -12,6 +12,12 @@ class Subscription extends Model
 {
     use HasFactory, SoftDeletes, LogsActivity;
 
+    // `amount` is a computed accessor (sum of `services`), not a real
+    // column -- without $appends it silently drops out of toArray()/JSON
+    // for any code that serializes a Subscription model directly instead
+    // of going through SubscriptionResource (e.g. report endpoints).
+    protected $appends = ['amount'];
+
     protected $fillable = [
         'name',
         'project_id',
