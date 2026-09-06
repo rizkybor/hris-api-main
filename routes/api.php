@@ -164,6 +164,7 @@ Route::prefix('v1')
             // Payroll routes
             Route::get('payrolls/statistics', [PayrollController::class, 'getStatistics']);
             Route::get('payrolls/all/paginated', [PayrollController::class, 'getAllPaginated']);
+            Route::get('payrolls/check-period', [PayrollController::class, 'checkPeriod']);
             Route::post('payrolls/generate', [PayrollController::class, 'generate']);
             Route::post('payrolls/generate-thr', [PayrollController::class, 'generateThr']);
             Route::get('payrolls/{id}/statistics', [PayrollController::class, 'getPayrollStatistics']);
