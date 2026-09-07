@@ -8,13 +8,17 @@ interface AttendanceRepositoryInterface
         ?string $search,
         ?string $date,
         ?int $limit,
-        bool $execute
+        bool $execute,
+        ?string $startDate = null,
+        ?string $endDate = null
     );
 
     public function getAllPaginated(
         ?string $search,
         int $rowPerPage,
-        ?string $status = null
+        ?string $status = null,
+        ?string $startDate = null,
+        ?string $endDate = null
     );
 
     public function getMyAttendances();

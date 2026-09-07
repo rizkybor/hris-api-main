@@ -59,13 +59,17 @@ class AttendanceController extends Controller implements HasMiddleware
             'search' => 'nullable|string',
             'row_per_page' => 'required|integer',
             'status' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
         ]);
 
         try {
             $attendances = $this->attendanceRepository->getAllPaginated(
                 $request['search'] ?? null,
                 $request['row_per_page'],
-                $request['status'] ?? null
+                $request['status'] ?? null,
+                $request['start_date'] ?? null,
+                $request['end_date'] ?? null
             );
 
             return ResponseHelper::jsonResponse(true, 'Attendances Retrieved Successfully', PaginateResource::make($attendances, AttendanceResource::class), 200);
