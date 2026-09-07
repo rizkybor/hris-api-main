@@ -16,6 +16,7 @@ class AttendanceCheckOutRequest extends FormRequest
         return [
             'check_out_lat' => ['required', 'numeric'],
             'check_out_long' => ['required', 'numeric'],
+            'check_out_photo' => ['required', 'string', 'starts_with:data:image/', 'max:5000000'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }
@@ -25,6 +26,7 @@ class AttendanceCheckOutRequest extends FormRequest
         return [
             'check_out_lat' => 'Latitude',
             'check_out_long' => 'Longitude',
+            'check_out_photo' => 'Photo',
             'notes' => 'Notes',
         ];
     }

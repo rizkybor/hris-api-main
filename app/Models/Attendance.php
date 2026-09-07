@@ -31,6 +31,7 @@ class Attendance extends Model
         'check_out',
         'check_out_lat',
         'check_out_long',
+        'check_out_photo',
         'status',
         'late_minutes',
         'notes',

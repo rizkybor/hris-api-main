@@ -26,6 +26,7 @@ class AttendanceResource extends JsonResource
             'check_out' => $this->check_out,
             'check_out_lat' => $this->check_out_lat,
             'check_out_long' => $this->check_out_long,
+            'check_out_photo' => CloudinaryUrl::image($this->check_out_photo),
             'total_hours' => $this->check_in && $this->check_out
                 ? sprintf('%02d:%02d', $this->check_in->diffInHours($this->check_out), $this->check_in->diff($this->check_out)->format('%I'))
                 : null,
