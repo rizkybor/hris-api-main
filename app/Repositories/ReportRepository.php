@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Http\Resources\AttendanceResource;
 use App\Interfaces\ReportRepositoryInterface;
 use App\Models\Attendance;
 use App\Models\CompanyFinance;
@@ -57,7 +58,12 @@ class ReportRepository implements ReportRepositoryInterface
         return [
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
             'summary' => $summary,
-            'rows' => $paginated->items(),
+            // Wrapped through AttendanceResource (not raw models) so
+            // check_in_photo/check_out_photo resolve to real Cloudinary
+            // URLs -- the Reporting page's detail modal reuses the same
+            // component as Attendance Records, which expects those fields
+            // pre-resolved.
+            'rows' => AttendanceResource::collection($paginated->items()),
             'meta' => [
                 'current_page' => $paginated->currentPage(),
                 'last_page' => $paginated->lastPage(),

@@ -27,15 +27,22 @@ class AttendanceRepository implements AttendanceRepositoryInterface
         ?string $search,
         ?string $date,
         ?int $limit,
-        bool $execute
+        bool $execute,
+        ?string $startDate = null,
+        ?string $endDate = null
     ): Builder|Collection {
         $query = Attendance::with(['employee.user', 'employee.jobInformation.team'])
-            ->where(function ($query) use ($search, $date) {
+            ->where(function ($query) use ($search, $date, $startDate, $endDate) {
                 if ($search) {
                     $query->search($search);
                 }
 
-                if ($date) {
+                if ($startDate && $endDate) {
+                    $query->whereBetween('date', [
+                        $startDate.' 00:00:00',
+                        $endDate.' 23:59:59',
+                    ]);
+                } elseif ($date) {
                     // Use direct comparison instead of whereDate for better performance
                     $query->whereBetween('date', [
                         $date.' 00:00:00',
@@ -59,13 +66,17 @@ class AttendanceRepository implements AttendanceRepositoryInterface
     public function getAllPaginated(
         ?string $search,
         int $rowPerPage,
-        ?string $status = null
+        ?string $status = null,
+        ?string $startDate = null,
+        ?string $endDate = null
     ): LengthAwarePaginator {
         $query = $this->getAll(
             $search,
             null, // date
             null, // limit
-            false
+            false,
+            $startDate,
+            $endDate
         );
 
         if ($status) {
@@ -292,13 +303,42 @@ class AttendanceRepository implements AttendanceRepositoryInterface
 
     public function checkOut(array $data): Attendance
     {
-        return DB::transaction(function () use ($data) {
-            $employeeId = Auth::user()->employeeProfile?->id;
+        $employeeId = Auth::user()->employeeProfile?->id;
 
-            if (! $employeeId) {
-                throw new \Exception('This account has no employee profile, so it cannot clock out.');
-            }
+        if (! $employeeId) {
+            throw new \Exception('This account has no employee profile, so it cannot clock out.');
+        }
 
+        // Cheap pre-check before the (comparatively slow, external)
+        // Cloudinary upload below -- same reasoning as checkIn(): a doomed
+        // request (no open check-in, or the 8-hour minimum not yet met)
+        // shouldn't waste an upload on a photo that will never be used.
+        // Re-checked inside the transaction too, as the authoritative,
+        // race-safe guard.
+        $openAttendance = Attendance::where('employee_id', $employeeId)
+            ->where('date', now()->format('Y-m-d'))
+            ->whereNull('check_out')
+            ->first();
+
+        if (! $openAttendance) {
+            throw new \Exception('Tidak ada data check in hari ini');
+        }
+
+        $minutesWorked = (int) floor(Carbon::parse($openAttendance->check_in)->diffInMinutes(Carbon::now()));
+        if ($minutesWorked < self::MIN_WORK_MINUTES_BEFORE_CHECK_OUT) {
+            $remainingMinutes = self::MIN_WORK_MINUTES_BEFORE_CHECK_OUT - $minutesWorked;
+            $hours = intdiv($remainingMinutes, 60);
+            $minutes = $remainingMinutes % 60;
+            throw new \Exception("Belum bisa check out. Sisa {$hours} jam {$minutes} menit lagi untuk mencapai 8 jam kerja.");
+        }
+
+        $data['check_out_photo'] = $this->cloudinary->uploadBase64Image(
+            $data['check_out_photo'],
+            CloudinaryFolders::companyFiles('attendance'),
+            CloudinaryFolders::filename('checkout-'.$employeeId.'-'.now()->format('Ymd'))
+        );
+
+        return DB::transaction(function () use ($data, $employeeId) {
             $attendance = Attendance::where('employee_id', $employeeId)
                 ->where('date', now()->format('Y-m-d'))
                 ->whereNull('check_out')
