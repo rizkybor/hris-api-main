@@ -33,6 +33,7 @@ class PaymentReceipt extends Model
         'invoice_id',
         'payment_status',
         'recipient_name',
+        'use_signature',
         'status',
         'created_by',
     ];
@@ -44,6 +45,7 @@ class PaymentReceipt extends Model
             'amount' => 'decimal:2',
             'pph23_percent' => 'decimal:2',
             'pph23_amount' => 'decimal:2',
+            'use_signature' => 'boolean',
         ];
     }
 
