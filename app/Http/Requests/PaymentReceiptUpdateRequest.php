@@ -27,6 +27,7 @@ class PaymentReceiptUpdateRequest extends FormRequest
             'invoice_id' => ['nullable', 'integer', 'exists:invoices,id'],
             'payment_status' => ['sometimes', 'required', 'in:paid,partial'],
             'recipient_name' => ['nullable', 'string', 'max:255'],
+            'use_signature' => ['sometimes', 'boolean'],
         ];
     }
 

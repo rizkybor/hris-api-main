@@ -80,7 +80,7 @@
         <div style="margin-top: 30mm;">
             <p class="label" style="margin: 0;">Recipient,</p>
             <p style="margin: 0;">PT. Jendela Cakra Digital</p>
-            <div style="height: 18mm;"></div>
+            @include('pdf.partials.signature', ['name' => $receipt->recipient_name, 'enabled' => $receipt->use_signature, 'space' => 18])
             <p style="margin: 0;">{{ $receipt->recipient_name ?? '________________________' }}</p>
         </div>
     </div>
