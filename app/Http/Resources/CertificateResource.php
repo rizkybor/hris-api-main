@@ -19,6 +19,7 @@ class CertificateResource extends JsonResource
             'end_date' => $this->end_date,
             'signatory_name' => $this->signatory_name,
             'signatory_title' => $this->signatory_title,
+            'use_signature' => (bool) $this->use_signature,
             'template' => $this->whenLoaded('template', fn () => [
                 'id' => $this->template->id,
                 'name' => $this->template->name,

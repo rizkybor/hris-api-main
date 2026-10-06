@@ -15,6 +15,7 @@ class CertificateGenerateRequest extends FormRequest
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'signatory_name' => ['required', 'string', 'max:255'],
             'signatory_title' => ['required', 'string', 'max:255'],
+            'use_signature' => ['sometimes', 'boolean'],
             'category_code' => ['required', 'string', 'max:50'],
             'program_code' => ['required', 'string', 'max:50'],
             'certificate_template_id' => ['nullable', 'integer', 'exists:certificate_templates,id'],

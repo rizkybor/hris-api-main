@@ -18,6 +18,7 @@ class DocumentLetterStoreRequest extends FormRequest
             'subject' => ['required', 'string', 'max:255'],
             'document_date' => ['required', 'date'],
             'body' => ['required', 'string'],
+            'use_signature' => ['sometimes', 'boolean'],
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'mimes:pdf,doc,docx,png,jpg,jpeg', 'max:5120'],
         ];

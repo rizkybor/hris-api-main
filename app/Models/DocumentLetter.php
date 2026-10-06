@@ -27,6 +27,7 @@ class DocumentLetter extends Model
         'document_date',
         'sender_id',
         'body',
+        'use_signature',
         'status',
         'rejection_reason',
         'submitted_at',
@@ -41,6 +42,7 @@ class DocumentLetter extends Model
             'document_date' => 'date',
             'submitted_at' => 'datetime',
             'approved_at' => 'datetime',
+            'use_signature' => 'boolean',
         ];
     }
 

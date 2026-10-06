@@ -47,7 +47,6 @@
 
         .signature-block { margin-top: 10mm; width: 60mm; page-break-inside: avoid; }
         .signature-block p { margin: 0; line-height: 1.5; }
-        .signature-space { height: 18mm; }
         .signature-name { font-weight: bold; text-decoration: underline; }
 
         .rejection-box {
@@ -99,7 +98,7 @@
         <div class="signature-block">
             <p>Tangerang Selatan, {{ $documentLetter->document_date->locale('id')->translatedFormat('d F Y') }}</p>
             <p>{{ $senderTitle }},</p>
-            <div class="signature-space"></div>
+            @include('pdf.partials.signature', ['name' => $senderName, 'enabled' => $documentLetter->use_signature, 'space' => 18])
             <p class="signature-name">{{ $senderName }}</p>
         </div>
 

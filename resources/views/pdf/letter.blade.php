@@ -221,7 +221,7 @@
                         <td style="border: none; width: 50%; text-align: center;">
                             <p style="margin: 0;">PIHAK PERTAMA</p>
                             <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
-                            <div style="height: 20mm;"></div>
+                            @include('pdf.partials.signature', ['name' => $letter->signatory_name, 'enabled' => $letter->use_signature])
                             <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
                             <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
                         </td>
@@ -238,7 +238,7 @@
                 <div style="text-align: left;">
                     <p style="margin: 0;">Hormat kami,</p>
                     <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
-                    <div style="height: 20mm;"></div>
+                    @include('pdf.partials.signature', ['name' => $letter->signatory_name, 'enabled' => $letter->use_signature])
                     <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
                     <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
                 </div>
