@@ -198,7 +198,7 @@
         <div style="page-break-inside: avoid; margin-top: 14mm; text-align: right;">
             <p style="margin: 0;">Tangerang Selatan, {{ $generated_at->translatedFormat('d F Y') }}</p>
             <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
-            <div style="height: 20mm;"></div>
+            @include('pdf.partials.signature', ['name' => 'Aldi Pratama Putra, S.Ikom', 'enabled' => $use_signature ?? false])
             <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">Aldi Pratama Putra, S.Ikom</p>
             <p style="margin: 0;">Director</p>
         </div>

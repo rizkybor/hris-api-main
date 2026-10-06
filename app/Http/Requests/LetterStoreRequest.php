@@ -33,6 +33,7 @@ class LetterStoreRequest extends FormRequest
             'second_party_signatory_name' => ['nullable', 'string', 'max:255'],
             'second_party_signatory_title' => ['nullable', 'string', 'max:255'],
             'template' => ['nullable', 'in:primary,secondary'],
+            'use_signature' => ['sometimes', 'boolean'],
         ];
     }
 }

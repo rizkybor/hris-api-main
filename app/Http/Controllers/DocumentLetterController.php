@@ -107,6 +107,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
                     'document_date' => $validated['document_date'],
                     'sender_id' => $user->employeeProfile?->id,
                     'body' => $validated['body'],
+                    'use_signature' => $validated['use_signature'] ?? false,
                     'status' => 'draft',
                     'created_by' => $user->id,
                 ]);
@@ -161,7 +162,7 @@ class DocumentLetterController extends Controller implements HasMiddleware
             $validated = $request->validated();
 
             $documentLetter = DB::transaction(function () use ($documentLetter, $validated) {
-                $documentLetter->update(collect($validated)->only(['document_number', 'subject', 'document_date', 'body'])->toArray());
+                $documentLetter->update(collect($validated)->only(['document_number', 'subject', 'document_date', 'body', 'use_signature'])->toArray());
 
                 return $documentLetter;
             });

@@ -57,6 +57,7 @@ class CertificateService
             'end_date' => $data['end_date'] ?? null,
             'signatory_name' => $data['signatory_name'],
             'signatory_title' => $data['signatory_title'],
+            'use_signature' => $data['use_signature'] ?? false,
             'certificate_template_id' => $template?->id,
             'company_code' => strtoupper($settings->company_code),
             'category_code' => strtoupper($data['category_code']),

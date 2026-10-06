@@ -267,6 +267,7 @@ class ReportController extends Controller implements HasMiddleware
             $data = $this->reportRepository->getStaffRaportDetail((int) $employeeId, $startDate, $endDate);
             $data['period_label'] = $periodLabel;
             $data['generated_at'] = now();
+            $data['use_signature'] = $request->boolean('with_signature');
 
             $pdf = Pdf::loadView('pdf.staff-raport', $data)->setPaper('a4');
 

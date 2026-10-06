@@ -21,6 +21,7 @@ class DocumentLetterResource extends JsonResource
             'subject' => $this->subject,
             'document_date' => $this->document_date,
             'body' => $this->body,
+            'use_signature' => (bool) $this->use_signature,
             'status' => $this->status,
             'rejection_reason' => $this->rejection_reason,
             'submitted_at' => $this->submitted_at,
