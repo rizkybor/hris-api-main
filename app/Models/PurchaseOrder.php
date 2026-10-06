@@ -39,6 +39,7 @@ class PurchaseOrder extends Model
         'buyer_signatory_title',
         'client_signatory_name',
         'client_signatory_title',
+        'use_signature',
         'status',
         'created_by',
     ];
@@ -50,6 +51,7 @@ class PurchaseOrder extends Model
             'items' => 'array',
             'payment_terms' => 'array',
             'total' => 'decimal:2',
+            'use_signature' => 'boolean',
         ];
     }
 

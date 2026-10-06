@@ -34,6 +34,7 @@ class PurchaseOrderStoreRequest extends FormRequest
             'replacement_days' => ['nullable', 'integer', 'min:0'],
             'buyer_signatory_name' => ['nullable', 'string', 'max:255'],
             'buyer_signatory_title' => ['nullable', 'string', 'max:255'],
+            'use_signature' => ['sometimes', 'boolean'],
             'client_signatory_name' => ['nullable', 'string', 'max:255'],
             'client_signatory_title' => ['nullable', 'string', 'max:255'],
         ];

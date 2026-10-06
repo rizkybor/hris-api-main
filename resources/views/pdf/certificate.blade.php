@@ -172,10 +172,9 @@
             border-top: 1px solid #1f2937;
             padding-top: 2mm;
             min-width: 65mm;
-            /* Blank space above the line for an actual signature to be
-               placed, not just a hairline sitting right under the last
-               paragraph of text. */
-            margin: 18mm 0 1mm 0;
+            /* The blank space above the line (for the actual signature)
+               comes from the signature partial right before this. */
+            margin: 0 0 1mm 0;
         }
 
         .signature-title {
@@ -220,6 +219,7 @@
                 </p>
             @endif
 
+            @include('pdf.partials.signature', ['name' => $certificate->signatory_name, 'enabled' => $certificate->use_signature, 'space' => 18])
             <p class="signature-name">{{ $certificate->signatory_name }}</p>
             <p class="signature-title">{{ $certificate->signatory_title }}</p>
 

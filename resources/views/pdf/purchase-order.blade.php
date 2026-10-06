@@ -155,7 +155,7 @@
                 <td style="width: 50%; border: none; text-align: center;">
                     <p style="margin: 0;">PIHAK PEMBELI</p>
                     <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
-                    <div style="height: 20mm;"></div>
+                    @include('pdf.partials.signature', ['name' => $order->buyer_signatory_name, 'enabled' => $order->use_signature])
                     <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $order->buyer_signatory_name ?? '________________________' }}</p>
                     <p style="margin: 0;">{{ $order->buyer_signatory_title ?? '' }}</p>
                 </td>

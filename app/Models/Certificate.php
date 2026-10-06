@@ -30,6 +30,7 @@ class Certificate extends Model
         'end_date',
         'signatory_name',
         'signatory_title',
+        'use_signature',
         'certificate_template_id',
         'company_code',
         'category_code',
@@ -45,6 +46,7 @@ class Certificate extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'use_signature' => 'boolean',
     ];
 
     public function template()

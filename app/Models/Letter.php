@@ -40,6 +40,7 @@ class Letter extends Model
         'second_party_signatory_title',
         'status',
         'template',
+        'use_signature',
         'created_by',
     ];
 
@@ -48,6 +49,7 @@ class Letter extends Model
         return [
             'date' => 'date',
             'items' => 'array',
+            'use_signature' => 'boolean',
         ];
     }
 
