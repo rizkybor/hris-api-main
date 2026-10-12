@@ -124,7 +124,7 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'password' => ['nullable', 'confirmed', PasswordRule::defaults()],
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
         try {
