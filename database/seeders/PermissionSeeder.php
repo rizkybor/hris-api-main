@@ -349,6 +349,12 @@ class PermissionSeeder extends Seeder
             'view',
         ],
 
+        // VPS disk usage page under Insights.
+        'server-storage' => [
+            'menu',
+            'view',
+        ],
+
         'announcement' => [
             'menu',
             'list',

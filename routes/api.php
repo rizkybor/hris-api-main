@@ -46,6 +46,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\StaffPermissionController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\ServerStorageController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\GreetingController;
 use App\Http\Controllers\AssetMaintenanceLogController;
@@ -327,6 +328,9 @@ Route::prefix('v1')
             Route::get('history/statistics', [ActivityLogController::class, 'statistics']);
             Route::post('history/delete-row', [ActivityLogController::class, 'deleteRow']);
             Route::post('history/delete-range', [ActivityLogController::class, 'deleteByRange']);
+
+            // Server Storage routes
+            Route::get('server-storage', [ServerStorageController::class, 'index']);
 
             // Announcements
             Route::apiResource('announcements', AnnouncementController::class)->except(['show']);
