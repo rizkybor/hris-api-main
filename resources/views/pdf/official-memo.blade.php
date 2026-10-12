@@ -9,7 +9,7 @@
            needs a negative offset equal to the margin to still reach the
            physical page edge from within the new, inset content box. */
         @page { margin: 48mm 25mm 12mm 25mm; }
-        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11pt; }
+        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 10.5pt; }
         .letterhead { position: fixed; top: -48mm; left: -25mm; width: 210mm; height: 297mm; z-index: -1; }
         /* Unlike letter.blade.php / purchase-order.blade.php, this template
            doesn't pull in the shared style-letterhead partial (which sets
@@ -20,13 +20,13 @@
         .page { position: relative; z-index: 1; }
 
         .title {
-            text-align: center; font-size: 16pt; font-weight: bold; color: #0b1d51;
+            text-align: center; font-size: 15.5pt; font-weight: bold; color: #0b1d51;
             letter-spacing: 1px; margin: 0 0 5mm 0; padding-bottom: 3mm;
             border-bottom: 1.5px solid #0b1d51;
         }
 
         table.info-table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
-        table.info-table td { border: none; padding: 1.5px 0; font-size: 11pt; vertical-align: top; }
+        table.info-table td { border: none; padding: 1.5px 0; font-size: 10.5pt; vertical-align: top; }
         table.info-table td.label { width: 20%; font-weight: bold; }
         table.info-table td.colon { width: 3%; }
         table.info-table td.value { width: 77%; }
@@ -34,16 +34,16 @@
         .body-content { margin-bottom: 8mm; line-height: 1.6; text-align: justify; }
         .body-content p { margin: 0 0 3mm 0; }
         .body-content table { width: 100%; border-collapse: collapse; margin: 3mm 0; }
-        .body-content table td, .body-content table th { border: 1px solid #94a3b8; padding: 4px 6px; font-size: 10.5pt; }
+        .body-content table td, .body-content table th { border: 1px solid #94a3b8; padding: 4px 6px; font-size: 10pt; }
         .body-content table th { background-color: #eef2ff; font-weight: bold; }
         .body-content ul, .body-content ol { margin: 0 0 3mm 0; padding-left: 18px; }
         .body-content blockquote { margin: 3mm 0; padding-left: 8px; border-left: 3px solid #cbd5e1; color: #475569; }
         /* Matches the Rich Text Editor's own Title/Subtitle/Heading/Sub
            Heading style menu so the PDF output is WYSIWYG. */
-        .body-content h1 { font-size: 18pt; font-weight: bold; margin: 0 0 3mm 0; }
-        .body-content h2 { font-size: 13pt; font-weight: normal; color: #6b7280; margin: -2mm 0 3mm 0; }
-        .body-content h3 { font-size: 13pt; font-weight: bold; margin: 0 0 3mm 0; }
-        .body-content h4 { font-size: 12pt; font-weight: bold; color: #374151; margin: 0 0 3mm 0; }
+        .body-content h1 { font-size: 17pt; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h2 { font-size: 12.5pt; font-weight: normal; color: #6b7280; margin: -2mm 0 3mm 0; }
+        .body-content h3 { font-size: 12.5pt; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h4 { font-size: 11.5pt; font-weight: bold; color: #374151; margin: 0 0 3mm 0; }
 
         .signature-block { margin-top: 10mm; width: 60mm; page-break-inside: avoid; }
         .signature-block p { margin: 0; line-height: 1.5; }
@@ -53,7 +53,7 @@
             margin-top: 8mm; padding: 4mm; border: 1px solid #fca5a5; background-color: #fef2f2;
             border-radius: 4px;
         }
-        .rejection-box p { margin: 0; font-size: 10.5pt; color: #991b1b; }
+        .rejection-box p { margin: 0; font-size: 10pt; color: #991b1b; }
         .rejection-box .rejection-label { font-weight: bold; margin-bottom: 1mm; }
     </style>
 </head>

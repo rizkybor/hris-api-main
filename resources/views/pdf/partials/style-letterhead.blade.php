@@ -8,7 +8,7 @@
         color: #1f2937;
         margin: 0;
         padding: 0;
-        font-size: 11pt;
+        font-size: 10.5pt;
     }
 
     .page {
@@ -60,7 +60,7 @@
         left: 26mm;
         right: 18mm;
         text-align: center;
-        font-size: 10pt;
+        font-size: 9.5pt;
         font-weight: bold;
         color: #0c51d9;
     }
@@ -76,14 +76,14 @@
     }
 
     .company-name {
-        font-size: 20pt;
+        font-size: 19pt;
         font-weight: bold;
         color: #0c51d9;
         margin: 0;
     }
 
     .company-address {
-        font-size: 10pt;
+        font-size: 9.5pt;
         color: #374151;
         margin: 2px 0 0 0;
     }
@@ -113,19 +113,19 @@
         color: #ffffff;
         text-align: left;
         padding: 6px 8px;
-        font-size: 10.5pt;
+        font-size: 10pt;
     }
 
     .doc-table td {
         border: 1px solid #dcdedd;
         padding: 6px 8px;
         vertical-align: top;
-        font-size: 10.5pt;
+        font-size: 10pt;
     }
 
     .section-title {
         font-weight: bold;
-        font-size: 12pt;
+        font-size: 11.5pt;
         margin: 6mm 0 3mm 0;
     }
 </style>

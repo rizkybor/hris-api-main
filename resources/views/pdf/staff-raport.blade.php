@@ -27,34 +27,34 @@
            row whole, letting the break fall between rows instead. */
         table.data-table tr { page-break-inside: avoid; }
 
-        body { font-family: "Helvetica", "Arial", sans-serif; color: #1f2937; font-size: 11pt; }
+        body { font-family: "Helvetica", "Arial", sans-serif; color: #1f2937; font-size: 10.5pt; }
 
         .header-row { margin-bottom: 6mm; }
 
-        h1.title { font-size: 16pt; margin: 0 0 1mm 0; color: #070b30; }
-        .subtitle { font-size: 10pt; color: #6b7280; margin: 0 0 4mm 0; }
+        h1.title { font-size: 15.5pt; margin: 0 0 1mm 0; color: #070b30; }
+        .subtitle { font-size: 9.5pt; color: #6b7280; margin: 0 0 4mm 0; }
 
-        .employee-name { font-size: 14pt; font-weight: bold; margin: 0; }
-        .employee-meta { font-size: 10pt; color: #4b5563; margin: 1mm 0 0 0; }
+        .employee-name { font-size: 13.5pt; font-weight: bold; margin: 0; }
+        .employee-meta { font-size: 9.5pt; color: #4b5563; margin: 1mm 0 0 0; }
 
         /* "Helvetica"/"Arial" resolve to dompdf's core PDF fonts, which
            don't cover the Unicode star glyph (renders as tofu boxes) --
            DejaVu Sans is dompdf's bundled font with full Unicode coverage,
            so it's forced here specifically for the star characters. */
-        .stars { font-family: "DejaVu Sans", sans-serif; font-size: 16pt; letter-spacing: 1px; color: #f59e0b; margin: 2mm 0 0 0; }
+        .stars { font-family: "DejaVu Sans", sans-serif; font-size: 15.5pt; letter-spacing: 1px; color: #f59e0b; margin: 2mm 0 0 0; }
         .stars .empty { color: #d1d5db; }
-        .score-label { font-size: 10pt; color: #6b7280; }
+        .score-label { font-size: 9.5pt; color: #6b7280; }
 
         .summary-row { display: table; width: 100%; margin: 4mm 0 6mm 0; }
         .summary-card { display: table-cell; width: 33.33%; padding: 3mm; border: 1px solid #dcdedd; border-radius: 4px; }
-        .summary-card .value { font-size: 15pt; font-weight: bold; color: #070b30; }
-        .summary-card .label { font-size: 9pt; color: #6b7280; }
+        .summary-card .value { font-size: 14.5pt; font-weight: bold; color: #070b30; }
+        .summary-card .label { font-size: 8.5pt; color: #6b7280; }
 
         table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
-        table.data-table th, table.data-table td { border: 1px solid #94a3b8; padding: 3px 6px; font-size: 10pt; }
+        table.data-table th, table.data-table td { border: 1px solid #94a3b8; padding: 3px 6px; font-size: 9.5pt; }
         table.data-table th { background-color: #eef2ff; font-weight: bold; text-align: left; }
 
-        h3.section-title { font-size: 12pt; margin: 0 0 2mm 0; color: #1f2937; border-bottom: 1px solid #dcdedd; padding-bottom: 1mm; }
+        h3.section-title { font-size: 11.5pt; margin: 0 0 2mm 0; color: #1f2937; border-bottom: 1px solid #dcdedd; padding-bottom: 1mm; }
     </style>
 </head>
 <body>
@@ -146,13 +146,13 @@
                 </tbody>
             </table>
         @else
-            <p style="color: #6b7280; font-size: 10pt;">No completed tasks in this period.</p>
+            <p style="color: #6b7280; font-size: 9.5pt;">No completed tasks in this period.</p>
         @endif
 
         @if($performance_review)
             <h3 class="section-title">Latest Performance Review</h3>
             <div style="page-break-inside: avoid; margin-bottom: 6mm;">
-                <p style="margin: 0 0 2mm 0; font-size: 10pt; color: #6b7280;">
+                <p style="margin: 0 0 2mm 0; font-size: 9.5pt; color: #6b7280;">
                     Period: {{ $performance_review['period'] ?? '-' }}
                     @if($performance_review['period_start'] && $performance_review['period_end'])
                         ({{ \Carbon\Carbon::parse($performance_review['period_start'])->translatedFormat('d M Y') }} &ndash; {{ \Carbon\Carbon::parse($performance_review['period_end'])->translatedFormat('d M Y') }})
@@ -160,7 +160,7 @@
                     &bull; Reviewer: {{ $performance_review['reviewer_name'] ?? '-' }}
                     &bull; Status: {{ ucfirst($performance_review['status']) }}
                 </p>
-                <p style="margin: 0 0 3mm 0; font-size: 11pt;">
+                <p style="margin: 0 0 3mm 0; font-size: 10.5pt;">
                     Overall Rating: <strong style="color: #070b30;">{{ $performance_review['overall_rating'] }} / 5</strong>
                 </p>
 
@@ -184,13 +184,13 @@
                 @endif
 
                 @if($performance_review['strengths'])
-                    <p style="margin: 0 0 2mm 0; font-size: 10pt;"><strong>Strengths:</strong> {{ $performance_review['strengths'] }}</p>
+                    <p style="margin: 0 0 2mm 0; font-size: 9.5pt;"><strong>Strengths:</strong> {{ $performance_review['strengths'] }}</p>
                 @endif
                 @if($performance_review['areas_for_improvement'])
-                    <p style="margin: 0 0 2mm 0; font-size: 10pt;"><strong>Areas for Improvement:</strong> {{ $performance_review['areas_for_improvement'] }}</p>
+                    <p style="margin: 0 0 2mm 0; font-size: 9.5pt;"><strong>Areas for Improvement:</strong> {{ $performance_review['areas_for_improvement'] }}</p>
                 @endif
                 @if($performance_review['goals_next_period'])
-                    <p style="margin: 0; font-size: 10pt;"><strong>Goals for Next Period:</strong> {{ $performance_review['goals_next_period'] }}</p>
+                    <p style="margin: 0; font-size: 9.5pt;"><strong>Goals for Next Period:</strong> {{ $performance_review['goals_next_period'] }}</p>
                 @endif
             </div>
         @endif

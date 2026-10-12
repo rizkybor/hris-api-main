@@ -51,8 +51,8 @@
 
     <div class="page page-first">
         <div style="text-align: center; margin-bottom: 8mm;">
-            <p style="font-size: 16pt; font-weight: bold; margin: 0;">PURCHASE ORDER (PO)</p>
-            <p style="font-size: 11pt; margin: 2px 0 0 0;">{{ $order->title }}</p>
+            <p style="font-size: 15.5pt; font-weight: bold; margin: 0;">PURCHASE ORDER (PO)</p>
+            <p style="font-size: 10.5pt; margin: 2px 0 0 0;">{{ $order->title }}</p>
         </div>
 
         <table style="margin-bottom: 6mm;">
