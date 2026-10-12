@@ -9,7 +9,7 @@
            needs a negative offset equal to the margin to still reach the
            physical page edge from within the new, inset content box. */
         @page { margin: 42mm 15mm 30mm 15mm; }
-        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 10.5pt; }
+        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11pt; }
         /* Top/bottom bars, brand name, doc title, watermark, and footer are
            all baked into this flattened letterhead image (matching the
            design team's template-payment-receipt.png reference) rather than
@@ -19,7 +19,7 @@
         .page { position: relative; z-index: 1; }
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
-        .info-table td { border: none; padding: 6px 0; font-size: 10.5pt; vertical-align: top; }
+        .info-table td { border: none; padding: 6px 0; font-size: 11pt; vertical-align: top; }
         .cancelled-stamp {
             position: fixed; top: 78mm; left: 25mm; width: 130mm; text-align: center;
             font-size: 42px; font-weight: bold; color: #dc2626; opacity: 0.35;

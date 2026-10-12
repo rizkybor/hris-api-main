@@ -9,7 +9,7 @@
            needs a negative offset equal to the margin to still reach the
            physical page edge from within the new, inset content box. */
         @page { margin: 42mm 15mm 30mm 15mm; }
-        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 10.5pt; }
+        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11pt; }
         /* Top/bottom bars, brand name, doc title, watermark, and footer are
            all baked into this flattened letterhead image (matching the
            design team's template-invoice.png reference) rather than
@@ -19,11 +19,11 @@
         .page { position: relative; z-index: 1; }
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
-        .info-table td { border: none; padding: 1px 0; font-size: 9.5pt; }
-        .items-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 6px 4px; font-size: 9.5pt; }
-        .items-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 4px; font-size: 9.5pt; }
-        .totals-table td { border: none; padding: 2px 0; font-size: 9.5pt; }
-        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 8.5pt; color: #0b1d51; }
+        .info-table td { border: none; padding: 1px 0; font-size: 10.5pt; }
+        .items-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 6px 4px; font-size: 10.5pt; }
+        .items-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 4px; font-size: 10.5pt; }
+        .totals-table td { border: none; padding: 2px 0; font-size: 10.5pt; }
+        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 9.5pt; color: #0b1d51; }
         .cancelled-stamp {
             position: fixed; top: 78mm; left: 25mm; width: 130mm; text-align: center;
             font-size: 42px; font-weight: bold; color: #dc2626; opacity: 0.35;

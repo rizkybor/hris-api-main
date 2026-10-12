@@ -4,21 +4,21 @@
     <meta charset="utf-8">
     <style>
         @page { margin: 0; }
-        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 10.5pt; }
+        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11pt; }
         .top-bar { position: fixed; top: 0; left: 0; right: 0; height: 10mm; background-color: #0b1d51; }
         .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 5mm; background-color: #0b1d51; }
         .watermark { position: fixed; top: 110mm; left: 50mm; width: 110mm; height: 93mm; opacity: 0.06; }
         .page { padding: 18mm 15mm 18mm 15mm; }
         .header-row { width: 100%; }
         .header-row td { border: none; vertical-align: top; }
-        .brand { font-size: 17pt; font-weight: bold; color: #0b1d51; margin: 0; }
-        .doc-title { font-size: 18pt; font-weight: bold; color: #0b1d51; text-align: right; margin: 0; }
-        .generated-at { text-align: right; color: #64748b; font-size: 8.5pt; margin: 2px 0 0 0; }
+        .brand { font-size: 22pt; font-weight: bold; color: #0b1d51; margin: 0; }
+        .doc-title { font-size: 24pt; font-weight: bold; color: #0b1d51; text-align: right; margin: 0; }
+        .generated-at { text-align: right; color: #64748b; font-size: 9.5pt; margin: 2px 0 0 0; }
         .label { color: #0b1d51; font-weight: bold; }
-        .section-title { color: #0b1d51; font-size: 12pt; font-weight: bold; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.3px; }
+        .section-title { color: #0b1d51; font-size: 13pt; font-weight: bold; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.3px; }
         table { width: 100%; border-collapse: collapse; }
-        .info-table td { border: none; padding: 2px 0; font-size: 9.5pt; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 8.5pt; font-weight: bold; }
+        .info-table td { border: none; padding: 2px 0; font-size: 10.5pt; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 9.5pt; font-weight: bold; }
         .badge-status-active, .badge-status-on-track { background-color: #dcfce7; color: #15803d; }
         .badge-status-planning, .badge-status-draft { background-color: #e0e7ff; color: #4338ca; }
         .badge-status-on_hold, .badge-status-behind { background-color: #fef9c3; color: #a16207; }
@@ -30,16 +30,16 @@
 
         .stat-table { margin-top: 6mm; }
         .stat-box { border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px 10px; text-align: center; }
-        .stat-value { font-size: 16pt; font-weight: bold; color: #0b1d51; margin: 0; }
-        .stat-label { font-size: 8.5pt; color: #64748b; margin: 2px 0 0 0; text-transform: uppercase; letter-spacing: 0.2px; }
+        .stat-value { font-size: 20pt; font-weight: bold; color: #0b1d51; margin: 0; }
+        .stat-label { font-size: 9pt; color: #64748b; margin: 2px 0 0 0; text-transform: uppercase; letter-spacing: 0.2px; }
 
         .progress-track { width: 100%; height: 8px; background-color: #e2e8f0; border-radius: 4px; }
         .progress-fill { height: 8px; background-color: #0b1d51; border-radius: 4px; }
 
         .task-table { margin-top: 3mm; }
-        .task-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 5px 4px; font-size: 9pt; }
-        .task-table td { border-bottom: 1px solid #e5e7eb; padding: 6px 4px; font-size: 9pt; vertical-align: top; }
-        .empty-note { color: #94a3b8; font-size: 9pt; padding: 6px 4px; font-style: italic; }
+        .task-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 5px 4px; font-size: 10pt; }
+        .task-table td { border-bottom: 1px solid #e5e7eb; padding: 6px 4px; font-size: 10pt; vertical-align: top; }
+        .empty-note { color: #94a3b8; font-size: 10pt; padding: 6px 4px; font-style: italic; }
 
         .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
         .dot-done { background-color: #16a34a; }
@@ -47,7 +47,7 @@
         .dot-pending { background-color: #ca8a04; }
         .dot-cancelled { background-color: #dc2626; }
 
-        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 8.5pt; color: #0b1d51; }
+        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 9.5pt; color: #0b1d51; }
     </style>
 </head>
 <body>
@@ -70,7 +70,7 @@
         <table style="margin-top: 8mm;">
             <tr>
                 <td style="width: 60%; border: none; vertical-align: top;">
-                    <p class="label" style="font-size: 13.5pt; margin: 0 0 3px 0;">{{ $project->name }}</p>
+                    <p class="label" style="font-size: 15pt; margin: 0 0 3px 0;">{{ $project->name }}</p>
                     <p style="margin: 0 0 4px 0;">
                         <span class="badge badge-status-{{ $project->status }}">{{ str_replace('_', ' ', strtoupper($project->status)) }}</span>
                         <span class="badge badge-priority-{{ $project->priority }}">{{ strtoupper($project->priority) }} PRIORITY</span>
@@ -107,7 +107,7 @@
                         </div>
                     </td>
                     <td style="width: 30%; border: none; text-align: right; vertical-align: middle;">
-                        <span style="font-size: 15pt; font-weight: bold; color: #0b1d51;">{{ $progress }}% Complete</span>
+                        <span style="font-size: 18pt; font-weight: bold; color: #0b1d51;">{{ $progress }}% Complete</span>
                     </td>
                 </tr>
             </table>
