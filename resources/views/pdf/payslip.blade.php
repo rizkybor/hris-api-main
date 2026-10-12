@@ -4,25 +4,25 @@
     <meta charset="utf-8">
     <style>
         @page { margin: 0; }
-        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 11px; }
+        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 10.5pt; }
         .top-bar { position: fixed; top: 0; left: 0; right: 0; height: 10mm; background-color: #0b1d51; }
         .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 5mm; background-color: #0b1d51; }
         .watermark { position: fixed; top: 110mm; left: 50mm; width: 110mm; height: 93mm; opacity: 0.08; }
         .page { padding: 18mm 15mm 22mm 15mm; }
         .header-row { width: 100%; }
         .header-row td { border: none; vertical-align: top; }
-        .brand { font-size: 22px; font-weight: bold; color: #0b1d51; margin: 0; }
-        .doc-title { font-size: 26px; font-weight: bold; color: #0b1d51; text-align: right; margin: 0; }
+        .brand { font-size: 17pt; font-weight: bold; color: #0b1d51; margin: 0; }
+        .doc-title { font-size: 20pt; font-weight: bold; color: #0b1d51; text-align: right; margin: 0; }
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
-        .info-table td { border: none; padding: 6px 0; font-size: 11px; vertical-align: top; }
-        .breakdown-table td { border: none; padding: 5px 0; font-size: 11px; }
+        .info-table td { border: none; padding: 6px 0; font-size: 10.5pt; vertical-align: top; }
+        .breakdown-table td { border: none; padding: 5px 0; font-size: 10.5pt; }
         .breakdown-table .amount { text-align: right; }
-        .section-title { color: #0b1d51; font-weight: bold; font-size: 12px; margin: 0 0 4px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1; }
+        .section-title { color: #0b1d51; font-weight: bold; font-size: 11pt; margin: 0 0 4px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1; }
         .total-row td { border-top: 1.5px solid #0b1d51; font-weight: bold; padding-top: 8px; }
         .net-box { margin-top: 10mm; background-color: #0b1d51; color: #ffffff; padding: 10px 14px; }
         .net-box td { border: none; color: #ffffff; }
-        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 9.5px; color: #0b1d51; }
+        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 8.5pt; color: #0b1d51; }
     </style>
 </head>
 <body>
@@ -74,8 +74,8 @@
         <table class="net-box">
             <tr>
                 <td>
-                    <p style="margin: 0; font-size: 10px; opacity: 0.85;">NET SALARY (TAKE HOME)</p>
-                    <p style="margin: 4px 0 0 0; font-size: 20px; font-weight: bold;">Rp {{ number_format($netSalary, 0, ',', '.') }}</p>
+                    <p style="margin: 0; font-size: 9pt; opacity: 0.85;">NET SALARY (TAKE HOME)</p>
+                    <p style="margin: 4px 0 0 0; font-size: 16pt; font-weight: bold;">Rp {{ number_format($netSalary, 0, ',', '.') }}</p>
                 </td>
             </tr>
         </table>
@@ -86,7 +86,7 @@
             </table>
         @endif
 
-        <p style="margin-top: 12mm; font-size: 9.5px; color: #64748b;">
+        <p style="margin-top: 12mm; font-size: 8.5pt; color: #64748b;">
             This is a computer-generated payslip and does not require a signature.
         </p>
     </div>

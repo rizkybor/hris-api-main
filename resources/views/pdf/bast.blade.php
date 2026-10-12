@@ -27,10 +27,10 @@
         .body-content blockquote { margin: 3mm 0; padding-left: 8px; border-left: 3px solid #cbd5e1; color: #475569; }
         /* Matches the Rich Text Editor's own Title/Subtitle/Heading/Sub
            Heading style menu so the PDF output is WYSIWYG. */
-        .body-content h1 { font-size: 18px; font-weight: bold; margin: 0 0 3mm 0; }
-        .body-content h2 { font-size: 13px; font-weight: normal; color: #6b7280; margin: -2mm 0 3mm 0; }
-        .body-content h3 { font-size: 13px; font-weight: bold; margin: 0 0 3mm 0; }
-        .body-content h4 { font-size: 12px; font-weight: bold; color: #374151; margin: 0 0 3mm 0; }
+        .body-content h1 { font-size: 15pt; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h2 { font-size: 12pt; font-weight: normal; color: #6b7280; margin: -2mm 0 3mm 0; }
+        .body-content h3 { font-size: 12pt; font-weight: bold; margin: 0 0 3mm 0; }
+        .body-content h4 { font-size: 11pt; font-weight: bold; color: #374151; margin: 0 0 3mm 0; }
     </style>
 </head>
 <body>
@@ -48,7 +48,7 @@
             <p class="company-address">Jl. Pd. Cabe Raya No.7, Pd. Cabe Udik, Kec. Pamulang, Kota Tangerang Selatan, Banten 15418</p>
         </div>
 
-        <p style="text-align: center; font-weight: bold; font-size: 13px; margin: 0 0 1mm 0;">BERITA ACARA SERAH TERIMA</p>
+        <p style="text-align: center; font-weight: bold; font-size: 12pt; margin: 0 0 1mm 0;">BERITA ACARA SERAH TERIMA</p>
         <p style="text-align: center; margin: 0 0 8mm 0;">Nomor: {{ $letter->letter_number }}</p>
 
         <div class="body-content" style="text-align: justify; line-height: 1.6; margin-bottom: {{ $letter->items ? '6mm' : '14mm' }};">

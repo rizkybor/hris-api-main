@@ -110,7 +110,7 @@
         }
 
         .kicker {
-            font-size: 10px;
+            font-size: 9pt;
             letter-spacing: 4px;
             color: #b08d3f;
             font-weight: bold;
@@ -126,13 +126,13 @@
         }
 
         .presented-to {
-            font-size: 11px;
+            font-size: 10.5pt;
             color: #6b7280;
             margin: 0 0 3mm 0;
         }
 
         .recipient-name {
-            font-size: 26px;
+            font-size: 20pt;
             font-weight: bold;
             color: #0c51d9;
             margin: 0 0 2mm 0;
@@ -143,14 +143,14 @@
         }
 
         .cert-title {
-            font-size: 14px;
+            font-size: 12.5pt;
             font-weight: bold;
             color: #0c1c3c;
             margin: 5mm 0 3mm 0;
         }
 
         .description {
-            font-size: 10px;
+            font-size: 9pt;
             line-height: 1.65;
             color: #374151;
             text-align: center;
@@ -159,14 +159,14 @@
         }
 
         .period {
-            font-size: 9px;
+            font-size: 8.5pt;
             color: #6b7280;
             margin: 0 0 6mm 0;
         }
 
         .signature-name {
             display: inline-block;
-            font-size: 12px;
+            font-size: 11pt;
             font-weight: bold;
             color: #0c1c3c;
             border-top: 1px solid #1f2937;
@@ -178,13 +178,13 @@
         }
 
         .signature-title {
-            font-size: 9px;
+            font-size: 8.5pt;
             color: #6b7280;
             margin: 0 0 5mm 0;
         }
 
         .cert-number {
-            font-size: 8px;
+            font-size: 7pt;
             letter-spacing: 1px;
             color: #9ca3af;
             margin: 0;
