@@ -21,6 +21,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // "Create Backup" manually.
         $schedule->command('backup:run')->dailyAt('01:00')->onOneServer();
         $schedule->command('backup:prune')->dailyAt('01:30')->onOneServer();
+
+        // H-30 subscription billing reminders to the company inbox, sent
+        // in the morning Jakarta time so they land at the start of the day.
+        $schedule->command('subscriptions:send-due-reminders')
+            ->dailyAt('08:00')
+            ->timezone('Asia/Jakarta')
+            ->onOneServer();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([

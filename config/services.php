@@ -47,4 +47,11 @@ return [
         'api_secret' => env('CLOUDINARY_API_SECRET'),
     ],
 
+    // Daily email listing each active subscription whose next due date is
+    // coming up (see subscriptions:send-due-reminders).
+    'subscription_reminder' => [
+        'recipient' => env('SUBSCRIPTION_REMINDER_EMAIL', 'contact@jcdigital.co.id'),
+        'days_before' => (int) env('SUBSCRIPTION_REMINDER_DAYS', 30),
+    ],
+
 ];
