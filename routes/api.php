@@ -46,6 +46,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\StaffPermissionController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\FlowchartController;
 use App\Http\Controllers\ServerStorageController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\GreetingController;
@@ -143,6 +144,9 @@ Route::prefix('v1')
             Route::get('project-calculations/statistics', [ProjectCalculationController::class, 'getStatistics']);
             Route::post('project-calculations/preview', [ProjectCalculationController::class, 'preview']);
             Route::apiResource('project-calculations', ProjectCalculationController::class);
+
+            // Flowchart routes
+            Route::apiResource('flowcharts', FlowchartController::class);
 
             Route::get('attendances/all/paginated', [AttendanceController::class, 'getAllPaginated']);
             Route::get('attendances/statistics', [AttendanceController::class, 'getStatistics']);
