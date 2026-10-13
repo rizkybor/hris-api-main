@@ -76,11 +76,14 @@ class ProjectRateSetting extends Model
     }
 
     /**
-     * Jumlah Orang di Tim -- the count of selected SDM Resource team members.
+     * Jumlah Orang di Tim -- the count of selected SDM Resource team members
+     * that still exist. Counted from the query rather than the raw id list,
+     * since an SDM Resource soft-deleted after being selected keeps its id
+     * in selected_sdm_resource_ids but no longer counts toward hours or cost.
      */
     public function getTeamSizeAttribute(): int
     {
-        return count($this->selected_sdm_resource_ids ?? []);
+        return $this->selectedSdmResources()->count();
     }
 
     public function getRateCostPerHourAttribute(): float
