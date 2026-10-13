@@ -147,6 +147,14 @@ class PermissionSeeder extends Seeder
             'settings',
         ],
 
+        // Flowchart builder under Tools.
+        'flowchart' => [
+            'menu',
+            'create',
+            'edit',
+            'delete',
+        ],
+
         'fixed-cost' => [
             'list',
             'create',

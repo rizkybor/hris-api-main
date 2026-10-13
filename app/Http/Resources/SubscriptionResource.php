@@ -47,6 +47,7 @@ class SubscriptionResource extends JsonResource
             'amount' => (float) (string) $this->amount,
             'start_date' => $this->start_date,
             'next_due_date' => $this->next_due_date,
+            'due_reminder_sent_for' => $this->due_reminder_sent_for?->toDateString(),
             'status' => $this->status,
             'last_invoiced_at' => $this->last_invoiced_at,
             'notes' => $this->notes,

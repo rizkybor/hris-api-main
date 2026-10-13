@@ -196,10 +196,6 @@ class SubscriptionController extends Controller implements HasMiddleware
                 }
 
                 $client = $subscription->client;
-                $periodLabel = $subscription->billing_cycle === 'yearly'
-                    ? $subscription->next_due_date->format('Y')
-                    : $subscription->next_due_date->format('F Y');
-
                 $clientCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $client->name), 0, 4)) ?: 'CLI';
                 $date = Carbon::now();
 
@@ -207,50 +203,14 @@ class SubscriptionController extends Controller implements HasMiddleware
                     ? BankAccount::where('bank_name', $subscription->bank_name)->first()
                     : null;
 
-                // One line item per bundled service so several services
-                // under the same subscription still land on a single
-                // invoice.
-                $serviceItems = $subscription->services->map(fn ($service) => [
-                    'description' => ($service->product_name ?: $service->service_type)." - {$periodLabel}",
-                    'quantity' => '1',
-                    'rate' => null,
-                    'total' => (float) (string) $service->amount,
-                ])->all();
-
-                $subtotal = array_sum(array_column($serviceItems, 'total'));
-                $ppnPercentage = (float) (string) $subscription->ppn_percentage;
-
-                // Optional pass-through registrar cost (e.g. ICANN's fee on
-                // a domain service) -- billed as its own line item per
-                // service it applies to, but excluded from subtotal/ppn
-                // (not part of the VAT taxable base), same treatment as
-                // Invoice::admin_fee.
-                $icannFeeTotal = (float) $subscription->services->sum(fn ($service) => (float) ($service->icann_fee ?? 0));
-                $icannItems = $subscription->services
-                    ->filter(fn ($service) => (float) ($service->icann_fee ?? 0) > 0)
-                    ->map(fn ($service) => [
-                        'description' => ($service->product_name ?: $service->service_type)." - ICANN Fee - {$periodLabel}",
-                        'quantity' => '1',
-                        'rate' => null,
-                        'total' => (float) (string) $service->icann_fee,
-                    ])->values()->all();
-
-                $items = array_merge($serviceItems, $icannItems);
-
-                // With several services, ppn_percentage is a blended rate
-                // rounded to 2 decimals (see recalculateAggregatePpn()) --
-                // reapplying it to the whole subtotal would drift from what
-                // each service's own rate actually adds up to (which the PPN
-                // report reads straight off this invoice), so sum each
-                // service's exact contribution instead. A single service has
-                // only one rate for the whole subtotal, so both give the
-                // same result.
-                $ppnAmount = $subscription->services->count() > 1
-                    ? round($subscription->services->sum(
-                        fn ($service) => (float) (string) $service->amount * ((float) ($service->ppn_percentage ?? 0) / 100)
-                    ))
-                    : round($subtotal * ($ppnPercentage / 100));
-                $adminFee = (float) (string) $subscription->admin_fee;
+                $billing = $subscription->billingBreakdown();
+                $periodLabel = $billing['period_label'];
+                $items = array_merge($billing['service_items'], $billing['icann_items']);
+                $subtotal = $billing['subtotal'];
+                $ppnPercentage = $billing['ppn_percentage'];
+                $ppnAmount = $billing['ppn_amount'];
+                $adminFee = $billing['admin_fee'];
+                $icannFeeTotal = $billing['icann_fee'];
 
                 $invoice = Invoice::create([
                     'invoice_number' => $this->numberService->generateInvoiceNumber($clientCode, $date),
@@ -275,7 +235,7 @@ class SubscriptionController extends Controller implements HasMiddleware
                     'terms' => $subscription->terms,
                     'pph23_type' => $subscription->pph23_type,
                     'pph23_percent' => $subscription->pph23_percent,
-                    'total' => $subtotal + $ppnAmount + $adminFee + $icannFeeTotal,
+                    'total' => $billing['total'],
                     'created_by' => Auth::id(),
                 ]);
 

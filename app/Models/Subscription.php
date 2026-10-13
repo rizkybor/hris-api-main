@@ -25,6 +25,7 @@ class Subscription extends Model
         'billing_cycle',
         'start_date',
         'next_due_date',
+        'due_reminder_sent_for',
         'status',
         'last_invoiced_at',
         'notes',
@@ -45,6 +46,7 @@ class Subscription extends Model
             'pph23_percent' => 'decimal:2',
             'start_date' => 'date',
             'next_due_date' => 'date',
+            'due_reminder_sent_for' => 'date',
             'last_invoiced_at' => 'date',
         ];
     }
@@ -109,6 +111,69 @@ class Subscription extends Model
         return $this->billing_cycle === 'yearly'
             ? $this->next_due_date->format('Y')
             : $this->next_due_date->format('F Y');
+    }
+
+    /**
+     * Everything the next invoice for this subscription will bill, computed
+     * exactly as SubscriptionController::generateInvoice() stores it -- so
+     * the due-date reminder email and the invoice itself can never disagree.
+     * Needs `services` (eager-load them when calling this in a loop).
+     */
+    public function billingBreakdown(): array
+    {
+        $periodLabel = $this->currentPeriodLabel();
+
+        // One line item per bundled service so several services under the
+        // same subscription still land on a single invoice.
+        $serviceItems = $this->services->map(fn ($service) => [
+            'description' => ($service->product_name ?: $service->service_type)." - {$periodLabel}",
+            'quantity' => '1',
+            'rate' => null,
+            'total' => (float) (string) $service->amount,
+        ])->all();
+
+        $subtotal = array_sum(array_column($serviceItems, 'total'));
+        $ppnPercentage = (float) (string) $this->ppn_percentage;
+
+        // Optional pass-through registrar cost (e.g. ICANN's fee on a domain
+        // service) -- billed as its own line item per service it applies to,
+        // but excluded from subtotal/ppn (not part of the VAT taxable base),
+        // same treatment as Invoice::admin_fee.
+        $icannFeeTotal = (float) $this->services->sum(fn ($service) => (float) ($service->icann_fee ?? 0));
+        $icannItems = $this->services
+            ->filter(fn ($service) => (float) ($service->icann_fee ?? 0) > 0)
+            ->map(fn ($service) => [
+                'description' => ($service->product_name ?: $service->service_type)." - ICANN Fee - {$periodLabel}",
+                'quantity' => '1',
+                'rate' => null,
+                'total' => (float) (string) $service->icann_fee,
+            ])->values()->all();
+
+        // With several services, ppn_percentage is a blended rate rounded to
+        // 2 decimals (see recalculateAggregatePpn()) -- reapplying it to the
+        // whole subtotal would drift from what each service's own rate
+        // actually adds up to (which the PPN report reads straight off the
+        // invoice), so sum each service's exact contribution instead. A
+        // single service has only one rate for the whole subtotal, so both
+        // give the same result.
+        $ppnAmount = $this->services->count() > 1
+            ? round($this->services->sum(
+                fn ($service) => (float) (string) $service->amount * ((float) ($service->ppn_percentage ?? 0) / 100)
+            ))
+            : round($subtotal * ($ppnPercentage / 100));
+        $adminFee = (float) (string) $this->admin_fee;
+
+        return [
+            'period_label' => $periodLabel,
+            'service_items' => $serviceItems,
+            'icann_items' => $icannItems,
+            'subtotal' => $subtotal,
+            'ppn_percentage' => $ppnPercentage,
+            'ppn_amount' => $ppnAmount,
+            'admin_fee' => $adminFee,
+            'icann_fee' => $icannFeeTotal,
+            'total' => $subtotal + $ppnAmount + $adminFee + $icannFeeTotal,
+        ];
     }
 
     public function scopeSearch($query, $search)
