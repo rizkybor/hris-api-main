@@ -4,23 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\ProposalRequest;
+use App\Mail\ProposalShareMail;
 use App\Http\Resources\PaginateResource;
 use App\Http\Resources\ProposalResource;
 use App\Models\Proposal;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\Cloudinary\CloudinaryUrl;
+use App\Services\ProposalPdfService;
 use App\Support\HtmlSanitizer;
 use App\Support\ProposalTemplate;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProposalController extends Controller implements HasMiddleware
@@ -32,7 +33,7 @@ class ProposalController extends Controller implements HasMiddleware
         return [
             new Middleware(PermissionMiddleware::using(['proposal-menu']), only: ['index', 'show', 'exportPdf']),
             new Middleware(PermissionMiddleware::using(['proposal-create']), only: ['store', 'duplicate']),
-            new Middleware(PermissionMiddleware::using(['proposal-edit']), only: ['update']),
+            new Middleware(PermissionMiddleware::using(['proposal-edit']), only: ['update', 'share', 'unshare', 'shareByEmail']),
             new Middleware(PermissionMiddleware::using(['proposal-create|proposal-edit']), only: ['uploadImage']),
             new Middleware(PermissionMiddleware::using(['proposal-delete']), only: ['destroy']),
         ];
@@ -74,7 +75,7 @@ class ProposalController extends Controller implements HasMiddleware
                 'updated_by' => Auth::id(),
             ]);
 
-            return ResponseHelper::jsonResponse(true, 'Proposal Created Successfully', (new ProposalResource($proposal->load(['creator', 'updater'])))->withSections(), 201);
+            return ResponseHelper::jsonResponse(true, 'Proposal Created Successfully', (new ProposalResource($proposal->load(['creator', 'updater', 'client'])))->withSections(), 201);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
@@ -83,7 +84,7 @@ class ProposalController extends Controller implements HasMiddleware
     public function show(int $id)
     {
         try {
-            $proposal = Proposal::with(['creator', 'updater'])->findOrFail($id);
+            $proposal = Proposal::with(['creator', 'updater', 'client'])->findOrFail($id);
 
             return ResponseHelper::jsonResponse(true, 'Proposal Retrieved Successfully', (new ProposalResource($proposal))->withSections(), 200);
         } catch (ModelNotFoundException $e) {
@@ -105,7 +106,7 @@ class ProposalController extends Controller implements HasMiddleware
                 'updated_by' => Auth::id(),
             ]);
 
-            return ResponseHelper::jsonResponse(true, 'Proposal Updated Successfully', (new ProposalResource($proposal->load(['creator', 'updater'])))->withSections(), 200);
+            return ResponseHelper::jsonResponse(true, 'Proposal Updated Successfully', (new ProposalResource($proposal->load(['creator', 'updater', 'client'])))->withSections(), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Proposal Not Found', null, 404);
         } catch (\Throwable $e) {
@@ -136,7 +137,8 @@ class ProposalController extends Controller implements HasMiddleware
         try {
             $source = Proposal::findOrFail($id);
 
-            $copy = $source->replicate(['letter_number', 'status', 'created_by', 'updated_by']);
+            // The share link stays with the original -- a copy starts unshared.
+            $copy = $source->replicate(['letter_number', 'status', 'created_by', 'updated_by', 'share_token', 'share_expires_at', 'share_view_count', 'share_last_viewed_at']);
             $copy->title = Str::limit($source->title.' (Salinan)', 255, '');
             $copy->status = 'draft';
             $copy->proposal_date = now('Asia/Jakarta')->toDateString();
@@ -147,7 +149,7 @@ class ProposalController extends Controller implements HasMiddleware
             $copy->updated_by = Auth::id();
             $copy->save();
 
-            return ResponseHelper::jsonResponse(true, 'Proposal Duplicated Successfully', (new ProposalResource($copy->load(['creator', 'updater'])))->withSections(), 201);
+            return ResponseHelper::jsonResponse(true, 'Proposal Duplicated Successfully', (new ProposalResource($copy->load(['creator', 'updater', 'client'])))->withSections(), 201);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Proposal Not Found', null, 404);
         } catch (\Throwable $e) {
@@ -178,107 +180,102 @@ class ProposalController extends Controller implements HasMiddleware
         }
     }
 
-    public function exportPdf(int $id)
+    public function exportPdf(int $id, ProposalPdfService $pdfService)
     {
-        $proposal = Proposal::findOrFail($id);
-        $tempFiles = [];
-
-        try {
-            // dompdf can't fetch remote images (enable_remote is off on
-            // purpose), so the cover and every image inside the body are
-            // pulled down from our Cloudinary account into storage first.
-            // Images from anywhere else are dropped.
-            $coverPath = $proposal->cover_image
-                ? $this->downloadImage(CloudinaryUrl::image($proposal->cover_image), $tempFiles)
-                : null;
-
-            $sections = array_map(function ($section) use (&$tempFiles) {
-                $section['content'] = preg_replace_callback(
-                    '/<img\b[^>]*?\bsrc="([^"]*)"[^>]*>/i',
-                    function ($match) use (&$tempFiles) {
-                        $local = $this->isOwnCloudinaryUrl($match[1]) ? $this->downloadImage(html_entity_decode($match[1]), $tempFiles) : null;
-
-                        return $local ? str_replace($match[1], $local, $match[0]) : '';
-                    },
-                    $section['content'] ?? ''
-                );
-
-                return $section;
-            }, $proposal->sections ?? []);
-
-            $pdf = Pdf::loadView('pdf.proposal', [
-                'proposal' => $proposal,
-                'sections' => $sections,
-                'coverPath' => $coverPath,
-            ])->setPaper('a4');
-
-            $this->addPageChrome($pdf, $proposal);
-
-            $output = $pdf->output();
-        } finally {
-            foreach ($tempFiles as $file) {
-                @unlink($file);
-            }
-        }
-
-        $filename = Str::slug($proposal->documentTitle()) ?: 'proposal-penawaran';
-
-        return response($output, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$filename.'.pdf"',
-        ]);
+        return $pdfService->response(Proposal::findOrFail($id));
     }
 
     /**
-     * Running header and footer on every content page (the cover, page 1,
-     * stays clean): company name / document label with a thin rule at the
-     * top, and the document title / "Halaman x dari y" at the bottom.
+     * Creates (or keeps) the proposal's public share link and sets how long
+     * it stays valid. Re-sharing an already shared proposal keeps the same
+     * URL, so a link already sent to the client keeps working.
      */
-    private function addPageChrome($pdf, Proposal $proposal): void
+    public function share(Request $request, int $id)
     {
-        // Through the wrapper (not Dompdf directly), so output() knows it's
-        // already rendered and doesn't render again, dropping the script.
-        $pdf->render();
-        $dompdf = $pdf->getDomPDF();
-        $metrics = $dompdf->getFontMetrics();
-        $canvas = $dompdf->getCanvas();
+        $data = $request->validate([
+            'expires_in_days' => ['nullable', 'integer', Rule::in([7, 14, 30])],
+        ]);
 
-        $regular = $metrics->getFont('Helvetica');
-        $bold = $metrics->getFont('Helvetica', 'bold');
-        $navy = [0.04, 0.11, 0.32];
-        $muted = [0.39, 0.45, 0.55];
-        $rule = [0.84, 0.86, 0.90];
-        $margin = 62; // ~22mm, matches the page's side margins
-        $size = 7.5;
+        try {
+            $proposal = Proposal::findOrFail($id);
+            $proposal->forceFill([
+                'share_token' => $proposal->share_token ?? Str::random(48),
+                'share_expires_at' => isset($data['expires_in_days']) ? now()->addDays($data['expires_in_days']) : null,
+            ])->save();
 
-        $headerRight = 'Proposal Penawaran · '.$proposal->client_name;
-        $footerLeft = $proposal->documentTitle();
-        $maxWidth = $canvas->get_width() - $margin * 2 - 90;
-        foreach (['headerRight', 'footerLeft'] as $var) {
-            while ($metrics->getTextWidth($$var, $regular, $size) > $maxWidth && mb_strlen($$var) > 10) {
-                $$var = mb_substr($$var, 0, -4).'…';
-            }
+            return ResponseHelper::jsonResponse(true, 'Share Link Ready', (new ProposalResource($proposal->load(['creator', 'updater', 'client'])))->withSections(), 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Proposal Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
 
-        $canvas->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($regular, $bold, $navy, $muted, $rule, $margin, $size, $headerRight, $footerLeft) {
-            if ($pageNumber === 1) {
-                return;
+    /**
+     * Emails the proposal's share link to the client (creating the link if
+     * needed, or renewing one that has expired). A draft is marked as sent.
+     */
+    public function shareByEmail(Request $request, int $id)
+    {
+        $data = $request->validate([
+            'to' => ['required', 'email', 'max:255'],
+            'cc' => ['nullable', 'array', 'max:5'],
+            'cc.*' => ['email', 'max:255'],
+            'recipient_name' => ['nullable', 'string', 'max:255'],
+            'message' => ['nullable', 'string', 'max:2000'],
+            'expires_in_days' => ['nullable', 'integer', Rule::in([7, 14, 30])],
+        ], [], ['to' => 'Email Penerima', 'cc.*' => 'Email CC', 'message' => 'Pesan']);
+
+        try {
+            $proposal = Proposal::findOrFail($id);
+
+            if (! $proposal->isShareActive() || array_key_exists('expires_in_days', $data)) {
+                $proposal->forceFill([
+                    'share_token' => $proposal->isShareActive() ? $proposal->share_token : Str::random(48),
+                    'share_expires_at' => isset($data['expires_in_days']) ? now()->addDays($data['expires_in_days']) : null,
+                ]);
             }
-            $width = $canvas->get_width();
-            $height = $canvas->get_height();
+            if ($proposal->status === 'draft') {
+                $proposal->status = 'sent';
+            }
+            $proposal->save();
 
-            // Header
-            $canvas->text($margin, 34, 'PT JENDELA CAKRA DIGITAL', $bold, $size, $navy);
-            $canvas->text($width - $margin - $fontMetrics->getTextWidth($headerRight, $regular, $size), 34, $headerRight, $regular, $size, $muted);
-            $canvas->line($margin, 48, $width - $margin, 48, $rule, 0.6);
+            Mail::to($data['to'])
+                ->cc($data['cc'] ?? [])
+                ->send(new ProposalShareMail($proposal, $data['recipient_name'] ?? null, $data['message'] ?? null));
 
-            // Footer
-            $y = $height - 40;
-            $canvas->line($margin, $y - 8, $width - $margin, $y - 8, $rule, 0.6);
-            $canvas->text($margin, $y, $footerLeft, $regular, $size, $muted);
-            $pageLabel = "Halaman {$pageNumber} dari {$pageCount}";
-            $canvas->text($width - $margin - $fontMetrics->getTextWidth($pageLabel, $regular, $size), $y, $pageLabel, $regular, $size, $muted);
-        });
+            activity('Business Documents')
+                ->performedOn($proposal)
+                ->withProperties(['to' => $data['to'], 'cc' => $data['cc'] ?? []])
+                ->event('shared_by_email')
+                ->log('sent a proposal share link by email');
+
+            return ResponseHelper::jsonResponse(true, 'Proposal Sent', (new ProposalResource($proposal->load(['creator', 'updater', 'client'])))->withSections(), 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Proposal Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Email gagal dikirim: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /** Turns the share link off; sharing again later issues a new URL. */
+    public function unshare(int $id)
+    {
+        try {
+            $proposal = Proposal::findOrFail($id);
+            $proposal->forceFill([
+                'share_token' => null,
+                'share_expires_at' => null,
+                'share_view_count' => 0,
+                'share_last_viewed_at' => null,
+            ])->save();
+
+            return ResponseHelper::jsonResponse(true, 'Share Link Disabled', (new ProposalResource($proposal->load(['creator', 'updater', 'client'])))->withSections(), 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Proposal Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
     }
 
     private function cleanSections(array $sections): array
@@ -289,44 +286,5 @@ class ProposalController extends Controller implements HasMiddleware
             'content' => HtmlSanitizer::clean($section['content'] ?? ''),
             'page_break_before' => (bool) ($section['page_break_before'] ?? false),
         ], $sections));
-    }
-
-    private function isOwnCloudinaryUrl(string $url): bool
-    {
-        $cloud = config('services.cloudinary.cloud_name');
-
-        return $cloud && str_starts_with(html_entity_decode($url), "https://res.cloudinary.com/{$cloud}/");
-    }
-
-    /**
-     * Downloads into storage/app/temp -- inside dompdf's chroot (the
-     * project directory), which a system temp dir like /tmp is not.
-     */
-    private function downloadImage(?string $url, array &$tempFiles): ?string
-    {
-        if (! $url) {
-            return null;
-        }
-
-        try {
-            $dir = storage_path('app/temp');
-            if (! is_dir($dir)) {
-                mkdir($dir, 0755, true);
-            }
-            // Ask Cloudinary for a print-sized JPEG instead of the original
-            // upload (photos straight off a camera can be 6000px / 10MB),
-            // which keeps the PDF small and fast to render.
-            $url = preg_replace('#/image/upload/(?!w_)#', '/image/upload/w_1600,c_limit,q_80,f_jpg/', $url, 1);
-
-            $path = $dir.'/proposal-'.Str::random(16);
-            file_put_contents($path, Http::timeout(20)->get($url)->throw()->body());
-            $tempFiles[] = $path;
-
-            return $path;
-        } catch (\Throwable $e) {
-            Log::warning('Proposal PDF image download failed', ['url' => $url, 'error' => $e->getMessage()]);
-
-            return null;
-        }
     }
 }

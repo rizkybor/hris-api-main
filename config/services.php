@@ -49,6 +49,11 @@ return [
 
     // Daily email listing each active subscription whose next due date is
     // coming up (see subscriptions:send-due-reminders).
+    // Replies to a proposal shared by email go to the company inbox.
+    'proposal_share' => [
+        'reply_to' => env('PROPOSAL_SHARE_REPLY_TO', 'contact@jcdigital.co.id'),
+    ],
+
     'subscription_reminder' => [
         'recipient' => env('SUBSCRIPTION_REMINDER_EMAIL', 'contact@jcdigital.co.id'),
         'days_before' => (int) env('SUBSCRIPTION_REMINDER_DAYS', 30),

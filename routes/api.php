@@ -402,6 +402,9 @@ Route::prefix('v1')
             // Proposal Penawaran routes
             Route::post('proposals/images', [ProposalController::class, 'uploadImage']);
             Route::post('proposals/{id}/duplicate', [ProposalController::class, 'duplicate']);
+            Route::post('proposals/{id}/share', [ProposalController::class, 'share']);
+            Route::post('proposals/{id}/share/email', [ProposalController::class, 'shareByEmail']);
+            Route::delete('proposals/{id}/share', [ProposalController::class, 'unshare']);
             Route::get('proposals/{id}/export-pdf', [ProposalController::class, 'exportPdf']);
             Route::apiResource('proposals', ProposalController::class);
 
