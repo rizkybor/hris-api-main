@@ -212,7 +212,7 @@ class ProposalController extends Controller implements HasMiddleware
                 'coverPath' => $coverPath,
             ])->setPaper('a4');
 
-            $this->addFooter($pdf, $proposal);
+            $this->addPageChrome($pdf, $proposal);
 
             $output = $pdf->output();
         } finally {
@@ -230,33 +230,54 @@ class ProposalController extends Controller implements HasMiddleware
     }
 
     /**
-     * "Proposal Penawaran — {title} - {client}" on the left and the page
-     * number on the right of every page's footer, like the Notion export.
+     * Running header and footer on every content page (the cover, page 1,
+     * stays clean): company name / document label with a thin rule at the
+     * top, and the document title / "Halaman x dari y" at the bottom.
      */
-    private function addFooter($pdf, Proposal $proposal): void
+    private function addPageChrome($pdf, Proposal $proposal): void
     {
-        $title = $proposal->documentTitle();
         // Through the wrapper (not Dompdf directly), so output() knows it's
         // already rendered and doesn't render again, dropping the script.
         $pdf->render();
         $dompdf = $pdf->getDomPDF();
-
+        $metrics = $dompdf->getFontMetrics();
         $canvas = $dompdf->getCanvas();
-        $font = $dompdf->getFontMetrics()->getFont('Helvetica');
-        $size = 7.5;
-        $color = [0.58, 0.64, 0.72];
-        $maxWidth = $canvas->get_width() - 140;
 
-        // Long titles are shortened so they never run into the page number.
-        while ($dompdf->getFontMetrics()->getTextWidth($title, $font, $size) > $maxWidth && mb_strlen($title) > 10) {
-            $title = mb_substr($title, 0, -4).'…';
+        $regular = $metrics->getFont('Helvetica');
+        $bold = $metrics->getFont('Helvetica', 'bold');
+        $navy = [0.04, 0.11, 0.32];
+        $muted = [0.39, 0.45, 0.55];
+        $rule = [0.84, 0.86, 0.90];
+        $margin = 62; // ~22mm, matches the page's side margins
+        $size = 7.5;
+
+        $headerRight = 'Proposal Penawaran · '.$proposal->client_name;
+        $footerLeft = $proposal->documentTitle();
+        $maxWidth = $canvas->get_width() - $margin * 2 - 90;
+        foreach (['headerRight', 'footerLeft'] as $var) {
+            while ($metrics->getTextWidth($$var, $regular, $size) > $maxWidth && mb_strlen($$var) > 10) {
+                $$var = mb_substr($$var, 0, -4).'…';
+            }
         }
 
-        $canvas->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($title, $font, $size, $color) {
-            $y = $canvas->get_height() - 28;
-            $canvas->text(42, $y, $title, $font, $size, $color);
-            $number = (string) $pageNumber;
-            $canvas->text($canvas->get_width() - 42 - $fontMetrics->getTextWidth($number, $font, $size), $y, $number, $font, $size, $color);
+        $canvas->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($regular, $bold, $navy, $muted, $rule, $margin, $size, $headerRight, $footerLeft) {
+            if ($pageNumber === 1) {
+                return;
+            }
+            $width = $canvas->get_width();
+            $height = $canvas->get_height();
+
+            // Header
+            $canvas->text($margin, 34, 'PT JENDELA CAKRA DIGITAL', $bold, $size, $navy);
+            $canvas->text($width - $margin - $fontMetrics->getTextWidth($headerRight, $regular, $size), 34, $headerRight, $regular, $size, $muted);
+            $canvas->line($margin, 48, $width - $margin, 48, $rule, 0.6);
+
+            // Footer
+            $y = $height - 40;
+            $canvas->line($margin, $y - 8, $width - $margin, $y - 8, $rule, 0.6);
+            $canvas->text($margin, $y, $footerLeft, $regular, $size, $muted);
+            $pageLabel = "Halaman {$pageNumber} dari {$pageCount}";
+            $canvas->text($width - $margin - $fontMetrics->getTextWidth($pageLabel, $regular, $size), $y, $pageLabel, $regular, $size, $muted);
         });
     }
 
