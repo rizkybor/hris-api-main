@@ -11,6 +11,7 @@ class FlowchartRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'prepared_for' => ['nullable', 'string', 'max:255'],
             'data' => ['required', 'array'],
             'data.nodes' => ['present', 'array', 'max:500'],
             'data.edges' => ['present', 'array', 'max:1000'],
@@ -23,6 +24,7 @@ class FlowchartRequest extends FormRequest
         return [
             'name' => 'Name',
             'description' => 'Description',
+            'prepared_for' => 'Disiapkan untuk',
             'data' => 'Diagram',
             'data.nodes' => 'Shapes',
             'data.edges' => 'Connectors',

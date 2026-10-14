@@ -18,6 +18,7 @@ class FlowchartResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
+            'prepared_for' => $this->prepared_for,
             'node_count' => count($data['nodes'] ?? []),
             'edge_count' => count($data['edges'] ?? []),
             'preview_url' => CloudinaryUrl::image($this->preview_image),
