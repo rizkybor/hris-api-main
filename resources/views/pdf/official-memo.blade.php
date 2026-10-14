@@ -55,6 +55,17 @@
         }
         .rejection-box p { margin: 0; font-size: 10pt; color: #991b1b; }
         .rejection-box .rejection-label { font-weight: bold; margin-bottom: 1mm; }
+
+        /* Lampiran (attachments) */
+        .attachment-list { margin-top: 8mm; page-break-inside: avoid; }
+        .attachment-list .heading { font-weight: bold; margin: 0 0 1.5mm 0; }
+        .attachment-list table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+        .attachment-list td { padding: 1mm 0; vertical-align: top; }
+        .attachment-list .no { width: 7mm; }
+        .attachment-list .note { color: #64748b; }
+        .attachment-page { page-break-before: always; text-align: center; }
+        .attachment-caption { text-align: left; font-size: 9.5pt; margin: 0 0 3mm 0; padding-bottom: 1.5mm; border-bottom: 1px solid #cbd5e1; }
+        .attachment-caption .muted { color: #64748b; }
     </style>
 </head>
 <body>
@@ -102,6 +113,27 @@
             <p class="signature-name">{{ $senderName }}</p>
         </div>
 
+        @if(! empty($lampiran['list']))
+            <div class="attachment-list">
+                <p class="heading">Lampiran:</p>
+                <table>
+                    @foreach($lampiran['list'] as $item)
+                        <tr>
+                            <td class="no">{{ $item['number'] }}.</td>
+                            <td>
+                                {{ $item['name'] }}
+                                @if($item['attached'])
+                                    <span class="note">({{ $item['pages'] > 1 ? $item['pages'].' halaman, ' : '' }}terlampir{{ $item['truncated'] ? ' sebagian' : '' }})</span>
+                                @else
+                                    <span class="note">(tidak dapat ditampilkan di dokumen ini; tersedia di sistem)</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </table>
+            </div>
+        @endif
+
         @if($documentLetter->status === 'rejected' && $documentLetter->rejection_reason)
             <div class="rejection-box">
                 <p class="rejection-label">Ditolak oleh {{ $documentLetter->approver?->name ?? 'Finance Manager' }}</p>
@@ -109,5 +141,18 @@
             </div>
         @endif
     </div>
+
+    {{-- One page per attachment image / PDF page, after the memo itself. --}}
+    @foreach($lampiran['pages'] ?? [] as $page)
+        <div class="attachment-page">
+            <p class="attachment-caption">
+                <strong>Lampiran {{ $page['number'] }}</strong> — {{ $page['name'] }}
+                @if($page['pages'] > 1)
+                    <span class="muted"> · Halaman {{ $page['page'] }} dari {{ $page['pages'] }}</span>
+                @endif
+            </p>
+            <img src="{{ $page['path'] }}" style="width: {{ $page['width_mm'] }}mm; height: {{ $page['height_mm'] }}mm;">
+        </div>
+    @endforeach
 </body>
 </html>
