@@ -17,6 +17,12 @@ class ProposalResource extends JsonResource
             'title' => $this->title,
             'client_id' => $this->client_id,
             'client_name' => $this->client_name,
+            // Contact details for pre-filling the email / WhatsApp share.
+            'client' => $this->whenLoaded('client', fn () => $this->client ? [
+                'email' => $this->client->email,
+                'pic_name' => $this->client->pic_name,
+                'pic_phone' => $this->client->pic_phone,
+            ] : null),
             'proposal_date' => $this->proposal_date?->toDateString(),
             'letter_number' => $this->letter_number,
             'status' => $this->status,
@@ -26,6 +32,13 @@ class ProposalResource extends JsonResource
             'signatory_title' => $this->signatory_title,
             'use_signature' => (bool) $this->use_signature,
             'section_count' => count($this->sections ?? []),
+            'share' => [
+                'active' => $this->isShareActive(),
+                'url' => $this->shareUrl(),
+                'expires_at' => $this->share_expires_at,
+                'view_count' => (int) $this->share_view_count,
+                'last_viewed_at' => $this->share_last_viewed_at,
+            ],
             // The body is only sent when one proposal is opened -- the list
             // never needs it and it can be large.
             'sections' => $this->when($this->includeSections, $this->sections ?? []),
