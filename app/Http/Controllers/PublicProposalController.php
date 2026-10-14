@@ -14,7 +14,9 @@ class PublicProposalController extends Controller
 {
     public function show(string $token, ProposalPdfService $pdfService)
     {
-        $proposal = Proposal::where('share_token', $token)->first();
+        $proposal = preg_match('/^[A-Za-z0-9]{32,64}$/', $token)
+            ? Proposal::where('share_token', $token)->first()
+            : null;
 
         if (! $proposal || ! $proposal->isShareActive()) {
             return response()->view('proposals.link-unavailable', [], 404);

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -60,11 +61,30 @@ return Application::configure(basePath: dirname(__DIR__))
             ], 401);
         });
 
+        // Unknown API endpoints (or a model findOrFail missed outside a
+        // controller's own try/catch) answer in the app-wide envelope too,
+        // without leaking the route or exception details.
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Not Found.',
+                    'data' => null,
+                ], 404);
+            }
+        });
+
         // Match the app-wide {success, message, data} envelope instead of
         // Laravel's bare {"message": "Too Many Attempts."} default, so the
         // frontend can handle a 429 the same way it handles every other
         // error response.
         $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            // A client opening a shared proposal in a browser gets a page,
+            // not raw JSON.
+            if ($request->routeIs('proposals.public')) {
+                return response()->view('errors.429', [], 429, $e->getHeaders());
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Too many attempts. Please wait a moment and try again.',

@@ -8,9 +8,10 @@ Route::get('/', function () {
 });
 
 // Public share link for a Proposal Penawaran (no login; the token is the
-// only key). Throttled so the token space can't be brute-forced.
+// only key). Throttled so the token space can't be brute-forced. Any
+// token -- even a malformed or truncated one -- reaches the controller, so
+// the client always gets the friendly "link unavailable" page.
 Route::get('/proposal/{token}', [PublicProposalController::class, 'show'])
-    ->where('token', '[A-Za-z0-9]{32,64}')
     ->middleware('throttle:30,1')
     // Stateless: a client opening a shared PDF needs no session or cookies.
     ->withoutMiddleware([
