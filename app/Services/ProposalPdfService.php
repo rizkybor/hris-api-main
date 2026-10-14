@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Flowchart;
 use App\Models\Proposal;
 use App\Services\Cloudinary\CloudinaryUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -29,11 +30,20 @@ class ProposalPdfService
                 ? $this->downloadImage(CloudinaryUrl::image($proposal->cover_image), $tempFiles)
                 : null;
 
-            $sections = array_map(function ($section) use (&$tempFiles) {
+            // Flowcharts inserted into the proposal point at their source
+            // flowchart; use its latest snapshot so edits made in the
+            // Flowchart module show up without re-inserting the image.
+            $flowchartPreviews = $this->flowchartPreviews($proposal->sections ?? []);
+
+            $sections = array_map(function ($section) use (&$tempFiles, $flowchartPreviews) {
                 $section['content'] = preg_replace_callback(
                     '/<img\b[^>]*?\bsrc="([^"]*)"[^>]*>/i',
-                    function ($match) use (&$tempFiles) {
-                        $local = $this->isOwnCloudinaryUrl($match[1]) ? $this->downloadImage(html_entity_decode($match[1]), $tempFiles) : null;
+                    function ($match) use (&$tempFiles, $flowchartPreviews) {
+                        $src = html_entity_decode($match[1]);
+                        if (preg_match('/\bdata-flowchart-id="(\d+)"/', $match[0], $id) && isset($flowchartPreviews[(int) $id[1]])) {
+                            $src = $flowchartPreviews[(int) $id[1]];
+                        }
+                        $local = $this->isOwnCloudinaryUrl($src) ? $this->downloadImage($src, $tempFiles) : null;
 
                         return $local ? str_replace($match[1], $local, $match[0]) : '';
                     },
@@ -116,6 +126,22 @@ class ProposalPdfService
             $pageLabel = "Halaman {$pageNumber} dari {$pageCount}";
             $canvas->text($width - $margin - $fontMetrics->getTextWidth($pageLabel, $regular, $size), $y, $pageLabel, $regular, $size, $muted);
         });
+    }
+
+    /** [flowchart id => latest preview URL] for flowcharts used in the sections. */
+    private function flowchartPreviews(array $sections): array
+    {
+        preg_match_all('/\bdata-flowchart-id="(\d+)"/', implode('', array_column($sections, 'content')), $matches);
+        $ids = array_unique(array_map('intval', $matches[1] ?? []));
+        if (! $ids) {
+            return [];
+        }
+
+        return Flowchart::whereIn('id', $ids)
+            ->whereNotNull('preview_image')
+            ->pluck('preview_image', 'id')
+            ->map(fn ($publicId) => CloudinaryUrl::image($publicId))
+            ->all();
     }
 
     private function isOwnCloudinaryUrl(string $url): bool
