@@ -37,6 +37,10 @@ class Proposal extends Model
         'signatory_name',
         'signatory_title',
         'use_signature',
+        'share_token',
+        'share_expires_at',
+        'share_view_count',
+        'share_last_viewed_at',
         'created_by',
         'updated_by',
     ];
@@ -47,6 +51,9 @@ class Proposal extends Model
             'proposal_date' => 'date',
             'sections' => 'array',
             'use_signature' => 'boolean',
+            'share_expires_at' => 'datetime',
+            'share_last_viewed_at' => 'datetime',
+            'share_view_count' => 'integer',
         ];
     }
 
@@ -72,6 +79,18 @@ class Proposal extends Model
                 ->orWhere('client_name', 'like', '%'.$search.'%')
                 ->orWhere('letter_number', 'like', '%'.$search.'%');
         });
+    }
+
+    /** Whether the public share link currently works. */
+    public function isShareActive(): bool
+    {
+        return $this->share_token !== null
+            && ($this->share_expires_at === null || $this->share_expires_at->isFuture());
+    }
+
+    public function shareUrl(): ?string
+    {
+        return $this->share_token ? route('proposals.public', $this->share_token) : null;
     }
 
     /** "Proposal Penawaran — Sistem Manajemen Order - PT Misael Berkat Abadi" */
