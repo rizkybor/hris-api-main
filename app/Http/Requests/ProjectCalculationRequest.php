@@ -53,6 +53,7 @@ class ProjectCalculationRequest extends FormRequest
             'estimated_hours' => [$scenario === 'landing_page' ? 'required' : 'nullable', 'numeric', 'min:0'],
             'rate_developer' => ['nullable', 'numeric', 'min:0'],
             'developer_count' => ['nullable', 'integer', 'min:1'],
+            'allocated_developers' => ['nullable', 'integer', 'min:1', 'max:50'],
             'margin_percent' => ['nullable', 'numeric', 'min:0', 'max:1000'],
 
             // Optional extra line items -- free-form, so the array itself is
@@ -85,6 +86,7 @@ class ProjectCalculationRequest extends FormRequest
             'estimated_hours' => 'Estimasi Waktu Pengerjaan',
             'rate_developer' => 'Rate Developer',
             'developer_count' => 'Jumlah Developer',
+            'allocated_developers' => 'Developer Dialokasikan',
             'margin_percent' => 'Margin Jual',
             'additional_items' => 'Item Tambahan',
         ];
