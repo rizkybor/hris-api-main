@@ -3,7 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Enums\InfrastructureToolStatus;
+use App\Enums\OperationalCostStatus;
+use Illuminate\Validation\Rule;
 
 class InfrastructureToolStoreRequest extends FormRequest
 {
@@ -27,8 +28,9 @@ class InfrastructureToolStoreRequest extends FormRequest
             'vendor' => ['required', 'string', 'max:255'],
             'monthly_fee' => ['nullable', 'numeric', 'min:0'],
             'annual_fee' => ['nullable', 'numeric', 'min:0'],
-            'expired_date' => ['nullable', 'date'],
-            'status' => ['required', 'string', 'in:'.implode(',', array_column(InfrastructureToolStatus::cases(), 'value'))],
+            // Required while the tool is in use; optional once it isn't.
+            'expired_date' => ['nullable', 'date', 'required_if:status,active'],
+            'status' => ['required', Rule::in(OperationalCostStatus::values())],
             'notes' => ['nullable', 'string'],
         ];
     }
@@ -43,6 +45,13 @@ class InfrastructureToolStoreRequest extends FormRequest
             'expired_date' => 'Expired Date',
             'status' => 'Status',
             'notes' => 'Notes',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'expired_date.required_if' => 'Expired wajib diisi untuk item yang Digunakan.',
         ];
     }
 }

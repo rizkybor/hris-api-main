@@ -63,8 +63,10 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
             $query->search($search);
         }
 
-        // AMBIL SEMUA KECUALI INACTIVE
-        $items = $query->where('status', '!=', 'inactive')->get();
+        // Only items JC Digital actually uses count toward the totals (and
+        // are offered in the Project Calculator's Team Rate Setup); items not
+        // in use stay in the regular paginated list.
+        $items = $query->inUse()->get();
 
         $totalMonthly = $items->sum('monthly_fee');
         $totalAnnual = $items->sum('annual_fee');
@@ -83,7 +85,7 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
     public function getMonthlyStatistic(): array
     {
         $result = InfrastructureTool::query()
-            ->where('status', '!=', 'inactive')
+            ->inUse()
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month')
             ->selectRaw('SUM(monthly_fee) as total_monthly_fee')
             ->selectRaw('SUM(annual_fee) as total_annual_fee')

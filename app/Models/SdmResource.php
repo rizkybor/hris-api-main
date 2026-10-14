@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OperationalCostStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -22,13 +23,20 @@ class SdmResource extends Model
     }
 
     protected $fillable = [
-        'sdm_component', 'sdm_field_id', 'productive_hours_per_month', 'capacity_target', 'actual', 'notes'
+        'sdm_component', 'sdm_field_id', 'productive_hours_per_month', 'capacity_target', 'actual', 'status', 'expired_date', 'notes'
     ];
 
     protected $casts = [
         'actual' => 'decimal:2',
         'productive_hours_per_month' => 'decimal:2',
+        'expired_date' => 'date',
     ];
+
+    /** Items JC Digital actually uses -- the only ones counted in totals. */
+    public function scopeInUse($query)
+    {
+        return $query->where('status', OperationalCostStatus::ACTIVE->value);
+    }
 
     public function field()
     {

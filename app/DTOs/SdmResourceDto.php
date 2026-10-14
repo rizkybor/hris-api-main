@@ -15,6 +15,8 @@ class SdmResourceDto
         public readonly ?string $capacity_target = null,
         public readonly ?float $actual = null,
         public readonly ?string $notes = null,
+        public readonly string $status = 'active',
+        public readonly ?string $expired_date = null,
     ) {}
 
     public function toArray(): array
@@ -26,6 +28,8 @@ class SdmResourceDto
             'capacity_target' => $this->capacity_target,
             'actual' => $this->actual,
             'notes' => $this->notes,
+            'status' => $this->status,
+            'expired_date' => $this->expired_date,
         ];
     }
 
@@ -43,6 +47,8 @@ class SdmResourceDto
             capacity_target: $data['capacity_target'] ?? null,
             actual: isset($data['actual']) ? (float) $data['actual'] : null,
             notes: $data['notes'] ?? null,
+            status: $data['status'] ?? 'active',
+            expired_date: $data['expired_date'] ?? null,
         );
     }
 
@@ -57,6 +63,10 @@ class SdmResourceDto
             capacity_target: $data['capacity_target'] ?? $existingSdmResource->capacity_target,
             actual: isset($data['actual']) ? (float) $data['actual'] : $existingSdmResource->actual,
             notes: $data['notes'] ?? $existingSdmResource->notes,
+            status: $data['status'] ?? $existingSdmResource->status,
+            // array_key_exists: an explicit null clears the date (an item no
+            // longer in use doesn't need one); a missing key keeps it.
+            expired_date: array_key_exists('expired_date', $data) ? $data['expired_date'] : $existingSdmResource->expired_date?->toDateString(),
         );
     }
 
