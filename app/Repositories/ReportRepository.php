@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\OperationalCostStatus;
 use App\Http\Resources\AttendanceResource;
 use App\Interfaces\ReportRepositoryInterface;
 use App\Models\Attendance;
@@ -165,12 +166,16 @@ class ReportRepository implements ReportRepositoryInterface
         $sdmResources = SdmResource::whereBetween('created_at', $range)->get();
         $latestBalance = CompanyFinance::orderBy('created_at', 'desc')->first();
 
+        // Totals count only items JC Digital actually uses; the rows below
+        // still list every item (with its status), like Operational Cost.
+        $inUse = fn ($items) => $items->where('status', OperationalCostStatus::ACTIVE->value);
+
         $summary = [
             'company_balance' => (float) ($latestBalance->saldo_company ?? 0),
-            'fixed_cost_actual' => (float) $fixedCosts->sum('actual'),
-            'infrastructure_monthly_fee' => (float) $infrastructureTools->sum('monthly_fee'),
-            'infrastructure_annual_fee' => (float) $infrastructureTools->sum('annual_fee'),
-            'sdm_actual' => (float) $sdmResources->sum('actual'),
+            'fixed_cost_actual' => (float) $inUse($fixedCosts)->sum('actual'),
+            'infrastructure_monthly_fee' => (float) $inUse($infrastructureTools)->sum('monthly_fee'),
+            'infrastructure_annual_fee' => (float) $inUse($infrastructureTools)->sum('annual_fee'),
+            'sdm_actual' => (float) $inUse($sdmResources)->sum('actual'),
         ];
 
         return [

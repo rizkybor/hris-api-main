@@ -11,7 +11,7 @@ class InfrastructureToolDto
         public readonly string $vendor,
         public readonly ?float $monthly_fee = null,
         public readonly ?float $annual_fee = null,
-        public readonly string $expired_date,
+        public readonly ?string $expired_date,
         public readonly string $status,
         public readonly ?string $notes = null,
     )
@@ -37,7 +37,7 @@ class InfrastructureToolDto
             vendor: $data['vendor'],
             monthly_fee: isset($data['monthly_fee']) ? (float) $data['monthly_fee'] : null,
             annual_fee: isset($data['annual_fee']) ? (float) $data['annual_fee'] : null,
-            expired_date: $data['expired_date'],
+            expired_date: $data['expired_date'] ?? null,
             status: $data['status'],
             notes: $data['notes'] ?? null,
         );
@@ -50,7 +50,9 @@ class InfrastructureToolDto
             vendor: $data['vendor'] ?? $existingInfrastructureTool->vendor,
             monthly_fee: isset($data['monthly_fee']) ? (float) $data['monthly_fee'] : $existingInfrastructureTool->monthly_fee,
             annual_fee: isset($data['annual_fee']) ? (float) $data['annual_fee'] : $existingInfrastructureTool->annual_fee,
-            expired_date: $data['expired_date'] ?? $existingInfrastructureTool->expired_date,
+            // array_key_exists: an explicit null clears the date (a tool no
+            // longer in use doesn't need one); a missing key keeps it.
+            expired_date: array_key_exists('expired_date', $data) ? $data['expired_date'] : $existingInfrastructureTool->expired_date?->toDateString(),
             status: $data['status'] ?? $existingInfrastructureTool->status,
             notes: $data['notes'] ?? $existingInfrastructureTool->notes,
         );

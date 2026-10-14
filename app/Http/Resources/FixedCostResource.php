@@ -20,6 +20,8 @@ class FixedCostResource extends JsonResource
             'description' => $this->description,
             'actual' => (float) (string) $this->actual,
             'notes' => $this->notes,
+            'status' => $this->status,
+            'expired_date' => $this->expired_date?->toDateString(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

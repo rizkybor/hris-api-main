@@ -23,6 +23,8 @@ class SdmResource extends JsonResource
             'capacity_target' => $this->capacity_target,
             'actual' => (float) (string) $this->actual,
             'notes' => $this->notes,
+            'status' => $this->status,
+            'expired_date' => $this->expired_date?->toDateString(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
