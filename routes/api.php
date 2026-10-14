@@ -139,6 +139,7 @@ Route::prefix('v1')
 
             // Project Calculator
             Route::get('project-calculator/rate-setting', [ProjectRateSettingController::class, 'show']);
+            Route::get('project-calculator/rate-setting/options', [ProjectRateSettingController::class, 'options']);
             Route::put('project-calculator/rate-setting', [ProjectRateSettingController::class, 'update']);
             Route::get('project-calculator/landing-page-setting', [LandingPageRateSettingController::class, 'show']);
             Route::put('project-calculator/landing-page-setting', [LandingPageRateSettingController::class, 'update']);
