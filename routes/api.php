@@ -148,6 +148,7 @@ Route::prefix('v1')
             Route::apiResource('project-calculations', ProjectCalculationController::class);
 
             // Flowchart routes
+            Route::post('flowcharts/{id}/preview', [FlowchartController::class, 'uploadPreview']);
             Route::apiResource('flowcharts', FlowchartController::class);
 
             Route::get('attendances/all/paginated', [AttendanceController::class, 'getAllPaginated']);

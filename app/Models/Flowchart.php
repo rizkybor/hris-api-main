@@ -27,6 +27,7 @@ class Flowchart extends Model
         'name',
         'description',
         'data',
+        'preview_image',
         'created_by',
         'updated_by',
     ];
