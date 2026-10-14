@@ -38,9 +38,10 @@ class OfficialMemoAttachmentService
 
     /**
      * @param  array  $tempFiles  downloaded files, for the caller to delete
-     * @return array{list: array, pages: array}
-     *   list:  every attachment with its kind and whether it's attached
-     *   pages: [number, name, page, pages, path, width_mm, height_mm]
+     * @return array{list: array, pages: array, sheets: array}
+     *   list:   every attachment with its kind and whether it's attached
+     *   pages:  [number, name, page, pages, path, width_mm, height_mm]
+     *   sheets: the pages packed onto PDF pages (see packSheets)
      */
     public function prepare(DocumentLetter $memo, array &$tempFiles): array
     {
@@ -91,7 +92,68 @@ class OfficialMemoAttachmentService
             $list[] = $entry;
         }
 
-        return ['list' => $list, 'pages' => $pages];
+        return ['list' => $list, 'pages' => $pages, 'sheets' => $this->packSheets($pages)];
+    }
+
+    // Usable height for attachments on a memo page (A4 minus the letterhead
+    // margins, the continuation note at the bottom, and a little air), the
+    // caption above each item, and the gap between items, in mm.
+    private const SHEET_HEIGHT_MM = 222;
+
+    private const CAPTION_MM = 7;
+
+    private const GAP_MM = 6;
+
+    // An item may be shrunk to fit the space left on a page, but never below
+    // this share of its normal size -- smaller and small print stops being
+    // legible, so it starts a new page instead.
+    private const MIN_SQUEEZE = 0.7;
+
+    /**
+     * Fills each PDF page with as many attachment items as fit, top to
+     * bottom, instead of one per page. When the next item doesn't fit, the
+     * whole page (items already on it plus the new one) is shrunk evenly to
+     * make room -- but never below MIN_SQUEEZE of the normal size; past that
+     * the item starts a new page.
+     *
+     * @return array<int, array<int, array>> sheets of items (same shape as pages)
+     */
+    private function packSheets(array $items): array
+    {
+        $sheets = [];
+        $current = [];
+
+        // Uniform scale that fits $group on one page (1.0 = normal size).
+        $scaleFor = function (array $group): float {
+            $fixed = count($group) * self::CAPTION_MM + (count($group) - 1) * self::GAP_MM;
+            $heights = array_sum(array_column($group, 'height_mm'));
+
+            return min(1.0, (self::SHEET_HEIGHT_MM - $fixed) / $heights);
+        };
+
+        $finish = function (array $group) use ($scaleFor): array {
+            $scale = $scaleFor($group);
+
+            return array_map(fn ($item) => [
+                ...$item,
+                'width_mm' => round($item['width_mm'] * $scale, 1),
+                'height_mm' => round($item['height_mm'] * $scale, 1),
+            ], $group);
+        };
+
+        foreach ($items as $item) {
+            if ($current && $scaleFor([...$current, $item]) < self::MIN_SQUEEZE) {
+                $sheets[] = $finish($current);
+                $current = [];
+            }
+            $current[] = $item;
+        }
+
+        if ($current) {
+            $sheets[] = $finish($current);
+        }
+
+        return $sheets;
     }
 
     private function kindOf(DocumentLetterAttachment $attachment): string

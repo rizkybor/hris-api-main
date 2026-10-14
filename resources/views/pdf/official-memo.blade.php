@@ -64,7 +64,8 @@
         .attachment-list .no { width: 7mm; }
         .attachment-list .note { color: #64748b; }
         .attachment-page { page-break-before: always; text-align: center; }
-        .attachment-caption { text-align: left; font-size: 9.5pt; margin: 0 0 3mm 0; padding-bottom: 1.5mm; border-bottom: 1px solid #cbd5e1; }
+        .attachment-item { page-break-inside: avoid; }
+        .attachment-caption { text-align: left; font-size: 9.5pt; margin: 0 0 2mm 0; padding-bottom: 1mm; border-bottom: 1px solid #cbd5e1; }
         .attachment-caption .muted { color: #64748b; }
         /* Thin frame so a white attachment page stands apart from the paper. */
         .attachment-image { border: 1px solid #cbd5e1; margin-top: 2mm; }
@@ -144,16 +145,21 @@
         @endif
     </div>
 
-    {{-- One page per attachment image / PDF page, after the memo itself. --}}
-    @foreach($lampiran['pages'] ?? [] as $page)
+    {{-- Attachment images / PDF pages after the memo, several per page
+         where they fit (see OfficialMemoAttachmentService::packSheets). --}}
+    @foreach($lampiran['sheets'] ?? [] as $sheet)
         <div class="attachment-page">
-            <p class="attachment-caption">
-                <strong>Lampiran {{ $page['number'] }}</strong> — {{ $page['name'] }}
-                @if($page['pages'] > 1)
-                    <span class="muted"> · Halaman {{ $page['page'] }} dari {{ $page['pages'] }}</span>
-                @endif
-            </p>
-            <img class="attachment-image" src="{{ $page['path'] }}" style="width: {{ $page['width_mm'] }}mm; height: {{ $page['height_mm'] }}mm;">
+            @foreach($sheet as $item)
+                <div class="attachment-item" @if(! $loop->first) style="margin-top: 6mm;" @endif>
+                    <p class="attachment-caption">
+                        <strong>Lampiran {{ $item['number'] }}</strong> — {{ $item['name'] }}
+                        @if($item['pages'] > 1)
+                            <span class="muted"> · Halaman {{ $item['page'] }} dari {{ $item['pages'] }}</span>
+                        @endif
+                    </p>
+                    <img class="attachment-image" src="{{ $item['path'] }}" style="width: {{ $item['width_mm'] }}mm; height: {{ $item['height_mm'] }}mm;">
+                </div>
+            @endforeach
         </div>
     @endforeach
 </body>
