@@ -133,6 +133,7 @@ class ProjectRateSetting extends Model
                 'name' => $item->tech_stack_component,
                 'vendor' => $item->vendor,
                 'monthly_fee' => (float) $item->monthly_fee,
+                'annual_fee' => $item->annual_fee !== null ? (float) $item->annual_fee : null,
             ])->values()->all(),
         ];
     }
