@@ -58,7 +58,10 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
 
     public function getStatistic(?string $search = null): array
     {
-        $query = SdmResource::query();
+        // Only items JC Digital actually uses count toward the totals (and
+        // are offered in the Project Calculator's Team Rate Setup); items not
+        // in use stay in the regular paginated list.
+        $query = SdmResource::query()->inUse();
 
         if ($search) {
             $query->search($search);
@@ -79,6 +82,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
     public function getMonthlyStatistic(): array
     {
         $result = SdmResource::query()
+            ->inUse()
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month')
             ->selectRaw('SUM(actual) as total_actual')
             ->selectRaw('COUNT(*) as total_items')

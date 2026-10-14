@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Enums\OperationalCostStatus;
 use App\Models\FixedCost;
 use App\Models\InfrastructureTool;
 use App\Models\SdmResource;
@@ -36,6 +37,8 @@ class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeading
             'monthly_fee' => null,
             'actual' => (float) $item->actual,
             'notes' => $item->notes,
+            'status' => $item->status,
+            'expired_date' => $item->expired_date?->toDateString(),
         ]);
 
         // Infrastructure never had a "Budget" concept -- its own pair is
@@ -46,6 +49,8 @@ class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeading
             'monthly_fee' => (float) $item->monthly_fee,
             'actual' => (float) $item->annual_fee,
             'notes' => $item->notes,
+            'status' => $item->status,
+            'expired_date' => $item->expired_date?->toDateString(),
         ]);
 
         $sdmResources = SdmResource::whereBetween('created_at', $range)->get()->map(fn ($item) => [
@@ -54,6 +59,8 @@ class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeading
             'monthly_fee' => null,
             'actual' => (float) $item->actual,
             'notes' => $item->notes,
+            'status' => $item->status,
+            'expired_date' => $item->expired_date?->toDateString(),
         ]);
 
         return new Collection([...$fixedCosts, ...$infrastructure, ...$sdmResources]);
@@ -61,7 +68,7 @@ class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeading
 
     public function headings(): array
     {
-        return ['No', 'Kategori', 'Nama Item', 'Monthly Fee (Infra)', 'Actual / Annual Fee', 'Catatan'];
+        return ['No', 'Kategori', 'Nama Item', 'Monthly Fee (Infra)', 'Actual / Annual Fee', 'Status', 'Expired', 'Catatan'];
     }
 
     public function map($row): array
@@ -75,6 +82,8 @@ class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeading
             $row['name'],
             $row['monthly_fee'],
             $row['actual'],
+            OperationalCostStatus::tryFrom((string) $row['status'])?->label() ?? $row['status'],
+            $row['expired_date'] ?? '',
             $row['notes'] ?? '',
         ];
     }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OperationalCostStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -30,6 +31,12 @@ class InfrastructureTool extends Model
         'annual_fee' => 'decimal:2',
         'expired_date' => 'date',
     ];
+
+    /** Items JC Digital actually uses -- the only ones counted in totals. */
+    public function scopeInUse($query)
+    {
+        return $query->where('status', OperationalCostStatus::ACTIVE->value);
+    }
 
     public function scopeSearch($query, $search)
     {

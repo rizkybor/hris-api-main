@@ -37,19 +37,22 @@ class ProjectRateSetting extends Model
         'default_infra_setup_cost' => 'decimal:2',
     ];
 
+    // Only items still in use count: one switched to "Tidak Digunakan" in
+    // Operational Cost drops out of the team cost (and out of the Rate Setup
+    // picker) instead of lingering as a hidden, un-untickable selection.
     public function selectedFixedCosts()
     {
-        return FixedCost::whereIn('id', $this->selected_fixed_cost_ids ?? [])->get();
+        return FixedCost::inUse()->whereIn('id', $this->selected_fixed_cost_ids ?? [])->get();
     }
 
     public function selectedSdmResources()
     {
-        return SdmResource::with('field')->whereIn('id', $this->selected_sdm_resource_ids ?? [])->get();
+        return SdmResource::with('field')->inUse()->whereIn('id', $this->selected_sdm_resource_ids ?? [])->get();
     }
 
     public function selectedInfrastructureTools()
     {
-        return InfrastructureTool::whereIn('id', $this->selected_infrastructure_tool_ids ?? [])->get();
+        return InfrastructureTool::inUse()->whereIn('id', $this->selected_infrastructure_tool_ids ?? [])->get();
     }
 
     /**

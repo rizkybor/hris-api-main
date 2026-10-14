@@ -20,7 +20,7 @@ class InfrastructureToolResource extends JsonResource
             'vendor' => $this->vendor,
             'monthly_fee' => (float) (string) $this->monthly_fee,
             'annual_fee' => (float) (string) $this->annual_fee,
-            'expired_date' => $this->expired_date,
+            'expired_date' => $this->expired_date?->toDateString(),
             'status' => $this->status,
             'notes' => $this->notes,
             'created_at' => $this->created_at,
