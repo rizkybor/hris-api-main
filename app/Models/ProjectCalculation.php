@@ -46,6 +46,7 @@ class ProjectCalculation extends Model
         'pph_amount',
         'net_received',
         'estimated_duration_weeks',
+        'allocated_developers',
         'notes',
         'created_by',
     ];
@@ -71,6 +72,7 @@ class ProjectCalculation extends Model
         'pph_amount' => 'decimal:2',
         'net_received' => 'decimal:2',
         'estimated_duration_weeks' => 'integer',
+        'allocated_developers' => 'integer',
     ];
 
     public function creator()

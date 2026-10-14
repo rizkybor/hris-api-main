@@ -86,6 +86,8 @@ class ProjectCalculationController extends Controller implements HasMiddleware
             $data['ppn_percent'] ?? 11,
             $data['include_pph'] ?? false,
             $data['pph_percent'] ?? 0,
+            allocatedDevelopers: $data['allocated_developers'] ?? null,
+            teamSize: $rateSetting->team_size,
         );
     }
 
@@ -183,6 +185,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'pph_amount' => $result['pph_amount'],
                 'net_received' => $result['net_received'],
                 'estimated_duration_weeks' => $result['estimated_duration_weeks'],
+                'allocated_developers' => $data['scenario'] === 'landing_page' ? null : ($data['allocated_developers'] ?? null),
                 'notes' => $data['notes'] ?? null,
                 'created_by' => Auth::id(),
             ]);
@@ -240,6 +243,7 @@ class ProjectCalculationController extends Controller implements HasMiddleware
                 'pph_amount' => $result['pph_amount'],
                 'net_received' => $result['net_received'],
                 'estimated_duration_weeks' => $result['estimated_duration_weeks'],
+                'allocated_developers' => $data['scenario'] === 'landing_page' ? null : ($data['allocated_developers'] ?? null),
                 'notes' => $data['notes'] ?? null,
             ]);
 
