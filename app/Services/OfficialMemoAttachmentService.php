@@ -23,11 +23,16 @@ class OfficialMemoAttachmentService
 
     private const MAX_PAGES_TOTAL = 40;
 
-    // Printable box on a memo page (A4 minus the letterhead's margins and
-    // room for the caption), in mm.
-    private const BOX_WIDTH_MM = 160;
+    // Box each attachment is fitted into, in mm -- deliberately smaller than
+    // the printable area: a compact, still-legible reference copy rather
+    // than a full-page reproduction.
+    private const BOX_WIDTH_MM = 120;
 
-    private const BOX_HEIGHT_MM = 215;
+    private const BOX_HEIGHT_MM = 160;
+
+    // Source resolution fetched from Cloudinary: ~210 DPI at 120mm wide,
+    // enough to read small print while keeping the PDF light.
+    private const SOURCE_TRANSFORM = 'w_1000,c_limit,q_70';
 
     public function __construct(protected CloudinaryManager $cloudinary) {}
 
@@ -125,7 +130,7 @@ class OfficialMemoAttachmentService
         $count = max(1, (int) $attachment->page_count);
 
         return array_map(
-            fn ($page) => preg_replace('#/image/upload/#', "/image/upload/pg_{$page},w_1400,c_limit,q_80/", $base, 1).'.jpg',
+            fn ($page) => preg_replace('#/image/upload/#', "/image/upload/pg_{$page},".self::SOURCE_TRANSFORM.'/', $base, 1).'.jpg',
             range(1, $count)
         );
     }
@@ -133,7 +138,7 @@ class OfficialMemoAttachmentService
     /** A print-sized JPEG of an image attachment, not the original upload. */
     private function imageUrl(string $url): string
     {
-        return preg_replace('#/image/upload/#', '/image/upload/w_1400,c_limit,q_80,f_jpg/', $url, 1);
+        return preg_replace('#/image/upload/#', '/image/upload/'.self::SOURCE_TRANSFORM.',f_jpg/', $url, 1);
     }
 
     /** Largest size (mm) that keeps the aspect ratio inside the page box. */

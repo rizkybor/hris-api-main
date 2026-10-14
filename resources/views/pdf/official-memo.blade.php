@@ -66,6 +66,8 @@
         .attachment-page { page-break-before: always; text-align: center; }
         .attachment-caption { text-align: left; font-size: 9.5pt; margin: 0 0 3mm 0; padding-bottom: 1.5mm; border-bottom: 1px solid #cbd5e1; }
         .attachment-caption .muted { color: #64748b; }
+        /* Thin frame so a white attachment page stands apart from the paper. */
+        .attachment-image { border: 1px solid #cbd5e1; margin-top: 2mm; }
     </style>
 </head>
 <body>
@@ -151,7 +153,7 @@
                     <span class="muted"> · Halaman {{ $page['page'] }} dari {{ $page['pages'] }}</span>
                 @endif
             </p>
-            <img src="{{ $page['path'] }}" style="width: {{ $page['width_mm'] }}mm; height: {{ $page['height_mm'] }}mm;">
+            <img class="attachment-image" src="{{ $page['path'] }}" style="width: {{ $page['width_mm'] }}mm; height: {{ $page['height_mm'] }}mm;">
         </div>
     @endforeach
 </body>
