@@ -7,6 +7,9 @@ use App\Http\Requests\FlowchartRequest;
 use App\Http\Resources\FlowchartResource;
 use App\Http\Resources\PaginateResource;
 use App\Models\Flowchart;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -16,6 +19,8 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class FlowchartController extends Controller implements HasMiddleware
 {
+    public function __construct(protected CloudinaryManager $cloudinary) {}
+
     public static function middleware()
     {
         return [
@@ -23,6 +28,7 @@ class FlowchartController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['flowchart-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['flowchart-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['flowchart-delete']), only: ['destroy']),
+            new Middleware(PermissionMiddleware::using(['flowchart-create|flowchart-edit']), only: ['uploadPreview']),
         ];
     }
 
@@ -82,6 +88,40 @@ class FlowchartController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(false, 'Flowchart Not Found', null, 404);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Stores the editor's PNG snapshot of the diagram (sent right after each
+     * save), replacing the previous one.
+     */
+    public function uploadPreview(Request $request, int $id)
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:5120'],
+        ]);
+
+        try {
+            $flowchart = Flowchart::findOrFail($id);
+            $previous = $flowchart->preview_image;
+
+            $publicId = $this->cloudinary->uploadImage(
+                $request->file('image'),
+                CloudinaryFolders::companyFiles('flowcharts'),
+                CloudinaryFolders::filename('flowchart-'.$flowchart->id)
+            );
+            // Not touching updated_at/updated_by: a preview refresh isn't an edit.
+            $flowchart->forceFill(['preview_image' => $publicId])->saveQuietly();
+
+            if ($previous && $previous !== $publicId) {
+                $this->cloudinary->delete($previous);
+            }
+
+            return ResponseHelper::jsonResponse(true, 'Flowchart Preview Saved', ['preview_url' => CloudinaryUrl::image($publicId)], 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Flowchart Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Preview upload failed: '.$e->getMessage(), null, 500);
         }
     }
 

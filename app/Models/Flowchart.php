@@ -17,7 +17,7 @@ class Flowchart extends Model
         // `data` is left out of the log: it's the full diagram JSON and
         // changes on every save, which would bloat the audit trail.
         return LogOptions::defaults()
-            ->logOnly(['name', 'description'])
+            ->logOnly(['name', 'description', 'prepared_for'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->useLogName('Flowchart');
@@ -26,7 +26,9 @@ class Flowchart extends Model
     protected $fillable = [
         'name',
         'description',
+        'prepared_for',
         'data',
+        'preview_image',
         'created_by',
         'updated_by',
     ];

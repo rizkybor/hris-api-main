@@ -26,7 +26,9 @@ class HtmlSanitizer
     private const ATTRIBUTES = [
         '*' => ['style'],
         'a' => ['href', 'target'],
-        'img' => ['src', 'alt', 'width', 'height'],
+        // data-flowchart-id: an image inserted from the Flowchart module,
+        // swapped for the flowchart's latest snapshot when a PDF is made.
+        'img' => ['src', 'alt', 'width', 'height', 'data-flowchart-id'],
         'td' => ['colspan', 'rowspan'],
         'th' => ['colspan', 'rowspan'],
         'font' => ['color'],
@@ -121,6 +123,8 @@ class HtmlSanitizer
                 $style = self::cleanStyle($value);
                 $style === '' ? $el->removeAttribute($attr->name) : $el->setAttribute('style', $style);
             } elseif ($name === 'href' && ! preg_match('#^(https?:|mailto:|tel:|\#)#i', $value)) {
+                $el->removeAttribute($attr->name);
+            } elseif ($name === 'data-flowchart-id' && ! ctype_digit($value)) {
                 $el->removeAttribute($attr->name);
             } elseif ($name === 'src' && ! preg_match('#^https://#i', $value)) {
                 $el->removeAttribute($attr->name);
