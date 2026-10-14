@@ -10,6 +10,8 @@ class DocumentLetterAttachment extends Model
         'document_letter_id',
         'original_name',
         'file_path',
+        'render_public_id',
+        'page_count',
         'mime_type',
         'size_file',
         'uploaded_by',

@@ -167,6 +167,33 @@ class CloudinaryManager
      *   error (which can leak transport details like hostnames or timeouts)
      *   is logged instead of being allowed to reach the API response.
      */
+    /**
+     * Uploads a file Cloudinary already hosts (by URL) as an *image*
+     * resource -- for a PDF that means each page can then be delivered as
+     * its own image (pg_N). Returns the new public id and the page count.
+     *
+     * @return array{public_id: string, pages: int}
+     */
+    public function uploadImageFromUrl(string $url, string $folder, string $filename): array
+    {
+        $publicId = $this->buildPublicId($folder, $filename);
+
+        try {
+            $result = $this->client->uploadApi()->upload($url, [
+                'public_id' => $publicId,
+                'asset_folder' => $folder,
+                'resource_type' => 'image',
+                'overwrite' => true,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Cloudinary upload from URL failed', ['public_id' => $publicId, 'error' => $e->getMessage()]);
+
+            throw new \RuntimeException('File conversion failed.', 0, $e);
+        }
+
+        return ['public_id' => $publicId, 'pages' => (int) ($result['pages'] ?? 1)];
+    }
+
     private function upload(string $source, array $options): void
     {
         try {

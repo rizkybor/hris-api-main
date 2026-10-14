@@ -12,6 +12,7 @@ use App\Models\DocumentLetter;
 use App\Models\DocumentLetterAttachment;
 use App\Models\User;
 use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\OfficialMemoAttachmentService;
 use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\Cloudinary\CloudinaryResourceType;
 use App\Services\DocumentNumberService;
@@ -312,11 +313,11 @@ class DocumentLetterController extends Controller implements HasMiddleware
      * Streams the Official Memo as a PDF on the company's Nota Dinas
      * letterhead. Staff are scoped to their own documents, same as show().
      */
-    public function exportPdf(string $id)
+    public function exportPdf(string $id, OfficialMemoAttachmentService $attachmentService)
     {
         /** @var User $user */
         $user = Auth::user();
-        $query = DocumentLetter::with(['sender.user', 'sender.jobInformation', 'approver']);
+        $query = DocumentLetter::with(['sender.user', 'sender.jobInformation', 'approver', 'attachments']);
 
         if ($user->hasRole('staff')) {
             $query->visibleTo($user);
@@ -332,17 +333,33 @@ class DocumentLetterController extends Controller implements HasMiddleware
             ? $financeManager->name.' — '.($financeManager->employeeProfile?->jobInformation?->job_title ?? 'Direktur Keuangan')
             : 'Finance Manager';
 
-        $pdf = Pdf::loadView('pdf.official-memo', [
-            'documentLetter' => $documentLetter,
-            'senderName' => $senderName,
-            'senderTitle' => $senderTitle,
-            'recipientLine' => $recipientLine,
-            'senderLine' => $senderName.' — '.$senderTitle,
-        ])->setPaper('a4');
+        // Attachments are appended as "Lampiran" pages: images as-is, PDFs
+        // page by page, anything else listed only.
+        $tempFiles = [];
+        try {
+            $lampiran = $attachmentService->prepare($documentLetter, $tempFiles);
 
-        $this->addContinuationMarkers($pdf, $documentLetter);
+            $pdf = Pdf::loadView('pdf.official-memo', [
+                'documentLetter' => $documentLetter,
+                'senderName' => $senderName,
+                'senderTitle' => $senderTitle,
+                'recipientLine' => $recipientLine,
+                'senderLine' => $senderName.' — '.$senderTitle,
+                'lampiran' => $lampiran,
+            ])->setPaper('a4');
 
-        return $pdf->stream(str_replace('/', '-', $documentLetter->document_number).'.pdf');
+            $this->addContinuationMarkers($pdf, $documentLetter);
+            $output = $pdf->output();
+        } finally {
+            foreach ($tempFiles as $file) {
+                @unlink($file);
+            }
+        }
+
+        return response($output, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.str_replace('/', '-', $documentLetter->document_number).'.pdf"',
+        ]);
     }
 
     /**
