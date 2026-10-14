@@ -47,6 +47,7 @@ use App\Http\Controllers\StaffPermissionController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\FlowchartController;
+use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\ServerStorageController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\GreetingController;
@@ -396,6 +397,12 @@ Route::prefix('v1')
             Route::get('letters/{id}/export-pdf', [LetterController::class, 'exportPdf']);
             Route::post('letters/{id}/cancel', [LetterController::class, 'cancel']);
             Route::apiResource('letters', LetterController::class);
+
+            // Proposal Penawaran routes
+            Route::post('proposals/images', [ProposalController::class, 'uploadImage']);
+            Route::post('proposals/{id}/duplicate', [ProposalController::class, 'duplicate']);
+            Route::get('proposals/{id}/export-pdf', [ProposalController::class, 'exportPdf']);
+            Route::apiResource('proposals', ProposalController::class);
 
             // Document Letters: Letters reference tables (Letter Codes, Division Codes)
             Route::apiResource('letter-codes', LetterCodeController::class)->only(['index', 'store', 'update', 'destroy']);
