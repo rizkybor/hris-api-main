@@ -147,6 +147,14 @@ class PermissionSeeder extends Seeder
             'settings',
         ],
 
+        // Proposal Penawaran documents under Business Documents.
+        'proposal' => [
+            'menu',
+            'create',
+            'edit',
+            'delete',
+        ],
+
         // Flowchart builder under Tools.
         'flowchart' => [
             'menu',
