@@ -35,6 +35,7 @@ class ProjectCalculationResource extends JsonResource
             'pph_amount' => $this->pph_amount !== null ? (float) $this->pph_amount : null,
             'net_received' => $this->net_received !== null ? (float) $this->net_received : null,
             'estimated_duration_weeks' => $this->estimated_duration_weeks,
+            'allocated_developers' => $this->allocated_developers,
             'notes' => $this->notes,
             'creator' => [
                 'id' => $this->whenLoaded('creator', fn () => $this->creator->id),

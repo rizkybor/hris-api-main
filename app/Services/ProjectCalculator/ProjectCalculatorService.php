@@ -38,6 +38,10 @@ class ProjectCalculatorService
      *   payment, not added like PPN -- it reduces what the company actually
      *   receives in cash, it does not change what the client is invoiced.
      * @param  float  $pphPercent
+     * @param  int|null  $allocatedDevelopers  people actually working on this
+     *   project; null keeps the old whole-team assumption
+     * @param  int  $teamSize  people behind $productiveHoursPerMonth, to get
+     *   the average productive hours per person
      * @return array
      */
     public function calculate(
@@ -51,6 +55,8 @@ class ProjectCalculatorService
         float $ppnPercent,
         bool $includePph = false,
         float $pphPercent = 0,
+        ?int $allocatedDevelopers = null,
+        int $teamSize = 0,
     ): array {
         $computedItems = $scenario === 'feature'
             ? $this->calculateFeatureItems($items, $rateSellPerHour)
@@ -71,8 +77,14 @@ class ProjectCalculatorService
         }
 
         $totalHours = round(array_sum(array_column($computedItems, 'total_hours_used')), 2);
-        $estimatedDurationWeeks = $productiveHoursPerMonth > 0
-            ? (int) ceil($totalHours / ($productiveHoursPerMonth / 4.33))
+        // Capacity is the allocated people's share of the team (average
+        // productive hours per person x people on this project), not the
+        // whole team's -- a project rarely has everyone on it full-time.
+        $capacityPerMonth = $allocatedDevelopers && $teamSize > 0
+            ? $productiveHoursPerMonth / $teamSize * $allocatedDevelopers
+            : $productiveHoursPerMonth;
+        $estimatedDurationWeeks = $capacityPerMonth > 0
+            ? (int) ceil($totalHours / ($capacityPerMonth / 4.33))
             : null;
 
         return [
