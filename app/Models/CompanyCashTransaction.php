@@ -29,6 +29,9 @@ class CompanyCashTransaction extends Model
         'amount',
         'transaction_date',
         'notes',
+        'proof_file',
+        'proof_name',
+        'proof_mime',
         'created_by',
     ];
 
