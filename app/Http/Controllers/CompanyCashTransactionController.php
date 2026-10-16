@@ -6,6 +6,8 @@ use App\Helpers\ResponseHelper;
 use App\Http\Resources\CompanyCashTransactionResource;
 use App\Models\CompanyCashBalance;
 use App\Models\CompanyCashTransaction;
+use App\Services\Cloudinary\CloudinaryFolders;
+use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -14,6 +16,8 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class CompanyCashTransactionController extends Controller implements HasMiddleware
 {
+    public function __construct(protected CloudinaryManager $cloudinary) {}
+
     public static function middleware()
     {
         return [
@@ -115,11 +119,13 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
             'amount' => ['required', 'numeric', 'min:0.01'],
             'transaction_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
-        ]);
+            'proof' => self::PROOF_RULE,
+        ], [], self::PROOF_ATTRIBUTES);
 
         try {
             $transaction = CompanyCashTransaction::create([
-                ...$validated,
+                ...collect($validated)->except('proof')->all(),
+                ...$this->storeProof($request),
                 'created_by' => $request->user()->id,
             ]);
 
@@ -137,7 +143,9 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
             'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'],
             'transaction_date' => ['sometimes', 'required', 'date'],
             'notes' => ['nullable', 'string'],
-        ]);
+            'proof' => self::PROOF_RULE,
+            'remove_proof' => ['nullable', 'boolean'],
+        ], [], self::PROOF_ATTRIBUTES);
 
         try {
             $transaction = CompanyCashTransaction::findOrFail($id);
@@ -146,7 +154,20 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
                 return ResponseHelper::jsonResponse(false, 'This entry was recorded from a project\'s cash ledger -- edit it there instead, it will sync here automatically.', null, 422);
             }
 
-            $transaction->update($validated);
+            $previousProof = $transaction->proof_file;
+            $proofChange = $request->hasFile('proof')
+                ? $this->storeProof($request)
+                : ($request->boolean('remove_proof') ? ['proof_file' => null, 'proof_name' => null, 'proof_mime' => null] : []);
+
+            $transaction->update([
+                ...collect($validated)->except(['proof', 'remove_proof'])->all(),
+                ...$proofChange,
+            ]);
+
+            // The old file goes once the row no longer points at it.
+            if ($previousProof && array_key_exists('proof_file', $proofChange)) {
+                $this->deleteProofFile($previousProof);
+            }
 
             return ResponseHelper::jsonResponse(true, 'Cash Transaction Updated Successfully', new CompanyCashTransactionResource($transaction->load('creator')), 200);
         } catch (ModelNotFoundException $e) {
@@ -172,6 +193,41 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
             return ResponseHelper::jsonResponse(false, 'Cash Transaction Not Found', null, 404);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    // Optional proof of transaction: a photo/scan or PDF of the receipt.
+    private const PROOF_RULE = ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'];
+
+    private const PROOF_ATTRIBUTES = ['proof' => 'Bukti Transaksi'];
+
+    /** Uploads the request's proof file, if any, and returns its columns. */
+    private function storeProof(Request $request): array
+    {
+        if (! $request->hasFile('proof')) {
+            return [];
+        }
+
+        $file = $request->file('proof');
+        $publicId = $this->cloudinary->uploadAuto(
+            $file,
+            CloudinaryFolders::companyFiles('cash-book'),
+            CloudinaryFolders::filename('cash-proof')
+        );
+
+        return [
+            'proof_file' => $publicId,
+            'proof_name' => $file->getClientOriginalName(),
+            'proof_mime' => $file->getMimeType(),
+        ];
+    }
+
+    private function deleteProofFile(string $publicId): void
+    {
+        try {
+            $this->cloudinary->delete($publicId, str_ends_with(strtolower($publicId), '.pdf') ? 'raw' : 'image');
+        } catch (\Throwable $e) {
+            // A leftover file on Cloudinary isn't worth failing the edit over.
         }
     }
 

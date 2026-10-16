@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,6 +25,12 @@ class CompanyCashTransactionResource extends JsonResource
             'amount' => (float) (string) $this->amount,
             'transaction_date' => $this->transaction_date?->toDateString(),
             'notes' => $this->notes,
+            'proof' => $this->proof_file ? [
+                'url' => CloudinaryUrl::auto($this->proof_file, $this->proof_mime),
+                'name' => $this->proof_name,
+                'mime' => $this->proof_mime,
+                'is_image' => str_starts_with((string) $this->proof_mime, 'image/'),
+            ] : null,
             // Running balance immediately after this transaction, computed
             // in CompanyCashTransactionController::index() as rows are
             // walked in chronological order -- not a stored column.
