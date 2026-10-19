@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Controllers\ServerAgentController;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -37,7 +38,14 @@ class MonitoredServerResource extends JsonResource
                 'cpu' => $report['cpu'],
                 'breakdown' => $report['breakdown'] ?? [],
                 'breakdown_at' => isset($report['breakdown_at']) ? date(DATE_ATOM, (int) $report['breakdown_at']) : null,
+                // null = agent older than 1.1, which doesn't look for sites.
+                'sites' => isset($report['sites']) ? array_map(fn ($site) => [
+                    ...$site,
+                    'ssl_expires_at' => isset($site['ssl_expires_at']) ? date(DATE_ATOM, (int) $site['ssl_expires_at']) : null,
+                ], $report['sites']) : null,
             ] : null,
+            'agent_outdated' => $report && version_compare($report['agent_version'] ?? '0', ServerAgentController::latestAgentVersion() ?? '0', '<'),
+            'update_command' => sprintf('curl -fsSL "%s" | sudo bash', route('server-agent.install')),
             'created_at' => $this->created_at,
         ];
     }
