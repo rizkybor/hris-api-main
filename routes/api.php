@@ -48,7 +48,6 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\FlowchartController;
 use App\Http\Controllers\ProposalController;
-use App\Http\Controllers\ServerStorageController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\ServerAgentController;
 use App\Http\Controllers\AnnouncementController;
@@ -344,8 +343,7 @@ Route::prefix('v1')
             Route::post('history/delete-row', [ActivityLogController::class, 'deleteRow']);
             Route::post('history/delete-range', [ActivityLogController::class, 'deleteByRange']);
 
-            // Server Storage routes
-            Route::get('server-storage', [ServerStorageController::class, 'index']);
+            // Server Storage (VPS monitoring) routes
             Route::get('server-monitor/servers', [ServerMonitorController::class, 'index']);
             Route::post('server-monitor/servers', [ServerMonitorController::class, 'store']);
             Route::put('server-monitor/servers/{id}', [ServerMonitorController::class, 'update']);
