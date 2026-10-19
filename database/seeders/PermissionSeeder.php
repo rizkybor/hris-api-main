@@ -369,6 +369,8 @@ class PermissionSeeder extends Seeder
         'server-storage' => [
             'menu',
             'view',
+            // Add / rename / re-token / remove monitored VPSes.
+            'manage',
         ],
 
         'announcement' => [
