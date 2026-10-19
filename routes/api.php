@@ -49,6 +49,8 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\FlowchartController;
 use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\ServerStorageController;
+use App\Http\Controllers\ServerMonitorController;
+use App\Http\Controllers\ServerAgentController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\GreetingController;
 use App\Http\Controllers\AssetMaintenanceLogController;
@@ -80,6 +82,12 @@ Route::prefix('v1')
         Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
         Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:password-reset');
         Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset');
+
+        // HRIS server agent (runs on each monitored VPS; authenticates with
+        // its own per-server token, not a user session).
+        Route::get('server-agent/install.sh', [ServerAgentController::class, 'installScript'])->middleware('throttle:30,1')->name('server-agent.install');
+        Route::get('server-agent/agent.py', [ServerAgentController::class, 'agentScript'])->middleware('throttle:30,1')->name('server-agent.script');
+        Route::post('server-agent/report', [ServerAgentController::class, 'report'])->middleware('throttle:60,1')->name('server-agent.report');
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
@@ -338,6 +346,11 @@ Route::prefix('v1')
 
             // Server Storage routes
             Route::get('server-storage', [ServerStorageController::class, 'index']);
+            Route::get('server-monitor/servers', [ServerMonitorController::class, 'index']);
+            Route::post('server-monitor/servers', [ServerMonitorController::class, 'store']);
+            Route::put('server-monitor/servers/{id}', [ServerMonitorController::class, 'update']);
+            Route::post('server-monitor/servers/{id}/regenerate-token', [ServerMonitorController::class, 'regenerateToken']);
+            Route::delete('server-monitor/servers/{id}', [ServerMonitorController::class, 'destroy']);
 
             // Announcements
             Route::apiResource('announcements', AnnouncementController::class)->except(['show']);
