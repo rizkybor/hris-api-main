@@ -59,6 +59,10 @@ class ServerStorageController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(false, 'Unable to read server disk usage', null, 500);
         }
 
+        // Lets the page pair this server with its monitoring agent's report
+        // (the agent reports the same hostname) for RAM, CPU and websites.
+        $data['hostname'] = gethostname() ?: null;
+
         return ResponseHelper::jsonResponse(true, 'Server Storage Retrieved Successfully', $data, 200);
     }
 
