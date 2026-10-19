@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # HRIS server agent installer -- PT Jendela Cakra Digital.
-# Usage (from the Backoffice, Insights > Server Storage > Add Server):
+# Usage (from the Backoffice, Insights > Server Storage > Add VPS):
 #   curl -fsSL <this URL> | sudo HRIS_AGENT_TOKEN="<token>" bash
+# Updating an installed agent needs no token -- it keeps the one it has:
+#   curl -fsSL <this URL> | sudo bash
 set -euo pipefail
 
 REPORT_URL="__REPORT_URL__"
@@ -10,6 +12,10 @@ AGENT_URL="__AGENT_URL__"
 if [ "$(id -u)" -ne 0 ]; then
   echo "Jalankan dengan sudo." >&2
   exit 1
+fi
+if [ -z "${HRIS_AGENT_TOKEN:-}" ] && [ -f /etc/hris-agent.conf ]; then
+  HRIS_AGENT_TOKEN="$(sed -n 's/^TOKEN=//p' /etc/hris-agent.conf | head -n1)"
+  [ -n "$HRIS_AGENT_TOKEN" ] && echo "Memperbarui agen yang sudah terpasang (token lama dipakai)."
 fi
 if [ -z "${HRIS_AGENT_TOKEN:-}" ]; then
   echo "HRIS_AGENT_TOKEN kosong. Salin perintah instalasi lengkap dari Backoffice." >&2

@@ -33,6 +33,14 @@ class ServerAgentController extends Controller
         ]);
     }
 
+    /** VERSION of the agent script this API currently hands out. */
+    public static function latestAgentVersion(): ?string
+    {
+        static $version;
+
+        return $version ??= preg_match('/^VERSION = "([^"]+)"/m', (string) @file_get_contents(resource_path('server-agent/agent.py')), $m) ? $m[1] : null;
+    }
+
     public function report(Request $request)
     {
         // Sent in its own header rather than Authorization, so it never
@@ -66,6 +74,21 @@ class ServerAgentController extends Controller
             'breakdown.*.path' => ['required', 'string', 'max:255'],
             'breakdown.*.bytes' => $int,
             'breakdown_at' => ['nullable', 'integer'],
+            // Websites found in the nginx/apache config (agent 1.1+).
+            'sites' => ['nullable', 'array', 'max:100'],
+            'sites.*.domains' => ['nullable', 'array', 'max:20'],
+            'sites.*.domains.*' => ['string', 'max:255'],
+            'sites.*.server' => ['nullable', 'string', 'max:20'],
+            'sites.*.type' => ['nullable', 'string', 'max:30'],
+            'sites.*.version' => ['nullable', 'string', 'max:30'],
+            'sites.*.root' => ['nullable', 'string', 'max:500'],
+            'sites.*.path' => ['nullable', 'string', 'max:500'],
+            'sites.*.proxy' => ['nullable', 'string', 'max:255'],
+            'sites.*.process' => ['nullable', 'string', 'max:100'],
+            'sites.*.unlinked' => ['nullable', 'boolean'],
+            'sites.*.ssl' => ['nullable', 'boolean'],
+            'sites.*.ssl_expires_at' => ['nullable', 'integer'],
+            'sites.*.bytes' => ['nullable', 'integer', 'min:0'],
         ]);
 
         if ($validator->fails()) {
