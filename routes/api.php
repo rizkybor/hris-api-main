@@ -458,6 +458,7 @@ Route::prefix('v1')
             Route::post('meeting-notes/{id}/pin', [MeetingNoteController::class, 'togglePin']);
             Route::post('meeting-notes/{id}/heartbeat', [MeetingNoteController::class, 'heartbeat']);
             Route::get('meeting-notes/{id}/viewers', [MeetingNoteController::class, 'viewers']);
+            Route::get('meeting-notes/{id}/export-pdf', [MeetingNoteController::class, 'exportPdf']);
             Route::apiResource('meeting-notes', MeetingNoteController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 
             Route::get('meeting-notes/{meetingNoteId}/comments', [MeetingNoteCommentController::class, 'index']);
