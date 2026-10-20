@@ -37,6 +37,8 @@ class MeetingNoteController extends Controller implements HasMiddleware
 
     private const RELATIONS = ['creator.employeeProfile', 'updater', 'attendees.user', 'attachments'];
 
+    private const LOCAL_TIMEZONE = 'Asia/Jakarta';
+
     public function __construct(
         private DocumentNumberService $numberService,
         private CloudinaryManager $cloudinary
@@ -51,6 +53,18 @@ class MeetingNoteController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['meeting-note-delete']), only: ['destroy']),
             new Middleware(PermissionMiddleware::using(['meeting-note-list']), only: ['viewers']),
         ];
+    }
+
+    /**
+     * meeting_date is stored in UTC like every other timestamp, so the API
+     * returns it with its "Z" and every screen converts it the same way.
+     * The form sends an ISO string with its offset; a value without one
+     * (older frontend, manual API call) is read as WIB -- the time the user
+     * actually typed -- rather than as UTC.
+     */
+    private function meetingAt(string $value): Carbon
+    {
+        return Carbon::parse($value, self::LOCAL_TIMEZONE)->utc();
     }
 
     private function assertAllowedRole()
@@ -111,15 +125,16 @@ class MeetingNoteController extends Controller implements HasMiddleware
 
         try {
             $note = DB::transaction(function () use ($validated, $user) {
-                $date = Carbon::parse($validated['meeting_date']);
+                $meetingAt = $this->meetingAt($validated['meeting_date']);
+                // Numbered by the meeting's date in WIB, not UTC.
                 $documentNumber = $validated['document_number']
-                    ?? $this->numberService->generateMeetingNoteNumber($date)['number'];
+                    ?? $this->numberService->generateMeetingNoteNumber($meetingAt->copy()->timezone(self::LOCAL_TIMEZONE))['number'];
 
                 $note = MeetingNote::create([
                     'document_number' => $documentNumber,
                     'title' => $validated['title'],
                     'meeting_type' => $validated['meeting_type'],
-                    'meeting_date' => $validated['meeting_date'],
+                    'meeting_date' => $meetingAt,
                     'body' => $validated['body'] ?? null,
                     'action_items' => $validated['action_items'] ?? [],
                     'external_attendees' => $validated['external_attendees'] ?? [],
@@ -184,8 +199,8 @@ class MeetingNoteController extends Controller implements HasMiddleware
         $pdf = Pdf::loadView('pdf.meeting-note', [
             'note' => $note,
             'body' => $this->pdfBody($note->body),
-            'meetingDate' => $note->meeting_date?->copy()->timezone('Asia/Jakarta')->locale('id'),
-            'printedAt' => now('Asia/Jakarta')->locale('id'),
+            'meetingDate' => $note->meeting_date?->copy()->timezone(self::LOCAL_TIMEZONE)->locale('id'),
+            'printedAt' => now(self::LOCAL_TIMEZONE)->locale('id'),
             'printedBy' => Auth::user()->name,
         ])->setPaper('a4');
 
@@ -261,10 +276,11 @@ class MeetingNoteController extends Controller implements HasMiddleware
             $note = MeetingNote::findOrFail($id);
 
             $note = DB::transaction(function () use ($note, $validated, $user) {
-                $note->update([
-                    ...collect($validated)->only(['document_number', 'title', 'meeting_type', 'meeting_date', 'body'])->toArray(),
-                    'updated_by' => $user->id,
-                ]);
+                $fields = collect($validated)->only(['document_number', 'title', 'meeting_type', 'meeting_date', 'body'])->toArray();
+                if (isset($fields['meeting_date'])) {
+                    $fields['meeting_date'] = $this->meetingAt($fields['meeting_date']);
+                }
+                $note->update([...$fields, 'updated_by' => $user->id]);
 
                 if (array_key_exists('action_items', $validated)) {
                     $note->update(['action_items' => $validated['action_items'] ?? []]);
