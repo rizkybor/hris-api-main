@@ -15,6 +15,7 @@ use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\Cloudinary\CloudinaryResourceType;
 use App\Services\DocumentNumberService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -44,7 +45,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['meeting-note-menu|meeting-note-list']), only: ['index', 'show', 'pinned']),
+            new Middleware(PermissionMiddleware::using(['meeting-note-menu|meeting-note-list']), only: ['index', 'show', 'pinned', 'exportPdf']),
             new Middleware(PermissionMiddleware::using(['meeting-note-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['meeting-note-edit']), only: ['update', 'heartbeat']),
             new Middleware(PermissionMiddleware::using(['meeting-note-delete']), only: ['destroy']),
@@ -162,6 +163,84 @@ class MeetingNoteController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * The note as a compact A4 PDF ("Notulen Rapat"). Built-in Helvetica
+     * (never embedded) and no images from the note body keep the file
+     * small; attachments are listed by name only.
+     */
+    public function exportPdf(string $id)
+    {
+        if ($guardError = $this->assertAllowedRole()) {
+            return $guardError;
+        }
+
+        $note = MeetingNote::with(self::RELATIONS)->find($id);
+        if (! $note) {
+            return ResponseHelper::jsonResponse(false, 'Meeting Note Not Found', null, 404);
+        }
+
+        $pdf = Pdf::loadView('pdf.meeting-note', [
+            'note' => $note,
+            'body' => $this->pdfBody($note->body),
+            'meetingDate' => $note->meeting_date?->copy()->timezone('Asia/Jakarta')->locale('id'),
+            'printedAt' => now('Asia/Jakarta')->locale('id'),
+            'printedBy' => Auth::user()->name,
+        ])->setPaper('a4');
+
+        $this->addPageFooter($pdf, $note);
+
+        $filename = 'Notulen-'.str_replace(['/', '\\', ' '], '-', $note->document_number ?: $note->id).'.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+        ]);
+    }
+
+    /**
+     * The editor's HTML minus what doesn't belong in the PDF: images (remote
+     * loading is off in dompdf, so they'd only leave empty boxes -- and
+     * they're what would bloat the file), scripts and embedded styles.
+     */
+    private function pdfBody(?string $html): string
+    {
+        if (! $html || trim(strip_tags($html)) === '') {
+            return '';
+        }
+
+        $html = preg_replace('#<(script|style|iframe)\b[^>]*>.*?</\1>#is', '', $html);
+
+        return preg_replace('#<img\b[^>]*>#i', '', $html);
+    }
+
+    /**
+     * "Notulen Rapat · <number>" and "Halaman x dari y" at the foot of every
+     * page, drawn on the canvas like ProposalPdfService's page chrome.
+     */
+    private function addPageFooter($pdf, MeetingNote $note): void
+    {
+        // Through the wrapper, so output() doesn't render again and drop
+        // the script.
+        $pdf->render();
+        $dompdf = $pdf->getDomPDF();
+        $metrics = $dompdf->getFontMetrics();
+        $font = $metrics->getFont('Helvetica');
+        $muted = [0.39, 0.45, 0.55];
+        $rule = [0.84, 0.86, 0.90];
+        $margin = 51; // 18mm, the page's side margin
+        $size = 7.5;
+        $left = 'Notulen Rapat · '.($note->document_number ?: $note->title);
+
+        $dompdf->getCanvas()->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($font, $muted, $rule, $margin, $size, $left) {
+            $width = $canvas->get_width();
+            $y = $canvas->get_height() - 34;
+            $canvas->line($margin, $y - 8, $width - $margin, $y - 8, $rule, 0.6);
+            $canvas->text($margin, $y, $left, $font, $size, $muted);
+            $label = "Halaman {$pageNumber} dari {$pageCount}";
+            $canvas->text($width - $margin - $fontMetrics->getTextWidth($label, $font, $size), $y, $label, $font, $size, $muted);
+        });
     }
 
     /**
