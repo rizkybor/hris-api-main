@@ -115,6 +115,7 @@ class RolePermissionSeeder extends Seeder
                 'widget-quick-links',
                 'widget-latest-employees',
                 'widget-latest-teams',
+                'widget-upcoming-tasks',
             ];
 
             // Manager/Operational Director's dashboard never showed these
@@ -200,7 +201,6 @@ class RolePermissionSeeder extends Seeder
                         'widget-sticky-notes',
                         'widget-key-metrics',
                         'widget-project-budget',
-                        'widget-upcoming-tasks',
                     ])->get())
             );
 
@@ -259,7 +259,6 @@ class RolePermissionSeeder extends Seeder
                         'widget-key-metrics',
                         'widget-project-budget',
                         'widget-project-realized',
-                        'widget-upcoming-tasks',
                         'widget-subscriptions',
                     ])->get())
                     // Analytics monitoring page (own menu, not a
@@ -323,7 +322,6 @@ class RolePermissionSeeder extends Seeder
                     'document-letter-list',
                     'widget-employee-statistics',
                     'widget-search-section',
-                    'widget-upcoming-tasks',
                 ])->get()
             );
 
@@ -513,7 +511,6 @@ class RolePermissionSeeder extends Seeder
                     'widget-project-budget',
                     'widget-project-realized',
                     'widget-sticky-notes',
-                    'widget-upcoming-tasks',
                     'widget-subscriptions',
                 ])->get()
                     // Analytics monitoring page (own menu, not a

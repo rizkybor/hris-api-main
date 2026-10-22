@@ -72,11 +72,11 @@ class DashboardWidgetRegistry
      * saves their own layout; after that, DashboardWidgetLayout wins.
      */
     public const ROLE_DEFAULT_ORDER = [
-        'manager' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions', 'maintenance'],
-        'operational_director' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions'],
-        'finance' => ['upcoming_tasks', 'sticky_notes', 'project_budget', 'project_realized', 'subscriptions', 'key_metrics'],
-        'hr' => ['pending_leave_requests', 'upcoming_tasks', 'sticky_notes', 'project_budget', 'key_metrics'],
-        'staff' => ['upcoming_tasks', 'employee_statistics', 'search_section'],
+        'manager' => ['projects_at_risk', 'sticky_notes', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions', 'maintenance'],
+        'operational_director' => ['projects_at_risk', 'sticky_notes', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions'],
+        'finance' => ['sticky_notes', 'project_budget', 'project_realized', 'subscriptions', 'key_metrics'],
+        'hr' => ['pending_leave_requests', 'sticky_notes', 'project_budget', 'key_metrics'],
+        'staff' => ['employee_statistics', 'search_section'],
         'superadmin' => ['system_stats', 'system_settings_links', 'recent_activity'],
     ];
 
