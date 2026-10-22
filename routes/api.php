@@ -268,6 +268,7 @@ Route::prefix('v1')
             Route::apiResource('subscriptions', SubscriptionController::class)->except(['show']);
 
             // Dashboard widgets: Subscriptions & Maintenance charts
+            Route::get('dashboard/insights/key-metrics', [DashboardInsightsController::class, 'keyMetrics']);
             Route::get('dashboard/insights/subscriptions', [DashboardInsightsController::class, 'subscriptions']);
             Route::get('dashboard/insights/maintenance', [DashboardInsightsController::class, 'maintenance']);
 
