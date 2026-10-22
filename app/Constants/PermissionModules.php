@@ -136,7 +136,7 @@ class PermissionModules
      * Sidebar order top-to-bottom, so sections in the permission matrix
      * read in the same order a role-assigner already sees in the app.
      */
-    public const SECTION_ORDER = ['General', 'My Workspace', 'Administration', 'Finance', 'Tools', 'Insights', 'Company'];
+    public const SECTION_ORDER = ['General', 'My Workspace', 'Administration', 'Finance', 'Tools', 'Company', 'Insights'];
 
     /**
      * Resolve the module key for a permission name (e.g. "company-finance-menu"
