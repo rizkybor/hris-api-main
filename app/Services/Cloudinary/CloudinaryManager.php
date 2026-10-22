@@ -51,7 +51,9 @@ class CloudinaryManager
     {
         $publicId = $this->buildPublicId($folder, $filename);
 
-        $this->upload($file->getRealPath(), [
+        // getRealPath() is false when the temp file can't be resolved;
+        // fall back to the path PHP gave the upload.
+        $this->upload($file->getRealPath() ?: $file->getPathname(), [
             'public_id' => $publicId,
             'asset_folder' => $folder,
             'resource_type' => 'image',
@@ -94,7 +96,9 @@ class CloudinaryManager
         $extension = $file->getClientOriginalExtension() ?: $file->extension() ?: 'bin';
         $publicId = $this->buildPublicId($folder, "{$filename}.{$extension}");
 
-        $this->upload($file->getRealPath(), [
+        // getRealPath() is false when the temp file can't be resolved;
+        // fall back to the path PHP gave the upload.
+        $this->upload($file->getRealPath() ?: $file->getPathname(), [
             'public_id' => $publicId,
             'asset_folder' => $folder,
             'resource_type' => 'raw',
