@@ -72,10 +72,10 @@ class DashboardWidgetRegistry
      * saves their own layout; after that, DashboardWidgetLayout wins.
      */
     public const ROLE_DEFAULT_ORDER = [
-        'manager' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions', 'maintenance', 'latest_employees', 'latest_teams'],
-        'operational_director' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions', 'latest_employees', 'latest_teams'],
-        'finance' => ['upcoming_tasks', 'sticky_notes', 'project_budget', 'project_realized', 'subscriptions', 'key_metrics', 'quick_links'],
-        'hr' => ['pending_leave_requests', 'upcoming_tasks', 'sticky_notes', 'project_budget', 'key_metrics', 'quick_links', 'latest_employees'],
+        'manager' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions', 'maintenance'],
+        'operational_director' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions'],
+        'finance' => ['upcoming_tasks', 'sticky_notes', 'project_budget', 'project_realized', 'subscriptions', 'key_metrics'],
+        'hr' => ['pending_leave_requests', 'upcoming_tasks', 'sticky_notes', 'project_budget', 'key_metrics'],
         'staff' => ['upcoming_tasks', 'employee_statistics', 'search_section'],
         'superadmin' => ['system_stats', 'system_settings_links', 'recent_activity'],
     ];
