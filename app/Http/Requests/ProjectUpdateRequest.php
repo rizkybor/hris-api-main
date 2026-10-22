@@ -26,6 +26,8 @@ class ProjectUpdateRequest extends FormRequest
             'end_date' => ['nullable', 'date', 'after:start_date'],
             'description' => ['nullable', 'string'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            // Edit Project's "Remove Photo"; ignored when a new photo is sent.
+            'remove_photo' => ['nullable', 'boolean'],
             'budget' => ['nullable', 'numeric', 'min:0'],
             'warranty_period_months' => ['nullable', 'integer', 'min:0'],
             'retention_period_months' => ['nullable', 'integer', 'min:0'],

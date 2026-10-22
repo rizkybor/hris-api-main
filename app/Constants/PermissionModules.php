@@ -57,8 +57,10 @@ class PermissionModules
         'certificate' => 'Certificates',
         'clients' => 'Clients',
         'subscription' => 'Subscriptions',
+        'maintenance' => 'Maintenance',
         'backup' => 'Database Backup',
         'history' => 'History',
+        'server-storage' => 'Server Storage',
         'announcement' => 'Announcements',
         'asset' => 'Company Assets',
         'greeting' => 'Calendar Greetings',
@@ -83,6 +85,8 @@ class PermissionModules
         'task' => 'My Workspace',
         'staff-task' => 'My Workspace',
         'project' => 'My Workspace',
+        'subscription' => 'My Workspace',
+        'maintenance' => 'My Workspace',
         'attendance' => 'My Workspace',
         'leave-request' => 'My Workspace',
 
@@ -90,7 +94,6 @@ class PermissionModules
         'employee' => 'Administration',
         'performance-review' => 'Administration',
         'clients' => 'Administration',
-        'subscription' => 'Administration',
         'purchase-order' => 'Administration',
         'invoice' => 'Administration',
         'payment-receipt' => 'Administration',
@@ -113,6 +116,7 @@ class PermissionModules
 
         'analytics' => 'Insights',
         'history' => 'Insights',
+        'server-storage' => 'Insights',
 
         'company-about' => 'Company',
         'asset' => 'Company',

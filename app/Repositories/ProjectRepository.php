@@ -190,6 +190,10 @@ class ProjectRepository implements ProjectRepositoryInterface
             if ($oldPhoto) {
                 $this->cloudinary->delete($oldPhoto);
             }
+        } elseif (! empty($data['remove_photo']) && $project->photo) {
+            $oldPhoto = $project->photo;
+            $project->update(['photo' => null]);
+            $this->cloudinary->delete($oldPhoto);
         }
 
         return $project;
