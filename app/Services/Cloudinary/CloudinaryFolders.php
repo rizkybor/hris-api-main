@@ -53,8 +53,17 @@ class CloudinaryFolders
 
     private static function initials(string $name): string
     {
-        $words = array_filter(preg_split('/\s+/', trim($name)) ?: []);
-        $initials = implode('', array_map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)), $words));
+        // First letter/digit of each word, ASCII only: a name like
+        // "Web & SEO (Phase 2)" must not put "&" or "(" into a Cloudinary
+        // public_id, which rejects them and fails the whole upload.
+        $words = preg_split('/[^\p{L}\p{N}]+/u', trim($name)) ?: [];
+        $initials = '';
+        foreach ($words as $word) {
+            $ascii = preg_replace('/[^A-Za-z0-9]/', '', \Illuminate\Support\Str::ascii($word));
+            if ($ascii !== '') {
+                $initials .= strtoupper($ascii[0]);
+            }
+        }
 
         return $initials !== '' ? $initials : 'PRJ';
     }
