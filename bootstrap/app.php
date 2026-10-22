@@ -25,6 +25,15 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // H-30 subscription billing reminders to the company inbox, sent
         // in the morning Jakarta time so they land at the start of the day.
+        // Maintenance: close last month (leftover hours expire / roll over /
+        // go to the development balance) and open the new one just after
+        // midnight Jakarta time. Viewing a contract runs the same sync, so
+        // a missed run only delays it.
+        $schedule->command('maintenance:sync')
+            ->dailyAt('00:05')
+            ->timezone('Asia/Jakarta')
+            ->onOneServer();
+
         $schedule->command('subscriptions:send-due-reminders')
             ->dailyAt('08:00')
             ->timezone('Asia/Jakarta')
