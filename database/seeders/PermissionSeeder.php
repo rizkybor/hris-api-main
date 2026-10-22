@@ -322,6 +322,20 @@ class PermissionSeeder extends Seeder
             'generate-invoice',
         ],
 
+        // Maintenance Management: monthly hour quotas per client contract.
+        // "log" records worked hours, "adjust" changes quotas/balance and a
+        // month's leftover handling, "share" manages the client's link.
+        'maintenance' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'log',
+            'adjust',
+            'share',
+        ],
+
         'clients' => [
             'menu',
             'list',

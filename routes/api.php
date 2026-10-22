@@ -15,6 +15,8 @@ use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
 use App\Http\Controllers\DocumentLetterController;
 use App\Http\Controllers\MeetingNoteCommentController;
+use App\Http\Controllers\MaintenanceContractController;
+use App\Http\Controllers\MaintenanceWorkController;
 use App\Http\Controllers\MeetingNoteController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateTemplateController;
@@ -263,6 +265,29 @@ Route::prefix('v1')
             // domain renewal, SaaS)
             Route::post('subscriptions/{id}/generate-invoice', [SubscriptionController::class, 'generateInvoice']);
             Route::apiResource('subscriptions', SubscriptionController::class)->except(['show']);
+
+            // Maintenance Management (monthly hour quotas per client)
+            Route::get('maintenance/contracts', [MaintenanceContractController::class, 'index']);
+            Route::post('maintenance/contracts', [MaintenanceContractController::class, 'store']);
+            Route::get('maintenance/contracts/{id}', [MaintenanceContractController::class, 'show']);
+            Route::put('maintenance/contracts/{id}', [MaintenanceContractController::class, 'update']);
+            Route::delete('maintenance/contracts/{id}', [MaintenanceContractController::class, 'destroy']);
+            Route::post('maintenance/contracts/{id}/share', [MaintenanceContractController::class, 'share']);
+            Route::delete('maintenance/contracts/{id}/share', [MaintenanceContractController::class, 'unshare']);
+            Route::post('maintenance/contracts/{id}/balance-adjustments', [MaintenanceContractController::class, 'adjustBalance']);
+            Route::get('maintenance/periods/{id}', [MaintenanceContractController::class, 'period']);
+            Route::put('maintenance/periods/{id}/leftover-action', [MaintenanceContractController::class, 'setLeftoverAction']);
+            Route::post('maintenance/periods/{id}/adjustments', [MaintenanceContractController::class, 'storeAdjustment']);
+            Route::delete('maintenance/adjustments/{id}', [MaintenanceContractController::class, 'destroyAdjustment']);
+            Route::post('maintenance/contracts/{id}/logs', [MaintenanceWorkController::class, 'storeLog']);
+            Route::put('maintenance/logs/{id}', [MaintenanceWorkController::class, 'updateLog']);
+            Route::delete('maintenance/logs/{id}', [MaintenanceWorkController::class, 'destroyLog']);
+            Route::post('maintenance/contracts/{id}/features', [MaintenanceWorkController::class, 'storeFeature']);
+            Route::put('maintenance/features/{id}', [MaintenanceWorkController::class, 'updateFeature']);
+            Route::delete('maintenance/features/{id}', [MaintenanceWorkController::class, 'destroyFeature']);
+            Route::post('maintenance/features/{id}/approve', [MaintenanceWorkController::class, 'approveFeature']);
+            Route::post('maintenance/features/{id}/complete', [MaintenanceWorkController::class, 'completeFeature']);
+            Route::post('maintenance/features/{id}/cancel', [MaintenanceWorkController::class, 'cancelFeature']);
 
             // Client
             Route::get('clients/all/paginated', [ClientController::class, 'getAllPaginated']);
