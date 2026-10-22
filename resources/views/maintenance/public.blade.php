@@ -44,6 +44,20 @@
     $pct = $totals ? min(100, $totals['used_percent']) : 0;
     $barColor = $totals && $totals['overage'] > 0 ? '#dc2626' : ($pct >= 75 ? '#d97706' : '#0c51d9');
     $policy = $period?->leftover_action ?? $contract->leftover_policy;
+
+    // Link previews (WhatsApp, email, Slack): what the page holds, in one
+    // line -- a snapshot of when the link was opened, the page is live.
+    $metaTitle = 'Kuota Maintenance · '.$contract->name;
+    $metaParts = [($contract->client?->name ? $contract->client->name.' · ' : '').$contract->name.'.'];
+    if ($totals) {
+        $metaParts[] = 'Sisa kuota '.$monthLabel($period->period_month).': '.$h($totals['remaining']).' dari '.$h($totals['total'])
+            .($totals['overage'] > 0 ? ' (melebihi '.$h($totals['overage']).')' : '').'.';
+    } else {
+        $metaParts[] = 'Kuota '.$h($contract->monthly_quota_hours).' per bulan.';
+    }
+    $metaParts[] = 'Saldo Pengembangan '.$h($balance).'.';
+    $metaParts[] = 'Lihat daftar pekerjaan, fitur baru, dan riwayat bulanan dari PT Jendela Cakra Digital.';
+    $metaDescription = \Illuminate\Support\Str::limit(implode(' ', $metaParts), 300);
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -51,7 +65,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>Kuota Maintenance · {{ $contract->name }}</title>
+    <title>{{ $metaTitle }}</title>
+    <meta name="description" content="{{ $metaDescription }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="PT Jendela Cakra Digital">
+    <meta property="og:locale" content="id_ID">
+    <meta property="og:title" content="{{ $metaTitle }}">
+    <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:url" content="{{ $contract->shareUrl() }}">
+    <meta property="og:image" content="{{ asset('images/jcd-logo-pdf.png') }}">
+    <meta property="og:image:alt" content="Logo PT Jendela Cakra Digital">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ $metaTitle }}">
+    <meta name="twitter:description" content="{{ $metaDescription }}">
+    <meta name="twitter:image" content="{{ asset('images/jcd-logo-pdf.png') }}">
+    <link rel="icon" href="{{ asset('images/jcd-logo-pdf.png') }}">
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; color: #1f2937; font-size: 14px; line-height: 1.55; }
