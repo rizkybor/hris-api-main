@@ -451,6 +451,8 @@ class PermissionSeeder extends Seeder
             'system-stats',
             'recent-activity',
             'upcoming-tasks',
+            'subscriptions',
+            'maintenance',
         ],
 
         // Analytics monitoring page (embedded PostHog / GA4 / Search

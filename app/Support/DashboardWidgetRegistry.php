@@ -50,6 +50,10 @@ class DashboardWidgetRegistry
         // role-specific, since anyone (Staff through Manager) can have
         // either kind of task on them.
         ['key' => 'upcoming_tasks', 'permission' => 'widget-upcoming-tasks', 'size' => 'medium'],
+        // Projected billing per month + what's due soon / this month's
+        // maintenance quota use per contract + hours used over 6 months.
+        ['key' => 'subscriptions', 'permission' => 'widget-subscriptions', 'size' => 'medium'],
+        ['key' => 'maintenance', 'permission' => 'widget-maintenance', 'size' => 'medium'],
     ];
 
     public const SIZES = ['small', 'medium', 'large'];
@@ -68,9 +72,9 @@ class DashboardWidgetRegistry
      * saves their own layout; after that, DashboardWidgetLayout wins.
      */
     public const ROLE_DEFAULT_ORDER = [
-        'manager' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'latest_employees', 'latest_teams'],
-        'operational_director' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'latest_employees', 'latest_teams'],
-        'finance' => ['upcoming_tasks', 'sticky_notes', 'project_budget', 'project_realized', 'key_metrics', 'quick_links'],
+        'manager' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions', 'maintenance', 'latest_employees', 'latest_teams'],
+        'operational_director' => ['projects_at_risk', 'upcoming_tasks', 'sticky_notes', 'quick_links', 'key_metrics', 'project_budget', 'project_realized', 'subscriptions', 'latest_employees', 'latest_teams'],
+        'finance' => ['upcoming_tasks', 'sticky_notes', 'project_budget', 'project_realized', 'subscriptions', 'key_metrics', 'quick_links'],
         'hr' => ['pending_leave_requests', 'upcoming_tasks', 'sticky_notes', 'project_budget', 'key_metrics', 'quick_links', 'latest_employees'],
         'staff' => ['upcoming_tasks', 'employee_statistics', 'search_section'],
         'superadmin' => ['system_stats', 'system_settings_links', 'recent_activity'],

@@ -15,6 +15,7 @@ use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
 use App\Http\Controllers\DocumentLetterController;
 use App\Http\Controllers\MeetingNoteCommentController;
+use App\Http\Controllers\DashboardInsightsController;
 use App\Http\Controllers\MaintenanceContractController;
 use App\Http\Controllers\MaintenanceWorkController;
 use App\Http\Controllers\MeetingNoteController;
@@ -265,6 +266,10 @@ Route::prefix('v1')
             // domain renewal, SaaS)
             Route::post('subscriptions/{id}/generate-invoice', [SubscriptionController::class, 'generateInvoice']);
             Route::apiResource('subscriptions', SubscriptionController::class)->except(['show']);
+
+            // Dashboard widgets: Subscriptions & Maintenance charts
+            Route::get('dashboard/insights/subscriptions', [DashboardInsightsController::class, 'subscriptions']);
+            Route::get('dashboard/insights/maintenance', [DashboardInsightsController::class, 'maintenance']);
 
             // Maintenance Management (monthly hour quotas per client)
             Route::get('maintenance/contracts', [MaintenanceContractController::class, 'index']);

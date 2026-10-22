@@ -85,6 +85,8 @@ class PermissionModules
         'task' => 'My Workspace',
         'staff-task' => 'My Workspace',
         'project' => 'My Workspace',
+        'subscription' => 'My Workspace',
+        'maintenance' => 'My Workspace',
         'attendance' => 'My Workspace',
         'leave-request' => 'My Workspace',
 
@@ -92,8 +94,6 @@ class PermissionModules
         'employee' => 'Administration',
         'performance-review' => 'Administration',
         'clients' => 'Administration',
-        'subscription' => 'Administration',
-        'maintenance' => 'Administration',
         'purchase-order' => 'Administration',
         'invoice' => 'Administration',
         'payment-receipt' => 'Administration',
