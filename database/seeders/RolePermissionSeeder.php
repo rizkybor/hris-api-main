@@ -109,10 +109,18 @@ class RolePermissionSeeder extends Seeder
                 'widget-subscriptions',
                 'widget-maintenance',
             ];
+            // Not on any role's dashboard by default -- still assignable per
+            // role/user in Roles & Permissions when wanted.
+            $notDefaultWidgets = [
+                'widget-quick-links',
+                'widget-latest-employees',
+                'widget-latest-teams',
+            ];
+
             // Manager/Operational Director's dashboard never showed these
             // (Search, Super Admin's system widgets, HR's Pending Leave
             // Requests card, or Staff's My Overview stat block).
-            $managerScopeExcludedWidgets = array_merge($superAdminOnlyWidgets, [
+            $managerScopeExcludedWidgets = array_merge($superAdminOnlyWidgets, $notDefaultWidgets, [
                 'widget-search-section',
                 'widget-pending-leave-requests',
                 'widget-employee-statistics',
@@ -192,8 +200,6 @@ class RolePermissionSeeder extends Seeder
                         'widget-sticky-notes',
                         'widget-key-metrics',
                         'widget-project-budget',
-                        'widget-quick-links',
-                        'widget-latest-employees',
                         'widget-upcoming-tasks',
                     ])->get())
             );
@@ -253,9 +259,6 @@ class RolePermissionSeeder extends Seeder
                         'widget-key-metrics',
                         'widget-project-budget',
                         'widget-project-realized',
-                        'widget-latest-employees',
-                        'widget-latest-teams',
-                        'widget-quick-links',
                         'widget-upcoming-tasks',
                         'widget-subscriptions',
                     ])->get())
@@ -509,7 +512,6 @@ class RolePermissionSeeder extends Seeder
                     'widget-key-metrics',
                     'widget-project-budget',
                     'widget-project-realized',
-                    'widget-quick-links',
                     'widget-sticky-notes',
                     'widget-upcoming-tasks',
                     'widget-subscriptions',

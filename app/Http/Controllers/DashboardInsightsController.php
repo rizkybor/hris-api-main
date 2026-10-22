@@ -6,8 +6,10 @@ use App\Helpers\ResponseHelper;
 use App\Models\MaintenanceContract;
 use App\Models\MaintenancePeriod;
 use App\Models\Subscription;
+use App\Services\KeyMetricsService;
 use App\Services\MaintenanceService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -25,7 +27,14 @@ class DashboardInsightsController extends Controller implements HasMiddleware
         return [
             new Middleware(PermissionMiddleware::using(['widget-subscriptions']), only: ['subscriptions']),
             new Middleware(PermissionMiddleware::using(['widget-maintenance']), only: ['maintenance']),
+            new Middleware(PermissionMiddleware::using(['widget-key-metrics']), only: ['keyMetrics']),
         ];
+    }
+
+    /** The Key Metrics widget, tailored to the user's role (see KeyMetricsService). */
+    public function keyMetrics(KeyMetricsService $service)
+    {
+        return ResponseHelper::jsonResponse(true, 'Key Metrics Retrieved Successfully', $service->forUser(Auth::user()), 200);
     }
 
     /**
