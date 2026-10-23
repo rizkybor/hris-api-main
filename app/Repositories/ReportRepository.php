@@ -9,6 +9,7 @@ use App\Models\Attendance;
 use App\Models\EmployeeProfile;
 use App\Models\FixedCost;
 use App\Models\InfrastructureTool;
+use App\Models\MaintenanceContract;
 use App\Models\Invoice;
 use App\Models\PaymentReceipt;
 use App\Models\Payroll;
@@ -21,6 +22,7 @@ use App\Models\SdmResource;
 use App\Models\StaffTaskAssignee;
 use App\Models\Subscription;
 use App\Services\CompanyCashBookService;
+use App\Services\MaintenanceService;
 use App\Services\StaffPerformanceCalculator;
 use Carbon\Carbon;
 
@@ -29,6 +31,7 @@ class ReportRepository implements ReportRepositoryInterface
     public function __construct(
         private StaffPerformanceCalculator $performanceCalculator,
         private CompanyCashBookService $cashBook,
+        private MaintenanceService $maintenance,
     ) {}
 
     public function getAttendanceReport(?string $startDate, ?string $endDate, ?int $employeeId, ?string $status, int $page = 1, int $rowPerPage = 15)
@@ -516,6 +519,62 @@ class ReportRepository implements ReportRepositoryInterface
             'summary' => $summary,
             'status_breakdown' => $statusBreakdown,
             'upcoming_renewals' => $upcomingRenewals,
+            'rows' => $rows,
+        ];
+    }
+
+    /**
+     * Maintenance contracts with their quota use in one month (default: this
+     * month, WIB) and their development balance -- the same figures as the
+     * Maintenance Lists page.
+     */
+    public function getMaintenanceReport(?string $status = null, ?string $month = null)
+    {
+        $this->maintenance->syncAll();
+        $month = $month && preg_match('/^\d{4}-\d{2}$/', $month) ? $month : $this->maintenance->currentMonth();
+
+        $contracts = MaintenanceContract::with([
+            'client:id,name',
+            'project:id,name',
+            'periods' => fn ($q) => $q->whereDate('period_month', $month.'-01')->withSum('adjustments', 'hours')->withSum('logs', 'hours'),
+        ])
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->orderByRaw("CASE status WHEN 'active' THEN 0 WHEN 'paused' THEN 1 ELSE 2 END")
+            ->orderBy('name')
+            ->get();
+
+        $rows = $contracts->map(function (MaintenanceContract $c) {
+            $period = $c->periods->first()?->totals();
+
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'client' => $c->client?->name,
+                'project' => $c->project?->name,
+                'status' => $c->status,
+                'monthly_quota_hours' => (float) $c->monthly_quota_hours,
+                'leftover_policy' => $c->leftover_policy,
+                'start_date' => $c->start_date?->toDateString(),
+                'end_date' => $c->end_date?->toDateString(),
+                'period' => $period,
+                'balance' => $this->maintenance->balance($c),
+                'expiring' => $this->maintenance->expiringSoon($c)['hours'],
+            ];
+        })->values();
+
+        $withPeriod = $rows->filter(fn ($r) => $r['period']);
+
+        return [
+            'month' => $month,
+            'summary' => [
+                'active_count' => $rows->where('status', 'active')->count(),
+                'total_count' => $rows->count(),
+                'used' => round($withPeriod->sum(fn ($r) => $r['period']['used']), 2),
+                'available' => round($withPeriod->sum(fn ($r) => $r['period']['total']), 2),
+                'over_count' => $withPeriod->filter(fn ($r) => $r['period']['overage'] > 0)->count(),
+                'balance' => round($rows->sum('balance'), 2),
+                'expiring' => round($rows->sum('expiring'), 2),
+            ],
             'rows' => $rows,
         ];
     }
