@@ -21,8 +21,8 @@ class AttendanceReportExport implements FromCollection, ShouldAutoSize, WithHead
         protected ?int $employeeId = null,
         protected ?string $status = null,
     ) {
-        $this->startDate = $startDate ?: now()->startOfMonth()->toDateString();
-        $this->endDate = $endDate ?: now()->endOfMonth()->toDateString();
+        $this->startDate = $startDate ?: now('Asia/Jakarta')->startOfMonth()->toDateString();
+        $this->endDate = $endDate ?: now('Asia/Jakarta')->endOfMonth()->toDateString();
     }
 
     public function collection()
@@ -42,9 +42,20 @@ class AttendanceReportExport implements FromCollection, ShouldAutoSize, WithHead
         return $query->orderBy('date', 'desc')->get();
     }
 
+    private const STATUS_LABELS = [
+        'present' => 'Hadir',
+        'late' => 'Terlambat',
+        'absent' => 'Tidak Hadir',
+        'remote' => 'Remote',
+        'overtime' => 'Lembur',
+        'sick_leave' => 'Sakit',
+        'annual_leave' => 'Cuti',
+        'half_day' => 'Setengah Hari',
+    ];
+
     public function headings(): array
     {
-        return ['No', 'Tanggal', 'Nama Karyawan', 'Departemen', 'Jam Masuk', 'Jam Keluar', 'Status', 'Catatan'];
+        return ['No', 'Tanggal', 'Nama Karyawan', 'Departemen', 'Jam Masuk (WIB)', 'Jam Keluar (WIB)', 'Status', 'Telat (menit)', 'Catatan'];
     }
 
     public function map($attendance): array
@@ -57,9 +68,11 @@ class AttendanceReportExport implements FromCollection, ShouldAutoSize, WithHead
             optional($attendance->date)->format('d-m-Y'),
             $attendance->employee->user->name ?? 'N/A',
             $attendance->employee->jobInformation->team->name ?? 'N/A',
-            $attendance->check_in ? $attendance->check_in->format('H:i') : '-',
-            $attendance->check_out ? $attendance->check_out->format('H:i') : '-',
-            ucfirst(str_replace('_', ' ', $attendance->status)),
+            // Stored in UTC -- shown in WIB like everywhere else in the app.
+            $attendance->check_in ? $attendance->check_in->copy()->setTimezone('Asia/Jakarta')->format('H:i') : '-',
+            $attendance->check_out ? $attendance->check_out->copy()->setTimezone('Asia/Jakarta')->format('H:i') : '-',
+            self::STATUS_LABELS[$attendance->status] ?? ucfirst(str_replace('_', ' ', (string) $attendance->status)),
+            $attendance->status === 'late' ? (string) (int) $attendance->late_minutes : '',
             $attendance->notes ?? '',
         ];
     }
