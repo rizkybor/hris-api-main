@@ -7,6 +7,7 @@ use App\Models\MaintenanceContract;
 use App\Models\MaintenancePeriod;
 use App\Models\Subscription;
 use App\Services\KeyMetricsService;
+use App\Services\SubscriptionInsightsService;
 use App\Services\MaintenanceService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -42,48 +43,15 @@ class DashboardInsightsController extends Controller implements HasMiddleware
      * the next 30 days, and the billing expected in each of the next 12
      * months (each subscription's due dates projected forward by its cycle).
      */
-    public function subscriptions()
+    public function subscriptions(SubscriptionInsightsService $insights)
     {
-        $today = Carbon::now(self::TZ)->startOfDay();
-        $firstMonth = $today->copy()->startOfMonth();
-        $lastDay = $firstMonth->copy()->addMonthsNoOverflow(11)->endOfMonth();
-
-        $active = Subscription::with(['services', 'client:id,name'])->where('status', 'active')->get();
-
-        $forecast = [];
-        for ($i = 0; $i < 12; $i++) {
-            $forecast[$firstMonth->copy()->addMonthsNoOverflow($i)->format('Y-m')] = ['amount' => 0.0, 'count' => 0];
-        }
-
-        foreach ($active as $subscription) {
-            if (! $subscription->next_due_date) {
-                continue;
-            }
-            $step = $subscription->billing_cycle === 'yearly' ? 12 : 1;
-            $due = Carbon::parse($subscription->next_due_date->toDateString(), self::TZ);
-            // Overdue bills still belong to the current month.
-            if ($due->lt($firstMonth)) {
-                $due = $firstMonth->copy();
-            }
-            for ($guard = 0; $due->lte($lastDay) && $guard < 24; $guard++) {
-                $key = $due->format('Y-m');
-                if (isset($forecast[$key])) {
-                    $forecast[$key]['amount'] += $subscription->amount;
-                    $forecast[$key]['count']++;
-                }
-                $due = $due->copy()->addMonthsNoOverflow($step);
-            }
-        }
-
-        $dueSoon = $active
-            ->filter(fn ($s) => $s->next_due_date && $s->next_due_date->lte($today->copy()->addDays(30)))
-            ->sortBy('next_due_date')
-            ->values();
+        $active = $insights->active();
+        $dueSoon = $insights->dueSoon($active);
 
         return ResponseHelper::jsonResponse(true, 'Subscription Insights Retrieved Successfully', [
             'active_count' => $active->count(),
             'postponed_count' => Subscription::where('status', 'postponed')->count(),
-            'monthly_value' => round($active->sum(fn ($s) => $s->billing_cycle === 'yearly' ? $s->amount / 12 : $s->amount), 2),
+            'monthly_value' => $insights->monthlyValue($active),
             'due_soon_count' => $dueSoon->count(),
             'due_soon_amount' => round($dueSoon->sum('amount'), 2),
             'due_soon' => $dueSoon->take(4)->map(fn ($s) => [
@@ -92,9 +60,9 @@ class DashboardInsightsController extends Controller implements HasMiddleware
                 'client' => $s->client?->name,
                 'next_due_date' => $s->next_due_date->toDateString(),
                 'amount' => (float) $s->amount,
-                'overdue' => $s->next_due_date->lt($today),
+                'overdue' => $insights->isOverdue($s),
             ]),
-            'forecast' => collect($forecast)->map(fn ($v, $month) => ['month' => $month, 'amount' => round($v['amount'], 2), 'count' => $v['count']])->values(),
+            'forecast' => $insights->forecast($active),
         ], 200);
     }
 

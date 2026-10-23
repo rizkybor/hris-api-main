@@ -10,6 +10,7 @@ use App\Models\StaffTask;
 use App\Models\StaffTaskAssignee;
 use App\Models\User;
 use App\Notifications\StaffTaskAssigned;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -35,7 +36,7 @@ class StaffTaskController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['staff-task-menu|staff-task-list']), only: ['index', 'show']),
+            new Middleware(PermissionMiddleware::using(['staff-task-menu|staff-task-list']), only: ['index', 'summary', 'show']),
             new Middleware(PermissionMiddleware::using(['staff-task-create', 'staff-task-edit']), only: ['staffOptions']),
             new Middleware(PermissionMiddleware::using(['staff-task-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['staff-task-edit']), only: ['update']),
@@ -78,6 +79,64 @@ class StaffTaskController extends Controller implements HasMiddleware
             $tasks = $query->paginate($rowPerPage);
 
             return ResponseHelper::jsonResponse(true, 'Staff Tasks Retrieved Successfully', PaginateResource::make($tasks, StaffTaskResource::class), 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * Recap above the Staff Tasks list. A task counts as done once every
+     * assignee has marked it done; dates are WIB.
+     */
+    public function summary()
+    {
+        if ($guardError = $this->assertAllowedRole()) {
+            return $guardError;
+        }
+
+        try {
+            $today = Carbon::now('Asia/Jakarta')->startOfDay();
+            $tasks = StaffTask::with('assignees.employee.user:id,name')->get();
+            $isDone = fn ($t) => $t->assignees->isNotEmpty() && $t->assignees->every(fn ($a) => $a->status === 'done');
+            $open = $tasks->reject($isDone);
+            $assignees = $tasks->flatMap->assignees;
+
+            $weeks = collect(range(6, -1))->map(fn ($i) => $today->copy()->startOfWeek()->subWeeks($i)); // six weeks back, this week and next
+            $trend = $weeks->map(function ($start) use ($tasks) {
+                $inWeek = $tasks->filter(fn ($t) => $t->due_date && Carbon::parse($t->due_date->toDateString(), 'Asia/Jakarta')->between($start, $start->copy()->endOfWeek()));
+                $rows = $inWeek->flatMap->assignees;
+
+                return [
+                    'week' => $start->toDateString(),
+                    'done' => $rows->where('status', 'done')->count(),
+                    'in_progress' => $rows->where('status', 'in_progress')->count(),
+                    'todo' => $rows->where('status', 'todo')->count(),
+                ];
+            })->values();
+
+            $staff = $assignees->groupBy('employee_id')->map(fn ($rows) => [
+                'name' => $rows->first()->employee?->user?->name ?? '-',
+                'total' => $rows->count(),
+                'done' => $rows->where('status', 'done')->count(),
+                'open' => $rows->where('status', '!=', 'done')->count(),
+                'overdue' => $rows->filter(fn ($a) => $a->status !== 'done' && $tasks->firstWhere('id', $a->staff_task_id)?->due_date?->lt($today))->count(),
+            ])->sortByDesc(fn ($s) => [$s['open'], $s['total']])->values();
+
+            return ResponseHelper::jsonResponse(true, 'Staff Task Summary Retrieved Successfully', [
+                'total' => $tasks->count(),
+                'open' => $open->count(),
+                'done' => $tasks->count() - $open->count(),
+                'overdue' => $open->filter(fn ($t) => $t->due_date && $t->due_date->lt($today))->count(),
+                'due_this_week' => $open->filter(fn ($t) => $t->due_date && $t->due_date->between($today, $today->copy()->endOfWeek()))->count(),
+                'assignments' => [
+                    'todo' => $assignees->where('status', 'todo')->count(),
+                    'in_progress' => $assignees->where('status', 'in_progress')->count(),
+                    'done' => $assignees->where('status', 'done')->count(),
+                ],
+                'staff' => $staff->take(8)->values(),
+                'staff_count' => $staff->count(),
+                'trend' => $trend,
+            ], 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

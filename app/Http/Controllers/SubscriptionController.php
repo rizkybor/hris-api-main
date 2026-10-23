@@ -26,7 +26,7 @@ class SubscriptionController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['subscription-menu|subscription-list']), only: ['index']),
+            new Middleware(PermissionMiddleware::using(['subscription-menu|subscription-list']), only: ['index', 'summary']),
             new Middleware(PermissionMiddleware::using(['subscription-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['subscription-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['subscription-delete']), only: ['destroy']),
@@ -65,6 +65,12 @@ class SubscriptionController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /** Recap above the Subscriptions list (see SubscriptionInsightsService). */
+    public function summary(\App\Services\SubscriptionInsightsService $insights)
+    {
+        return ResponseHelper::jsonResponse(true, 'Subscription Summary Retrieved Successfully', $insights->summary(), 200);
     }
 
     public function store(SubscriptionStoreRequest $request)

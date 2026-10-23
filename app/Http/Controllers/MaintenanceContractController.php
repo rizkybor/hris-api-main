@@ -6,9 +6,12 @@ use App\Helpers\ResponseHelper;
 use App\Http\Resources\MaintenanceContractResource;
 use App\Models\MaintenanceAdjustment;
 use App\Models\MaintenanceContract;
+use App\Models\MaintenanceFeature;
+use App\Models\MaintenanceLog;
 use App\Models\MaintenancePeriod;
 use App\Models\Project;
 use App\Services\MaintenanceService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -32,7 +35,7 @@ class MaintenanceContractController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['maintenance-menu|maintenance-list']), only: ['index', 'show', 'period']),
+            new Middleware(PermissionMiddleware::using(['maintenance-menu|maintenance-list']), only: ['index', 'summary', 'show', 'period']),
             new Middleware(PermissionMiddleware::using(['maintenance-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['maintenance-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['maintenance-delete']), only: ['destroy']),
@@ -72,6 +75,61 @@ class MaintenanceContractController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Maintenance Contracts Retrieved Successfully',
                 $contracts->map(fn ($c) => new MaintenanceContractResource($this->load($c))), 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /** Recap above the Maintenance list: this month's hours, trend, categories, balance. */
+    public function summary()
+    {
+        try {
+            $this->service->syncAll();
+            $current = $this->service->currentMonth();
+            $months = collect(range(5, 0))->map(fn ($i) => Carbon::createFromFormat('Y-m-d', $current.'-01', 'Asia/Jakarta')->subMonthsNoOverflow($i)->format('Y-m'));
+
+            $contracts = MaintenanceContract::with('client:id,name')->get();
+            $periods = MaintenancePeriod::whereDate('period_month', '>=', $months->first().'-01')
+                ->whereIn('maintenance_contract_id', $contracts->pluck('id'))
+                ->withSum('adjustments', 'hours')->withSum('logs', 'hours')->get();
+            $byMonth = $periods->groupBy(fn ($p) => $p->period_month->format('Y-m'));
+
+            $usage = $byMonth->get($current, collect())->map(function ($p) use ($contracts) {
+                $c = $contracts->firstWhere('id', $p->maintenance_contract_id);
+
+                return ['id' => $c->id, 'name' => $c->name, 'client' => $c->client?->name, 'status' => $c->status, ...$p->totals()];
+            })->sortByDesc('used_percent')->values();
+
+            $categories = MaintenanceLog::whereIn('maintenance_contract_id', $contracts->pluck('id'))
+                ->whereBetween('work_date', [$current.'-01', Carbon::createFromFormat('Y-m-d', $current.'-01')->endOfMonth()->toDateString()])
+                ->selectRaw('category, SUM(hours) as hours, COUNT(*) as c')->groupBy('category')->get()
+                ->map(fn ($row) => ['category' => $row->category ?: 'other', 'hours' => round((float) $row->hours, 2), 'count' => (int) $row->c])
+                ->groupBy('category')->map(fn ($rows, $cat) => ['category' => $cat, 'hours' => round($rows->sum('hours'), 2), 'count' => $rows->sum('count')])
+                ->values();
+
+            $active = $contracts->where('status', 'active');
+
+            return ResponseHelper::jsonResponse(true, 'Maintenance Summary Retrieved Successfully', [
+                'month' => $current,
+                'counts' => collect(MaintenanceContract::STATUSES)->mapWithKeys(fn ($st) => [$st => $contracts->where('status', $st)->count()]),
+                'client_count' => $active->pluck('client_id')->unique()->count(),
+                'used' => round($usage->sum('used'), 2),
+                'total' => round($usage->sum('total'), 2),
+                'over_count' => $usage->where('overage', '>', 0)->count(),
+                'near_count' => $usage->filter(fn ($u) => $u['overage'] <= 0 && $u['used_percent'] >= 80)->count(),
+                'balance' => round($contracts->sum(fn ($c) => $this->service->balance($c)), 2),
+                'expiring' => round($contracts->sum(fn ($c) => $this->service->expiringSoon($c)['hours']), 2),
+                'features_open' => MaintenanceFeature::whereIn('maintenance_contract_id', $contracts->pluck('id'))
+                    ->whereIn('status', ['proposed', 'approved', 'in_progress'])->count(),
+                'usage' => $usage->take(8)->values(),
+                'usage_count' => $usage->count(),
+                'by_category' => $categories,
+                'trend' => $months->map(fn ($m) => [
+                    'month' => $m,
+                    'used' => round($byMonth->get($m, collect())->sum(fn ($p) => $p->totals()['used']), 2),
+                    'total' => round($byMonth->get($m, collect())->sum(fn ($p) => $p->totals()['total']), 2),
+                ])->values(),
+            ], 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
