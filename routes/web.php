@@ -18,7 +18,7 @@ Route::get('/proposal/{token}', [PublicProposalController::class, 'show'])
     ->withoutMiddleware([
         \Illuminate\Session\Middleware\StartSession::class,
         \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-        \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+        \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
         \Illuminate\Cookie\Middleware\EncryptCookies::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
     ])
@@ -31,7 +31,7 @@ Route::get('/maintenance/{token}', [PublicMaintenanceController::class, 'show'])
     ->withoutMiddleware([
         \Illuminate\Session\Middleware\StartSession::class,
         \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-        \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+        \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
         \Illuminate\Cookie\Middleware\EncryptCookies::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
     ])
