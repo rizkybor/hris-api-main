@@ -254,14 +254,15 @@ class ReportController extends Controller implements HasMiddleware
         try {
             $employee = EmployeeProfile::with('jobInformation')->findOrFail($employeeId);
 
+            $now = now('Asia/Jakarta');
             [$startDate, $endDate, $periodLabel] = match ($period) {
-                'week' => [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString(), 'This Week'],
+                'week' => [$now->copy()->startOfWeek()->toDateString(), $now->copy()->endOfWeek()->toDateString(), 'This Week'],
                 'all' => [
                     $employee->jobInformation?->start_date?->toDateString() ?? '2000-01-01',
-                    now()->toDateString(),
+                    $now->toDateString(),
                     'All Time',
                 ],
-                default => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString(), 'This Month'],
+                default => [$now->copy()->startOfMonth()->toDateString(), $now->copy()->endOfMonth()->toDateString(), 'This Month'],
             };
 
             $data = $this->reportRepository->getStaffRaportDetail((int) $employeeId, $startDate, $endDate);

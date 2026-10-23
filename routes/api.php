@@ -3,6 +3,7 @@
 use App\Http\Controllers\AnalyticsSourceController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceSettingController;
+use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\PayrollSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialAccountController;
@@ -172,6 +173,9 @@ Route::prefix('v1')
 
             Route::get('attendance-setting', [AttendanceSettingController::class, 'show']);
             Route::put('attendance-setting', [AttendanceSettingController::class, 'update']);
+            Route::get('holidays', [HolidayController::class, 'index']);
+            Route::post('holidays', [HolidayController::class, 'store']);
+            Route::delete('holidays/{id}', [HolidayController::class, 'destroy']);
             Route::get('payroll-setting', [PayrollSettingController::class, 'show']);
             Route::put('payroll-setting', [PayrollSettingController::class, 'update']);
 
