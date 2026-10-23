@@ -6,6 +6,7 @@ use App\Exports\AttendanceReportExport;
 use App\Exports\EmployeeReportExport;
 use App\Exports\CompanyCashBookReportExport;
 use App\Exports\FinanceReportExport;
+use App\Exports\MaintenanceReportExport;
 use App\Exports\PayrollReportExport;
 use App\Exports\Pph21ReportExport;
 use App\Exports\Pph23ReportExport;
@@ -65,7 +66,7 @@ class ReportController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project', 'pph23', 'projectExpense', 'subscription']),
+            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project', 'pph23', 'projectExpense', 'subscription', 'maintenance']),
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
             new Middleware(PermissionMiddleware::using(['staff-raport-menu|staff-raport-list']), only: ['staffRaport', 'staffRaportDetail']),
             new Middleware(PermissionMiddleware::using(['staff-raport-export']), only: ['staffRaportPdf']),
@@ -179,6 +180,17 @@ class ReportController extends Controller implements HasMiddleware
             $data = $this->reportRepository->getSubscriptionReport($request->status);
 
             return ResponseHelper::jsonResponse(true, 'Subscription Report Retrieved Successfully', $data, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    public function maintenance(Request $request)
+    {
+        try {
+            $data = $this->reportRepository->getMaintenanceReport($request->status, $request->month);
+
+            return ResponseHelper::jsonResponse(true, 'Maintenance Report Retrieved Successfully', $data, 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
@@ -430,6 +442,7 @@ class ReportController extends Controller implements HasMiddleware
                 'pph23' => new Pph23ReportExport($startDate, $endDate),
                 'project_expense' => new ProjectExpenseReportExport($startDate, $endDate, $request->query('project_id') ? (int) $request->query('project_id') : null),
                 'subscription' => new SubscriptionReportExport($request->query('status')),
+                'maintenance' => new MaintenanceReportExport($request->query('status'), $request->query('month')),
                 default => null,
             };
 
