@@ -35,7 +35,7 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
      * in (see CompanyCashLedgerSyncService), so nothing needs recording
      * twice by hand.
      *
-     * Optionally narrowed to one project via `project_id`, but the balance
+     * Optionally narrowed (project, type, source, date range, search), but the balance
      * math always walks the FULL chronological history first -- each row's
      * `balance` is the true company-wide running total at that point in
      * time, not a value recomputed in isolation from only that project's
@@ -47,6 +47,11 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
     {
         $validated = $request->validate([
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'type' => ['nullable', 'in:debit,credit'],
+            'source' => ['nullable', 'in:manual,project'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'search' => ['nullable', 'string', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
             'row_per_page' => ['nullable', 'integer', 'min:1'],
         ]);
@@ -60,7 +65,8 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
                 ->orderBy('id')
                 ->get();
 
-            $openingBalance = (float) CompanyCashBalance::current()->opening_balance;
+            $balanceRow = CompanyCashBalance::current();
+            $openingBalance = (float) $balanceRow->opening_balance;
             $runningBalance = $openingBalance;
 
             // Indonesian "buku kas" convention: Debit = uang masuk, Kredit
@@ -75,8 +81,25 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
 
             $filtered = $allTransactions;
             if (! empty($validated['project_id'])) {
-                $filtered = $filtered->where('project_id', $validated['project_id'])->values();
+                $filtered = $filtered->where('project_id', $validated['project_id']);
             }
+            if (! empty($validated['type'])) {
+                $filtered = $filtered->where('type', $validated['type']);
+            }
+            if (! empty($validated['source'])) {
+                $filtered = $filtered->filter(fn ($t) => $t->isSynced() === ($validated['source'] === 'project'));
+            }
+            if (! empty($validated['start_date'])) {
+                $filtered = $filtered->filter(fn ($t) => $t->transaction_date->toDateString() >= $validated['start_date']);
+            }
+            if (! empty($validated['end_date'])) {
+                $filtered = $filtered->filter(fn ($t) => $t->transaction_date->toDateString() <= $validated['end_date']);
+            }
+            if (! empty($validated['search'])) {
+                $needle = mb_strtolower($validated['search']);
+                $filtered = $filtered->filter(fn ($t) => str_contains(mb_strtolower($t->description.' '.$t->notes.' '.$t->project?->name), $needle));
+            }
+            $filtered = $filtered->values();
 
             $totalDebit = (float) $filtered->where('type', 'debit')->sum(fn ($t) => (float) $t->amount);
             $totalCredit = (float) $filtered->where('type', 'credit')->sum(fn ($t) => (float) $t->amount);
@@ -89,6 +112,7 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
             return ResponseHelper::jsonResponse(true, 'Company Cash Transactions Retrieved Successfully', [
                 'items' => CompanyCashTransactionResource::collection($paged),
                 'opening_balance' => $openingBalance,
+                ...$this->openingBalanceStamp($balanceRow),
                 'total_debit' => $totalDebit,
                 'total_credit' => $totalCredit,
                 'closing_balance' => $closingBalance,
@@ -237,6 +261,17 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
      * conceptually the same "who may touch the company's cash book by
      * hand" access.
      */
+    /** When the opening balance was last set, and by whom (null if never set). */
+    private function openingBalanceStamp(CompanyCashBalance $balance): array
+    {
+        $set = $balance->updated_by !== null;
+
+        return [
+            'opening_balance_updated_at' => $set ? $balance->updated_at?->toIso8601String() : null,
+            'opening_balance_updated_by' => $set ? $balance->updater?->name : null,
+        ];
+    }
+
     public function updateOpeningBalance(Request $request)
     {
         $validated = $request->validate([
@@ -245,13 +280,16 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
 
         try {
             $balance = CompanyCashBalance::current();
-            $balance->update([
+            $balance->fill([
                 'opening_balance' => $validated['opening_balance'],
                 'updated_by' => $request->user()->id,
             ]);
+            // Saving the same figure again still counts as "checked today".
+            $balance->isDirty() ? $balance->save() : $balance->touch();
 
             return ResponseHelper::jsonResponse(true, 'Opening Balance Updated Successfully', [
                 'opening_balance' => (float) $balance->opening_balance,
+                ...$this->openingBalanceStamp($balance),
             ], 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);

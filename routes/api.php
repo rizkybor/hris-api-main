@@ -264,6 +264,7 @@ Route::prefix('v1')
 
             // Subscriptions (manual recurring billing -- maintenance,
             // domain renewal, SaaS)
+            Route::get('subscriptions/summary', [SubscriptionController::class, 'summary']);
             Route::post('subscriptions/{id}/generate-invoice', [SubscriptionController::class, 'generateInvoice']);
             Route::apiResource('subscriptions', SubscriptionController::class)->except(['show']);
 
@@ -275,6 +276,7 @@ Route::prefix('v1')
             // Maintenance Management (monthly hour quotas per client)
             Route::get('maintenance/contracts', [MaintenanceContractController::class, 'index']);
             Route::post('maintenance/contracts', [MaintenanceContractController::class, 'store']);
+            Route::get('maintenance/summary', [MaintenanceContractController::class, 'summary']);
             Route::get('maintenance/contracts/{id}', [MaintenanceContractController::class, 'show']);
             Route::put('maintenance/contracts/{id}', [MaintenanceContractController::class, 'update']);
             Route::delete('maintenance/contracts/{id}', [MaintenanceContractController::class, 'destroy']);
@@ -502,6 +504,7 @@ Route::prefix('v1')
             // assignee tracking their own status.
             Route::get('my-staff-tasks', [StaffTaskController::class, 'myTasks']);
             Route::get('staff-tasks/staff-options', [StaffTaskController::class, 'staffOptions']);
+            Route::get('staff-tasks/summary', [StaffTaskController::class, 'summary']);
             Route::patch('staff-tasks/{id}/status', [StaffTaskController::class, 'updateMyStatus']);
             Route::apiResource('staff-tasks', StaffTaskController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 

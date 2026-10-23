@@ -85,6 +85,9 @@ class PermissionSeeder extends Seeder
         'attendance' => [
             'menu',
             'list',
+            // Correct a staff member's record from Attendance Records --
+            // Manager, Operational Director and Finance Manager.
+            'edit',
             'my-attendances',
             'my-statistics',
             'check-in',

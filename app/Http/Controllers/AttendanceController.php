@@ -8,8 +8,12 @@ use App\Http\Requests\AttendanceCheckOutRequest;
 use App\Http\Resources\AttendanceResource;
 use App\Http\Resources\PaginateResource;
 use App\Interfaces\AttendanceRepositoryInterface;
+use App\Models\Attendance;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -31,6 +35,7 @@ class AttendanceController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['attendance-check-out']), only: ['checkOut']),
             new Middleware(PermissionMiddleware::using(['attendance-last-attendance']), only: ['getLastAttendance']),
             new Middleware(PermissionMiddleware::using(['attendance-my-attendances']), only: ['getMyAttendances', 'getMyAttendanceStatistics']),
+            new Middleware(PermissionMiddleware::using(['attendance-edit']), only: ['update']),
         ];
     }
 
@@ -170,6 +175,67 @@ class AttendanceController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(true, 'Attendance Retrieved Successfully', new AttendanceResource($attendance), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Attendance Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    // Statuses a corrected record can take; matches what check-in and the
+    // attendance reports produce.
+    public const EDITABLE_STATUSES = ['present', 'late', 'absent', 'overtime', 'remote', 'sick_leave'];
+
+    /**
+     * Correct one staff member's attendance record (Attendance Records ->
+     * Edit). Times are entered as WIB on the record's own date and stored in
+     * UTC like a normal check-in; late minutes are recalculated from the same
+     * 09:00 WIB threshold check-in uses. Changes are kept in the activity log.
+     */
+    public function update(Request $request, string $id)
+    {
+        $data = $request->validate([
+            'check_in' => ['nullable', 'date_format:H:i'],
+            'check_out' => ['nullable', 'date_format:H:i'],
+            'status' => ['required', Rule::in(self::EDITABLE_STATUSES)],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $attendance = Attendance::findOrFail($id);
+            $day = $attendance->date->format('Y-m-d');
+            $at = fn (?string $time) => $time ? Carbon::parse("{$day} {$time}", 'Asia/Jakarta') : null;
+            $checkIn = $at($data['check_in'] ?? null);
+            $checkOut = $at($data['check_out'] ?? null);
+
+            if ($checkOut && ! $checkIn) {
+                throw ValidationException::withMessages(['check_in' => 'Isi jam check-in jika ada jam check-out.']);
+            }
+            if ($checkIn && $checkOut && $checkOut->lte($checkIn)) {
+                throw ValidationException::withMessages(['check_out' => 'Jam check-out harus setelah jam check-in.']);
+            }
+            if (! $checkIn && ! in_array($data['status'], ['absent', 'sick_leave'], true)) {
+                throw ValidationException::withMessages(['check_in' => 'Jam check-in wajib diisi untuk status ini.']);
+            }
+
+            $lateMinutes = null;
+            if ($data['status'] === 'late' && $checkIn) {
+                $threshold = $checkIn->copy()->setTime(9, 0);
+                $lateMinutes = $checkIn->gt($threshold) ? (int) $threshold->diffInMinutes($checkIn) : null;
+            }
+
+            $attendance->update([
+                'check_in' => $checkIn?->copy()->utc(),
+                'check_out' => $checkOut?->copy()->utc(),
+                'status' => $data['status'],
+                'late_minutes' => $lateMinutes,
+                'notes' => $data['notes'] ?? null,
+            ]);
+
+            return ResponseHelper::jsonResponse(true, 'Attendance Updated Successfully',
+                new AttendanceResource($attendance->fresh(['employee.user', 'employee.jobInformation.team'])), 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Attendance Not Found', null, 404);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
