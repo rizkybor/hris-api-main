@@ -19,8 +19,8 @@ class PpnReportExport implements FromCollection, ShouldAutoSize, WithHeadings, W
         protected ?string $startDate = null,
         protected ?string $endDate = null,
     ) {
-        $this->startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $this->endDate = $endDate ?: now()->endOfYear()->toDateString();
+        $this->startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
+        $this->endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
     }
 
     public function collection()

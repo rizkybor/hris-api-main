@@ -6,7 +6,6 @@ use App\Enums\OperationalCostStatus;
 use App\Http\Resources\AttendanceResource;
 use App\Interfaces\ReportRepositoryInterface;
 use App\Models\Attendance;
-use App\Models\CompanyFinance;
 use App\Models\EmployeeProfile;
 use App\Models\FixedCost;
 use App\Models\InfrastructureTool;
@@ -21,12 +20,16 @@ use App\Models\ProjectTask;
 use App\Models\SdmResource;
 use App\Models\StaffTaskAssignee;
 use App\Models\Subscription;
+use App\Services\CompanyCashBookService;
 use App\Services\StaffPerformanceCalculator;
 use Carbon\Carbon;
 
 class ReportRepository implements ReportRepositoryInterface
 {
-    public function __construct(private StaffPerformanceCalculator $performanceCalculator) {}
+    public function __construct(
+        private StaffPerformanceCalculator $performanceCalculator,
+        private CompanyCashBookService $cashBook,
+    ) {}
 
     public function getAttendanceReport(?string $startDate, ?string $endDate, ?int $employeeId, ?string $status, int $page = 1, int $rowPerPage = 15)
     {
@@ -78,8 +81,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function getPayrollReport(?string $startDate, ?string $endDate, int $page = 1, int $rowPerPage = 15)
     {
-        $startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
 
         $payrollIds = Payroll::query()
             ->whereBetween('salary_month', [$startDate, $endDate])
@@ -154,38 +157,100 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
-    public function getFinanceReport(?string $startDate, ?string $endDate)
+    /**
+     * Finance tab, two sources: the Company Cash Book (real money in/out in
+     * the period, default) or Operational Cost (standing cost items -- the
+     * same in-use totals as the Operational Cost page, not tied to a period).
+     */
+    public function getFinanceReport(?string $startDate, ?string $endDate, string $source = 'cash_book', int $page = 1, int $rowPerPage = 15)
     {
-        $startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+        return $source === 'operational_cost'
+            ? $this->operationalCostReport()
+            : $this->cashBookReport($startDate, $endDate, $page, $rowPerPage);
+    }
 
-        $range = [Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay()];
+    private function cashBookReport(?string $startDate, ?string $endDate, int $page, int $rowPerPage): array
+    {
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
 
-        $fixedCosts = FixedCost::whereBetween('created_at', $range)->get();
-        $infrastructureTools = InfrastructureTool::whereBetween('created_at', $range)->get();
-        $sdmResources = SdmResource::whereBetween('created_at', $range)->get();
-        $latestBalance = CompanyFinance::orderBy('created_at', 'desc')->first();
+        $ledger = $this->cashBook->ledger(['start_date' => $startDate, 'end_date' => $endDate]);
+        $rows = $ledger['rows'];
+        $debit = (float) $rows->where('type', 'debit')->sum(fn ($t) => (float) $t->amount);
+        $credit = (float) $rows->where('type', 'credit')->sum(fn ($t) => (float) $t->amount);
 
-        // Totals count only items JC Digital actually uses; the rows below
-        // still list every item (with its status), like Operational Cost.
-        $inUse = fn ($items) => $items->where('status', OperationalCostStatus::ACTIVE->value);
-
-        $summary = [
-            'company_balance' => (float) ($latestBalance->saldo_company ?? 0),
-            'fixed_cost_actual' => (float) $inUse($fixedCosts)->sum('actual'),
-            'infrastructure_monthly_fee' => (float) $inUse($infrastructureTools)->sum('monthly_fee'),
-            'infrastructure_annual_fee' => (float) $inUse($infrastructureTools)->sum('annual_fee'),
-            'sdm_actual' => (float) $inUse($sdmResources)->sum('actual'),
-        ];
+        $total = $rows->count();
+        $lastPage = (int) max(1, ceil($total / $rowPerPage));
+        $page = min($page, $lastPage);
 
         return [
+            'source' => 'cash_book',
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
-            'summary' => $summary,
-            'rows' => [
-                'fixed_costs' => $fixedCosts,
-                'infrastructure_tools' => $infrastructureTools,
-                'sdm_resources' => $sdmResources,
+            'summary' => [
+                'period_opening' => $ledger['period_opening'],
+                'total_debit' => $debit,
+                'total_credit' => $credit,
+                'net' => $debit - $credit,
+                'period_closing' => $ledger['period_closing'],
+                'transactions' => $total,
             ],
+            // Chronological, like a printed buku kas.
+            'rows' => $rows->slice(($page - 1) * $rowPerPage, $rowPerPage)->values()->map(fn ($t) => [
+                'id' => $t->id,
+                'transaction_date' => $t->transaction_date->toDateString(),
+                'description' => $t->description,
+                'notes' => $t->notes,
+                'source' => $t->isSynced() ? ($t->project?->name ?? 'Project') : 'Manual',
+                'is_synced' => $t->isSynced(),
+                'type' => $t->type,
+                'amount' => (float) $t->amount,
+                'balance' => (float) $t->running_balance,
+            ]),
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => $lastPage,
+                'per_page' => $rowPerPage,
+                'total' => $total,
+                'from' => $total === 0 ? null : ($page - 1) * $rowPerPage + 1,
+                'to' => $total === 0 ? null : min($page * $rowPerPage, $total),
+            ],
+        ];
+    }
+
+    private function operationalCostReport(): array
+    {
+        $item = fn ($category, $name, $monthly, $annual, $x) => [
+            'id' => $x->id,
+            'category' => $category,
+            'name' => $name,
+            'monthly' => $monthly,
+            'annual' => $annual,
+            'status' => $x->status,
+            'in_use' => $x->status === OperationalCostStatus::ACTIVE->value,
+            'expired_date' => $x->expired_date?->toDateString(),
+            'notes' => $x->notes,
+        ];
+
+        $rows = collect()
+            ->concat(FixedCost::orderBy('financial_items')->get()->map(fn ($x) => $item('Fixed Cost', $x->financial_items, (float) $x->actual, null, $x)))
+            ->concat(SdmResource::orderBy('sdm_component')->get()->map(fn ($x) => $item('SDM Resource', $x->sdm_component, (float) $x->actual, null, $x)))
+            ->concat(InfrastructureTool::orderBy('tech_stack_component')->get()->map(fn ($x) => $item('Infrastructure', $x->tech_stack_component, (float) $x->monthly_fee, (float) $x->annual_fee, $x)))
+            ->values();
+
+        $inUse = $rows->where('in_use', true);
+        $sum = fn ($category, $key = 'monthly') => (float) $inUse->where('category', $category)->sum($key);
+
+        return [
+            'source' => 'operational_cost',
+            'summary' => [
+                'fixed_cost' => $sum('Fixed Cost'),
+                'sdm' => $sum('SDM Resource'),
+                'infrastructure_monthly' => $sum('Infrastructure'),
+                'infrastructure_annual' => $sum('Infrastructure', 'annual'),
+                'items_in_use' => $inUse->count(),
+                'items_total' => $rows->count(),
+            ],
+            'rows' => $rows,
         ];
     }
 
@@ -196,8 +261,8 @@ class ReportRepository implements ReportRepositoryInterface
      */
     public function getPph21Report(?string $startDate, ?string $endDate)
     {
-        $startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
 
         $payrollIds = Payroll::query()
             ->whereBetween('salary_month', [$startDate, $endDate])
@@ -236,8 +301,8 @@ class ReportRepository implements ReportRepositoryInterface
      */
     public function getPpnReport(?string $startDate, ?string $endDate)
     {
-        $startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
 
         $rows = Invoice::query()
             ->whereBetween('date', [$startDate, $endDate])
@@ -266,8 +331,8 @@ class ReportRepository implements ReportRepositoryInterface
      */
     public function getProjectReport(?string $startDate, ?string $endDate, ?string $status, int $page = 1, int $rowPerPage = 15)
     {
-        $startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
 
         $baseQuery = Project::query()->whereBetween('start_date', [$startDate, $endDate]);
 
@@ -314,8 +379,8 @@ class ReportRepository implements ReportRepositoryInterface
      */
     public function getProjectExpenseReport(?string $startDate, ?string $endDate, ?int $projectId, int $page = 1, int $rowPerPage = 15)
     {
-        $startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
 
         $query = ProjectCashTransaction::query()
             ->whereBetween('transaction_date', [$startDate, $endDate]);
@@ -377,8 +442,8 @@ class ReportRepository implements ReportRepositoryInterface
      */
     public function getPph23Report(?string $startDate, ?string $endDate)
     {
-        $startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $endDate = $endDate ?: now()->endOfYear()->toDateString();
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
 
         $rows = PaymentReceipt::query()
             ->whereBetween('date', [$startDate, $endDate])

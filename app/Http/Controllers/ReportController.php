@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\AttendanceReportExport;
 use App\Exports\EmployeeReportExport;
+use App\Exports\CompanyCashBookReportExport;
 use App\Exports\FinanceReportExport;
 use App\Exports\PayrollReportExport;
 use App\Exports\Pph21ReportExport;
@@ -125,7 +126,13 @@ class ReportController extends Controller implements HasMiddleware
     public function finance(Request $request)
     {
         try {
-            $data = $this->reportRepository->getFinanceReport($request->start_date, $request->end_date);
+            $data = $this->reportRepository->getFinanceReport(
+                $request->start_date,
+                $request->end_date,
+                $request->query('source') === 'operational_cost' ? 'operational_cost' : 'cash_book',
+                (int) ($request->page ?? 1),
+                (int) ($request->row_per_page ?? 15),
+            );
 
             return ResponseHelper::jsonResponse(true, 'Finance Report Retrieved Successfully', $data, 200);
         } catch (\Throwable $e) {
@@ -404,14 +411,19 @@ class ReportController extends Controller implements HasMiddleware
         $type = $request->query('type', 'attendance');
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
-        $filename = "Report_".ucfirst($type)."_".now()->format('Ymd_His').'.xlsx';
+        $label = $type === 'finance'
+            ? ($request->query('source') === 'operational_cost' ? 'OperationalCost' : 'CompanyCashBook')
+            : str_replace(' ', '', ucwords(str_replace('_', ' ', $type)));
+        $filename = 'Report_'.$label.'_'.now('Asia/Jakarta')->format('Ymd_His').'.xlsx';
 
         try {
             $export = match ($type) {
                 'attendance' => new AttendanceReportExport($startDate, $endDate, $request->query('employee_id'), $request->query('status')),
                 'payroll' => new PayrollReportExport($startDate, $endDate),
                 'employee' => new EmployeeReportExport($request->query('team_id'), $request->query('status')),
-                'finance' => new FinanceReportExport($startDate, $endDate),
+                'finance' => $request->query('source') === 'operational_cost'
+                    ? new FinanceReportExport
+                    : new CompanyCashBookReportExport($startDate, $endDate),
                 'pph21' => new Pph21ReportExport($startDate, $endDate),
                 'ppn' => new PpnReportExport($startDate, $endDate),
                 'project' => new ProjectReportExport($startDate, $endDate, $request->query('status')),

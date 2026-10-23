@@ -8,6 +8,7 @@ use App\Models\CompanyCashBalance;
 use App\Models\CompanyCashTransaction;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\CompanyCashBookService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -16,7 +17,7 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class CompanyCashTransactionController extends Controller implements HasMiddleware
 {
-    public function __construct(protected CloudinaryManager $cloudinary) {}
+    public function __construct(protected CloudinaryManager $cloudinary, protected CompanyCashBookService $cashBook) {}
 
     public static function middleware()
     {
@@ -60,46 +61,11 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
             $page = (int) ($validated['page'] ?? 1);
             $rowPerPage = (int) ($validated['row_per_page'] ?? 15);
 
-            $allTransactions = CompanyCashTransaction::with(['creator', 'project'])
-                ->orderBy('transaction_date')
-                ->orderBy('id')
-                ->get();
-
-            $balanceRow = CompanyCashBalance::current();
-            $openingBalance = (float) $balanceRow->opening_balance;
-            $runningBalance = $openingBalance;
-
-            // Indonesian "buku kas" convention: Debit = uang masuk, Kredit
-            // = uang keluar/pemakaian -- matches the project cash ledger.
-            foreach ($allTransactions as $transaction) {
-                $amount = (float) $transaction->amount;
-                $runningBalance += $transaction->type === 'debit' ? $amount : -$amount;
-                $transaction->running_balance = $runningBalance;
-            }
-
-            $closingBalance = $runningBalance;
-
-            $filtered = $allTransactions;
-            if (! empty($validated['project_id'])) {
-                $filtered = $filtered->where('project_id', $validated['project_id']);
-            }
-            if (! empty($validated['type'])) {
-                $filtered = $filtered->where('type', $validated['type']);
-            }
-            if (! empty($validated['source'])) {
-                $filtered = $filtered->filter(fn ($t) => $t->isSynced() === ($validated['source'] === 'project'));
-            }
-            if (! empty($validated['start_date'])) {
-                $filtered = $filtered->filter(fn ($t) => $t->transaction_date->toDateString() >= $validated['start_date']);
-            }
-            if (! empty($validated['end_date'])) {
-                $filtered = $filtered->filter(fn ($t) => $t->transaction_date->toDateString() <= $validated['end_date']);
-            }
-            if (! empty($validated['search'])) {
-                $needle = mb_strtolower($validated['search']);
-                $filtered = $filtered->filter(fn ($t) => str_contains(mb_strtolower($t->description.' '.$t->notes.' '.$t->project?->name), $needle));
-            }
-            $filtered = $filtered->values();
+            $ledger = $this->cashBook->ledger($validated);
+            $balanceRow = $ledger['balance_row'];
+            $openingBalance = $ledger['opening_balance'];
+            $closingBalance = $ledger['closing_balance'];
+            $filtered = $ledger['rows'];
 
             $totalDebit = (float) $filtered->where('type', 'debit')->sum(fn ($t) => (float) $t->amount);
             $totalCredit = (float) $filtered->where('type', 'credit')->sum(fn ($t) => (float) $t->amount);
