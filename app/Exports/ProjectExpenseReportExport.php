@@ -20,8 +20,8 @@ class ProjectExpenseReportExport implements FromCollection, ShouldAutoSize, With
         protected ?string $endDate = null,
         protected ?int $projectId = null,
     ) {
-        $this->startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $this->endDate = $endDate ?: now()->endOfYear()->toDateString();
+        $this->startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
+        $this->endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
     }
 
     public function collection()

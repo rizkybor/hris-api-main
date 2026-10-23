@@ -2,105 +2,81 @@
 
 namespace App\Exports;
 
-use App\Enums\OperationalCostStatus;
-use App\Models\FixedCost;
-use App\Models\InfrastructureTool;
-use App\Models\SdmResource;
-use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use App\Interfaces\ReportRepositoryInterface;
+use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class FinanceReportExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithStyles, WithTitle
+/**
+ * Finance report, Operational Cost source: every Fixed Cost, SDM Resource and
+ * Infrastructure item with its status. Totals count only items in use, the
+ * same as the Operational Cost page -- standing costs, so not filtered by date.
+ */
+class FinanceReportExport implements FromArray, ShouldAutoSize, WithColumnFormatting, WithHeadings, WithStrictNullComparison, WithStyles, WithTitle
 {
-    public function __construct(
-        protected ?string $startDate = null,
-        protected ?string $endDate = null,
-    ) {
-        $this->startDate = $startDate ?: now()->startOfYear()->toDateString();
-        $this->endDate = $endDate ?: now()->endOfYear()->toDateString();
-    }
+    private int $dataRows = 0;
 
-    public function collection()
+    public function array(): array
     {
-        $range = [$this->startDate.' 00:00:00', $this->endDate.' 23:59:59'];
+        $report = app(ReportRepositoryInterface::class)->getFinanceReport(null, null, 'operational_cost');
 
-        $fixedCosts = FixedCost::whereBetween('created_at', $range)->get()->map(fn ($item) => [
-            'category' => 'Fixed Cost',
-            'name' => $item->financial_items,
-            'monthly_fee' => null,
-            'actual' => (float) $item->actual,
-            'notes' => $item->notes,
-            'status' => $item->status,
-            'expired_date' => $item->expired_date?->toDateString(),
-        ]);
+        $out = [];
+        foreach ($report['rows'] as $i => $row) {
+            $out[] = [
+                $i + 1,
+                $row['category'],
+                $row['name'],
+                $row['monthly'],
+                $row['annual'],
+                $row['in_use'] ? 'Digunakan' : 'Tidak Digunakan',
+                $row['expired_date'] ?? '',
+                $row['notes'] ?? '',
+            ];
+        }
+        $this->dataRows = count($out);
 
-        // Infrastructure never had a "Budget" concept -- its own pair is
-        // monthly/annual fee, kept as-is (not part of this Budget removal).
-        $infrastructure = InfrastructureTool::whereBetween('created_at', $range)->get()->map(fn ($item) => [
-            'category' => 'Infrastructure',
-            'name' => $item->tech_stack_component,
-            'monthly_fee' => (float) $item->monthly_fee,
-            'actual' => (float) $item->annual_fee,
-            'notes' => $item->notes,
-            'status' => $item->status,
-            'expired_date' => $item->expired_date?->toDateString(),
-        ]);
+        $s = $report['summary'];
+        $out[] = [''];
+        $out[] = ['', 'TOTAL (hanya item Digunakan)', 'Fixed Cost', $s['fixed_cost'], null, '', '', ''];
+        $out[] = ['', '', 'SDM Resource', $s['sdm'], null, '', '', ''];
+        $out[] = ['', '', 'Infrastructure', $s['infrastructure_monthly'], $s['infrastructure_annual'], '', '', ''];
 
-        $sdmResources = SdmResource::whereBetween('created_at', $range)->get()->map(fn ($item) => [
-            'category' => 'SDM Resource',
-            'name' => $item->sdm_component,
-            'monthly_fee' => null,
-            'actual' => (float) $item->actual,
-            'notes' => $item->notes,
-            'status' => $item->status,
-            'expired_date' => $item->expired_date?->toDateString(),
-        ]);
-
-        return new Collection([...$fixedCosts, ...$infrastructure, ...$sdmResources]);
+        return $out;
     }
 
     public function headings(): array
     {
-        return ['No', 'Kategori', 'Nama Item', 'Monthly Fee (Infra)', 'Actual / Annual Fee', 'Status', 'Expired', 'Catatan'];
+        return ['No', 'Kategori', 'Nama Item', 'Biaya / Bulan', 'Biaya / Tahun (Infra)', 'Status', 'Expired', 'Catatan'];
     }
 
-    public function map($row): array
+    public function columnFormats(): array
     {
-        static $rowNumber = 0;
-        $rowNumber++;
-
-        return [
-            $rowNumber,
-            $row['category'],
-            $row['name'],
-            $row['monthly_fee'],
-            $row['actual'],
-            OperationalCostStatus::tryFrom((string) $row['status'])?->label() ?? $row['status'],
-            $row['expired_date'] ?? '',
-            $row['notes'] ?? '',
-        ];
+        return ['D' => '#,##0', 'E' => '#,##0'];
     }
 
     public function styles(Worksheet $sheet)
     {
+        $totalRow = $this->dataRows + 3;
+
         return [
             1 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0C51D9']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ],
+            $totalRow => ['font' => ['bold' => true]],
         ];
     }
 
     public function title(): string
     {
-        return 'Finance Report';
+        return 'Operational Cost';
     }
 }
