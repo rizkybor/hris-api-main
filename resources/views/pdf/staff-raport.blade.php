@@ -89,11 +89,11 @@
         <div class="summary-row">
             <div class="summary-card">
                 <div class="value">{{ $attendance_rate !== null ? $attendance_rate.'%' : '-' }}</div>
-                <div class="label">Attendance Rate ({{ $attendance['present'] + $attendance['late'] }}/{{ $attendance['total'] }} days)</div>
+                <div class="label">Attendance ({{ $attendance['total'] }} working days scored)</div>
             </div>
             <div class="summary-card">
                 <div class="value">{{ $task_completion_rate !== null ? $task_completion_rate.'%' : '-' }}</div>
-                <div class="label">Task Completion ({{ $tasks['done'] }}/{{ $tasks['total'] }} tasks)</div>
+                <div class="label">Task Completion ({{ $tasks['done'] }}/{{ $tasks['total'] }} tasks due)</div>
             </div>
             <div class="summary-card">
                 <div class="value">{{ $overall_score !== null ? $overall_score.'%' : '-' }}</div>
@@ -105,23 +105,32 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Present</th>
+                    <th>Working Days</th>
+                    <th>On Time</th>
+                    <th>Remote</th>
                     <th>Late</th>
-                    <th>Absent</th>
-                    <th>Sick Leave</th>
-                    <th>Total Records</th>
+                    <th>Absent / No Check-in</th>
+                    <th>Sick / Leave</th>
+                    <th>Holidays</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
+                    <td>{{ $attendance['working_days'] }}</td>
                     <td>{{ $attendance['present'] }}</td>
-                    <td>{{ $attendance['late'] }}</td>
-                    <td>{{ $attendance['absent'] }}</td>
-                    <td>{{ $attendance['sick_leave'] }}</td>
-                    <td>{{ $attendance['total'] }}</td>
+                    <td>{{ $attendance['remote'] }}</td>
+                    <td>{{ $attendance['late'] }}@if($attendance['late']) ({{ $attendance['late_minutes'] }} min)@endif</td>
+                    <td>{{ $attendance['absent'] + $attendance['no_record'] }}</td>
+                    <td>{{ $attendance['sick_leave'] + $attendance['leave'] }}</td>
+                    <td>{{ $attendance['holidays'] }}</td>
                 </tr>
             </tbody>
         </table>
+        <p style="color: #6b7280; font-size: 8.5pt; margin: -4mm 0 5mm 0;">
+            Each working day is scored: on time / remote 100, late up to 15 min 90, 16-60 min 75, over 60 min 50, absent or no check-in 0.
+            Sick days, approved leave and holidays are not counted.
+            @if($tasks['staff_done_late']) {{ $tasks['staff_done_late'] }} staff task(s) were completed after their due date. @endif
+        </p>
 
         <h3 class="section-title">Completed Tasks ({{ count($completed_tasks) }})</h3>
         @if(count($completed_tasks) > 0)

@@ -30,8 +30,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function getAttendanceReport(?string $startDate, ?string $endDate, ?int $employeeId, ?string $status, int $page = 1, int $rowPerPage = 15)
     {
-        $startDate = $startDate ?: now()->startOfMonth()->toDateString();
-        $endDate = $endDate ?: now()->endOfMonth()->toDateString();
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfMonth()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfMonth()->toDateString();
 
         $baseQuery = Attendance::query()->whereBetween('date', [$startDate, $endDate]);
 
@@ -457,8 +457,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function getStaffRaportList(?string $search, ?string $employmentType, ?string $startDate, ?string $endDate, int $page = 1, int $rowPerPage = 15)
     {
-        $startDate = $startDate ?: now()->startOfMonth()->toDateString();
-        $endDate = $endDate ?: now()->endOfMonth()->toDateString();
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfMonth()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfMonth()->toDateString();
 
         $query = EmployeeProfile::query()->with(['user', 'jobInformation.team']);
 
@@ -512,8 +512,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function getStaffRaportDetail(int $employeeId, ?string $startDate, ?string $endDate)
     {
-        $startDate = $startDate ?: now()->startOfMonth()->toDateString();
-        $endDate = $endDate ?: now()->endOfMonth()->toDateString();
+        $startDate = $startDate ?: now('Asia/Jakarta')->startOfMonth()->toDateString();
+        $endDate = $endDate ?: now('Asia/Jakarta')->endOfMonth()->toDateString();
 
         $employee = EmployeeProfile::with(['user', 'jobInformation.team'])->findOrFail($employeeId);
         $performance = $this->performanceCalculator->calculate($employeeId, $startDate, $endDate);
