@@ -264,6 +264,7 @@ Route::prefix('v1')
 
             // Subscriptions (manual recurring billing -- maintenance,
             // domain renewal, SaaS)
+            Route::get('subscriptions/summary', [SubscriptionController::class, 'summary']);
             Route::post('subscriptions/{id}/generate-invoice', [SubscriptionController::class, 'generateInvoice']);
             Route::apiResource('subscriptions', SubscriptionController::class)->except(['show']);
 
