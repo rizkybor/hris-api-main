@@ -13,6 +13,7 @@ use App\Exports\ProjectExpenseReportExport;
 use App\Exports\ProjectReportExport;
 use App\Exports\SubscriptionReportExport;
 use App\Helpers\ResponseHelper;
+use Carbon\Carbon;
 use App\Interfaces\EmployeeProfileRepositoryInterface;
 use App\Interfaces\PayrollRepositoryInterface;
 use App\Interfaces\ProjectRepositoryInterface;
@@ -231,7 +232,11 @@ class ReportController extends Controller implements HasMiddleware
     public function staffRaportDetail(Request $request, string $employeeId)
     {
         try {
-            $data = $this->reportRepository->getStaffRaportDetail((int) $employeeId, $request->start_date, $request->end_date);
+            $employee = EmployeeProfile::with('jobInformation')->findOrFail($employeeId);
+            [$startDate, $endDate, $periodLabel] = $this->raportPeriod($request, $employee);
+
+            $data = $this->reportRepository->getStaffRaportDetail((int) $employeeId, $startDate, $endDate);
+            $data['period_label'] = $periodLabel;
 
             return ResponseHelper::jsonResponse(true, 'Staff Raport Detail Retrieved Successfully', $data, 200);
         } catch (ModelNotFoundException $e) {
@@ -242,28 +247,39 @@ class ReportController extends Controller implements HasMiddleware
     }
 
     /**
-     * PDF download with its own period picker (week/month/all), separate
-     * from whatever date range is currently applied on the list -- per
-     * spec, downloading a raport is a deliberate "give me this employee's
-     * week/month/all-time summary" action, not tied to the list's filters.
+     * The raport's date range: `period` = week / month / all, or explicit
+     * start_date/end_date (the list's filter). Shared by the detail modal and
+     * the PDF so both always show the same period.
      */
+    private function raportPeriod(Request $request, EmployeeProfile $employee): array
+    {
+        $now = now('Asia/Jakarta');
+        $period = $request->query('period');
+
+        if (! $period && $request->start_date && $request->end_date) {
+            $label = Carbon::parse($request->start_date)->translatedFormat('d M Y').' – '.Carbon::parse($request->end_date)->translatedFormat('d M Y');
+
+            return [$request->start_date, $request->end_date, $label];
+        }
+
+        return match ($period) {
+            'week' => [$now->copy()->startOfWeek()->toDateString(), $now->copy()->endOfWeek()->toDateString(), 'This Week'],
+            'all' => [
+                $employee->jobInformation?->start_date?->toDateString() ?? '2000-01-01',
+                $now->toDateString(),
+                'All Time',
+            ],
+            default => [$now->copy()->startOfMonth()->toDateString(), $now->copy()->endOfMonth()->toDateString(), 'This Month'],
+        };
+    }
+
+    /** PDF download for the same period the detail modal shows. */
     public function staffRaportPdf(Request $request, string $employeeId)
     {
-        $period = $request->query('period', 'month');
-
         try {
             $employee = EmployeeProfile::with('jobInformation')->findOrFail($employeeId);
-
-            $now = now('Asia/Jakarta');
-            [$startDate, $endDate, $periodLabel] = match ($period) {
-                'week' => [$now->copy()->startOfWeek()->toDateString(), $now->copy()->endOfWeek()->toDateString(), 'This Week'],
-                'all' => [
-                    $employee->jobInformation?->start_date?->toDateString() ?? '2000-01-01',
-                    $now->toDateString(),
-                    'All Time',
-                ],
-                default => [$now->copy()->startOfMonth()->toDateString(), $now->copy()->endOfMonth()->toDateString(), 'This Month'],
-            };
+            [$startDate, $endDate, $periodLabel] = $this->raportPeriod($request, $employee);
+            $period = $request->query('period', 'custom');
 
             $data = $this->reportRepository->getStaffRaportDetail((int) $employeeId, $startDate, $endDate);
             $data['period_label'] = $periodLabel;
