@@ -3,21 +3,47 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\Holiday;
+use App\Models\JobInformation;
+use App\Models\LeaveRequest;
 use App\Models\ProjectTask;
 use App\Models\StaffTaskAssignee;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 
 /**
  * Derives a data-driven performance score for one employee over a date
- * range -- 50% attendance rate, 50% task completion rate -- converted to a
- * 1-5 star rating. Deliberately separate from PerformanceReview, which is a
- * manager-submitted qualitative review with its own free-text rating; this
- * is a computed metric pulled straight from attendance and task records.
+ * range -- 50% attendance, 50% task completion -- converted to a 1-5 star
+ * rating. Deliberately separate from PerformanceReview, which is a
+ * manager-submitted qualitative review; this is computed straight from
+ * attendance and task records.
+ *
+ * Attendance is scored per working day (Mon-Fri, not a holiday, from the
+ * employee's join date up to today, WIB):
+ *   on time / remote / weekday overtime  100
+ *   late <= 15 min                         90
+ *   late 16-60 min                         75
+ *   late > 60 min                          50
+ *   half day                               50
+ *   absent, or no check-in at all           0
+ *   sick / approved leave              not counted
+ * so a day nobody clocked in on counts against the rate instead of being
+ * invisible, and being late costs something.
  */
 class StaffPerformanceCalculator
 {
+    private const TZ = 'Asia/Jakarta';
+
     private const ATTENDANCE_WEIGHT = 0.5;
 
     private const TASK_WEIGHT = 0.5;
+
+    /** [max late minutes, points] -- first tier that fits wins. */
+    public const LATE_TIERS = [[15, 90], [60, 75], [PHP_INT_MAX, 50]];
+
+    private const FULL_DAY = ['present', 'remote', 'overtime'];
+
+    private const EXCUSED = ['sick_leave', 'annual_leave'];
 
     public function calculate(int $employeeId, string $startDate, string $endDate): array
     {
@@ -25,7 +51,7 @@ class StaffPerformanceCalculator
         $tasks = $this->taskBreakdown($employeeId, $startDate, $endDate);
 
         $attendanceRate = $attendance['total'] > 0
-            ? round((($attendance['present'] + $attendance['late']) / $attendance['total']) * 100, 1)
+            ? round($attendance['points'] / $attendance['total'], 1)
             : null;
 
         $taskRate = $tasks['total'] > 0
@@ -43,6 +69,17 @@ class StaffPerformanceCalculator
             'overall_score' => $overallScore,
             'stars' => $stars,
         ];
+    }
+
+    public static function latePoints(?int $minutes): int
+    {
+        foreach (self::LATE_TIERS as [$max, $points]) {
+            if (($minutes ?? 0) <= $max) {
+                return $points;
+            }
+        }
+
+        return 50;
     }
 
     /**
@@ -68,67 +105,161 @@ class StaffPerformanceCalculator
         return round($attendanceRate * self::ATTENDANCE_WEIGHT + $taskRate * self::TASK_WEIGHT, 1);
     }
 
-    /**
-     * @return array{total: int, present: int, late: int, absent: int, sick_leave: int}
-     */
-    /**
-     * Saturday/Sunday are excluded outright (DAYOFWEEK: 1=Sunday,
-     * 7=Saturday) -- they aren't scheduled work days, so they never enter
-     * the attendance rate at all, regardless of status. A weekend
-     * clock-in is tagged 'overtime' rather than present/late anyway (see
-     * AttendanceRepository::checkIn()), but this filter is what actually
-     * keeps the rate honest even if that tagging ever changes.
-     */
+    /** The part of the range that can be judged: from joining, up to today. */
+    private function window(int $employeeId, string $startDate, string $endDate): array
+    {
+        $today = Carbon::now(self::TZ)->toDateString();
+        $joined = JobInformation::where('employee_id', $employeeId)->value('start_date');
+        $joined = $joined ? Carbon::parse($joined)->toDateString() : null;
+
+        $from = $joined && $joined > $startDate ? $joined : $startDate;
+        $to = min($endDate, $today);
+
+        return [$from, $to, $today];
+    }
+
     private function attendanceBreakdown(int $employeeId, string $startDate, string $endDate): array
     {
-        $counts = Attendance::where('employee_id', $employeeId)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->whereRaw('DAYOFWEEK(date) NOT IN (1, 7)')
-            ->selectRaw('status, count(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
+        [$from, $to, $today] = $this->window($employeeId, $startDate, $endDate);
 
-        $overtimeDays = (int) Attendance::where('employee_id', $employeeId)
+        $records = Attendance::where('employee_id', $employeeId)
             ->whereBetween('date', [$startDate, $endDate])
-            ->where('status', 'overtime')
-            ->count();
+            ->get()
+            ->keyBy(fn ($a) => $a->date->toDateString());
 
-        return [
-            'total' => (int) $counts->sum(),
-            'present' => (int) ($counts['present'] ?? 0),
-            'late' => (int) ($counts['late'] ?? 0),
-            'absent' => (int) ($counts['absent'] ?? 0),
-            'sick_leave' => (int) ($counts['sick_leave'] ?? 0),
-            'overtime_days' => $overtimeDays,
+        $holidays = Holiday::between($startDate, $endDate);
+        $onLeave = $this->approvedLeaveDays($employeeId, $startDate, $endDate);
+
+        $out = [
+            'working_days' => 0, 'total' => 0, 'points' => 0,
+            'present' => 0, 'remote' => 0, 'late' => 0, 'late_minutes' => 0,
+            'late_tiers' => ['minor' => 0, 'moderate' => 0, 'severe' => 0],
+            'half_day' => 0, 'absent' => 0, 'no_record' => 0,
+            'sick_leave' => 0, 'leave' => 0, 'holidays' => 0,
+            'overtime_days' => $records->where('status', 'overtime')->count(),
         ];
+
+        if ($from > $to) {
+            return $out;
+        }
+
+        foreach (CarbonPeriod::create($from, $to) as $day) {
+            $date = $day->toDateString();
+            if ($day->isWeekend()) {
+                continue;
+            }
+            if (isset($holidays[$date])) {
+                $out['holidays']++;
+
+                continue;
+            }
+
+            $out['working_days']++;
+            $record = $records->get($date);
+            $status = $record?->status;
+
+            // Excused: sick/leave on the record, or approved leave with no
+            // proper check-in that day.
+            if (in_array($status, self::EXCUSED, true)) {
+                $status === 'sick_leave' ? $out['sick_leave']++ : $out['leave']++;
+
+                continue;
+            }
+            if (isset($onLeave[$date]) && ! in_array($status, [...self::FULL_DAY, 'late', 'half_day'], true)) {
+                $onLeave[$date] === 'sick_leave' ? $out['sick_leave']++ : $out['leave']++;
+
+                continue;
+            }
+
+            if (! $record) {
+                // Today isn't over yet -- no check-in so far isn't a miss.
+                if ($date === $today) {
+                    $out['working_days']--;
+
+                    continue;
+                }
+                $out['no_record']++;
+                $out['total']++;
+
+                continue;
+            }
+
+            $out['total']++;
+            if (in_array($status, self::FULL_DAY, true)) {
+                $status === 'remote' ? $out['remote']++ : $out['present']++;
+                $out['points'] += 100;
+            } elseif ($status === 'late') {
+                $minutes = (int) ($record->late_minutes ?? 0);
+                $points = self::latePoints($minutes);
+                $out['late']++;
+                $out['late_minutes'] += $minutes;
+                $out['late_tiers'][$points === 90 ? 'minor' : ($points === 75 ? 'moderate' : 'severe')]++;
+                $out['points'] += $points;
+            } elseif ($status === 'half_day') {
+                $out['half_day']++;
+                $out['points'] += 50;
+            } else {
+                $out['absent']++;
+            }
+        }
+
+        return $out;
+    }
+
+    /** "Y-m-d" => leave type for every day covered by an approved leave. */
+    private function approvedLeaveDays(int $employeeId, string $startDate, string $endDate): array
+    {
+        $days = [];
+        LeaveRequest::where('employee_id', $employeeId)
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $endDate)
+            ->whereDate('end_date', '>=', $startDate)
+            ->get()
+            ->each(function ($leave) use (&$days) {
+                $type = $leave->leave_type?->value ?? (string) $leave->leave_type;
+                foreach (CarbonPeriod::create($leave->start_date, $leave->end_date) as $day) {
+                    $days[$day->toDateString()] = $type;
+                }
+            });
+
+        return $days;
     }
 
     /**
-     * "Due in period" (not "created in period") is the denominator, so a
-     * task assigned earlier but due this week still counts here -- and
-     * "completed" is read off task/assignee status, not a completed_at
-     * column (project_tasks has none; staff_task_assignees tracks status
-     * only, timestamped via status_updated_at).
-     *
-     * @return array{total: int, done: int, project_tasks: int, staff_tasks: int}
+     * Tasks due in the period count once their due date has arrived (a task
+     * due next week isn't failed yet), or earlier if already done. Cancelled
+     * project tasks are left out. "Done" comes from task/assignee status;
+     * for staff tasks, status_updated_at also tells whether it was finished
+     * after the due date.
      */
     private function taskBreakdown(int $employeeId, string $startDate, string $endDate): array
     {
-        $projectTasksQuery = ProjectTask::where('assignee_id', $employeeId)
-            ->whereBetween('due_date', [$startDate, $endDate]);
-        $projectTasksTotal = (clone $projectTasksQuery)->count();
-        $projectTasksDone = (clone $projectTasksQuery)->where('status', 'done')->count();
+        $cutoff = min($endDate, Carbon::now(self::TZ)->toDateString());
 
-        $staffTasksQuery = StaffTaskAssignee::where('employee_id', $employeeId)
-            ->whereHas('task', fn ($q) => $q->whereBetween('due_date', [$startDate, $endDate]));
-        $staffTasksTotal = (clone $staffTasksQuery)->count();
-        $staffTasksDone = (clone $staffTasksQuery)->where('status', 'done')->count();
+        $project = ProjectTask::where('assignee_id', $employeeId)
+            ->whereBetween('due_date', [$startDate, $endDate])
+            ->where('status', '!=', 'cancelled')
+            ->get(['id', 'status', 'due_date']);
+        $projectCounted = $project->filter(fn ($t) => $t->status === 'done' || Carbon::parse($t->due_date)->toDateString() <= $cutoff);
+
+        $staff = StaffTaskAssignee::where('employee_id', $employeeId)
+            ->whereHas('task', fn ($q) => $q->whereBetween('due_date', [$startDate, $endDate]))
+            ->with('task:id,due_date')
+            ->get();
+        $staffCounted = $staff->filter(fn ($a) => $a->status === 'done' || $a->task->due_date->toDateString() <= $cutoff);
+        $staffDone = $staffCounted->where('status', 'done');
+        $staffDoneLate = $staffDone->filter(fn ($a) => $a->status_updated_at
+            && $a->status_updated_at->copy()->setTimezone(self::TZ)->toDateString() > $a->task->due_date->toDateString());
 
         return [
-            'total' => $projectTasksTotal + $staffTasksTotal,
-            'done' => $projectTasksDone + $staffTasksDone,
-            'project_tasks' => $projectTasksTotal,
-            'staff_tasks' => $staffTasksTotal,
+            'total' => $projectCounted->count() + $staffCounted->count(),
+            'done' => $projectCounted->where('status', 'done')->count() + $staffDone->count(),
+            'project_tasks' => $projectCounted->count(),
+            'project_done' => $projectCounted->where('status', 'done')->count(),
+            'staff_tasks' => $staffCounted->count(),
+            'staff_done' => $staffDone->count(),
+            'staff_done_late' => $staffDoneLate->count(),
+            'upcoming' => ($project->count() - $projectCounted->count()) + ($staff->count() - $staffCounted->count()),
         ];
     }
 }
