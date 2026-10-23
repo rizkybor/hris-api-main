@@ -146,6 +146,7 @@ class RolePermissionSeeder extends Seeder
                     'task-list',
                     'team-menu',
                     'attendance-menu',
+                    'attendance-edit',
                     'project-menu',
                     'payroll-menu',
                 ]))->merge(Permission::whereIn('name', $superAdminOnlyWidgets)->get())
@@ -192,7 +193,7 @@ class RolePermissionSeeder extends Seeder
                     // attendance-setting-edit is explicitly excluded here despite the
                     // 'attendance-' prefix above -- only Superadmin/Manager may flip the
                     // weekend clock-in toggle, per spec.
-                ], array_merge($employeeSpecific, $officialMemoApproveOnly, $documentEditRestricted, ['attendance-setting-edit']))
+                ], array_merge($employeeSpecific, $officialMemoApproveOnly, $documentEditRestricted, ['attendance-setting-edit', 'attendance-edit']))
                     // HR's original dashboard: Pending Leave Requests, Sticky
                     // Notes, Key Metrics, Project Budget, Quick Access,
                     // Latest Employees -- not the full widget catalog.
@@ -336,6 +337,9 @@ class RolePermissionSeeder extends Seeder
                     'payslip-view',
                     'attendance-menu',
                     'attendance-list',
+                    // Correct staff attendance records (with Manager and
+                    // Operational Director; HR and Superadmin don't get it).
+                    'attendance-edit',
                     'leave-request-menu',
                     'leave-request-list',
                     'payroll-menu',
