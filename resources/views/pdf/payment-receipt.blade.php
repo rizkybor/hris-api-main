@@ -45,8 +45,9 @@
             @endif
             <tr>
                 <td class="label">For Payment of</td>
-                <td>: {{ $receipt->for_payment_of }}
-                    @if($receipt->invoice)
+                @php($forPayment = $receipt->forPaymentLine())
+                <td>: {{ $forPayment['text'] }}
+                    @if($forPayment['append_invoice'])
                         berdasarkan Invoice No. <strong>{{ $receipt->invoice->invoice_number }}</strong>.
                     @endif
                 </td>

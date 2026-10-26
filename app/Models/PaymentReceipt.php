@@ -66,4 +66,32 @@ class PaymentReceipt extends Model
                 ->orWhere('received_from', 'like', '%'.$search.'%');
         });
     }
+
+    /**
+     * "For Payment of" as printed, and whether the PDF should still add
+     * "berdasarkan Invoice No. ..." after it. That reference is added for a
+     * linked invoice, so the same reference typed (or auto-filled) at the
+     * end of the field is dropped to avoid printing it twice; text that
+     * already names the invoice mid-sentence is printed as written.
+     *
+     * @return array{text: string, append_invoice: bool}
+     */
+    public function forPaymentLine(): array
+    {
+        $text = trim((string) $this->for_payment_of);
+        $number = $this->invoice?->invoice_number;
+
+        if (! $number) {
+            return ['text' => $text, 'append_invoice' => false];
+        }
+
+        $pattern = '/[\s,.;-]*(berdasarkan\s+|sesuai\s+|for\s+)?(invoice|inv)\.?\s*(no\.?|nomor|number|#)?\s*:?\s*'.preg_quote($number, '/').'[\s.]*$/iu';
+        $text = trim(preg_replace($pattern, '', $text), " \t\n\r,.;-");
+
+        if (mb_stripos($text, $number) !== false) {
+            return ['text' => $text, 'append_invoice' => false];
+        }
+
+        return ['text' => $text !== '' ? $text : 'Pembayaran', 'append_invoice' => true];
+    }
 }
