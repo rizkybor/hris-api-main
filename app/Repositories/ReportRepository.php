@@ -16,13 +16,13 @@ use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\PerformanceReview;
 use App\Models\Project;
-use App\Models\ProjectCashTransaction;
 use App\Models\ProjectTask;
 use App\Models\SdmResource;
 use App\Models\StaffTaskAssignee;
 use App\Models\Subscription;
 use App\Services\CompanyCashBookService;
 use App\Services\MaintenanceService;
+use App\Services\ProjectBillingService;
 use App\Services\StaffPerformanceCalculator;
 use Carbon\Carbon;
 
@@ -32,6 +32,7 @@ class ReportRepository implements ReportRepositoryInterface
         private StaffPerformanceCalculator $performanceCalculator,
         private CompanyCashBookService $cashBook,
         private MaintenanceService $maintenance,
+        private ProjectBillingService $billing,
     ) {}
 
     public function getAttendanceReport(?string $startDate, ?string $endDate, ?int $employeeId, ?string $status, int $page = 1, int $rowPerPage = 15)
@@ -343,11 +344,23 @@ class ReportRepository implements ReportRepositoryInterface
             $baseQuery->where('status', $status);
         }
 
+        // Billing (invoiced vs paid) across every project in the filter, not
+        // just this page -- see ProjectBillingService.
+        $all = (clone $baseQuery)->get(['id', 'budget']);
+        $invoicesByProject = $this->billing->invoicesFor($all->pluck('id')->all());
+        $billingFor = fn ($p) => $this->billing->summary((float) $p->budget, $invoicesByProject->get($p->id, collect()));
+        $billing = $all->mapWithKeys(fn ($p) => [$p->id => $billingFor($p)]);
+
         $summary = [
-            'total_projects' => (clone $baseQuery)->count(),
+            'total_projects' => $all->count(),
             'active_projects' => (clone $baseQuery)->where('status', 'active')->count(),
             'completed_projects' => (clone $baseQuery)->where('status', 'completed')->count(),
-            'total_budget' => (float) (clone $baseQuery)->sum('budget'),
+            'total_budget' => (float) $all->sum('budget'),
+            'total_invoiced' => round($billing->sum('invoiced_total'), 2),
+            'total_paid' => round($billing->sum('paid_total'), 2),
+            'total_outstanding' => round($billing->sum('outstanding'), 2),
+            'total_not_invoiced' => round($billing->sum('not_invoiced'), 2),
+            'billing_status_counts' => $billing->countBy('status'),
         ];
 
         $paginated = (clone $baseQuery)
@@ -359,74 +372,15 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('start_date', 'desc')
             ->paginate($rowPerPage, ['*'], 'page', $page);
 
+        $paginated->getCollection()->each(function ($project) use ($billing) {
+            $b = $billing->get($project->id);
+            $project->setAttribute('billing', collect($b)->except('invoices')->all());
+        });
+
         return [
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
             'summary' => $summary,
             'rows' => $paginated->items(),
-            'meta' => [
-                'current_page' => $paginated->currentPage(),
-                'last_page' => $paginated->lastPage(),
-                'per_page' => $paginated->perPage(),
-                'total' => $paginated->total(),
-                'from' => $paginated->firstItem(),
-                'to' => $paginated->lastItem(),
-            ],
-        ];
-    }
-
-    /**
-     * One row per project cash ledger transaction (debit/credit) within
-     * the period, optionally narrowed to a single project -- shows the
-     * actual transaction date, unlike the old per-project-aggregate shape
-     * this replaced (a whole project doesn't have one meaningful date).
-     */
-    public function getProjectExpenseReport(?string $startDate, ?string $endDate, ?int $projectId, int $page = 1, int $rowPerPage = 15)
-    {
-        $startDate = $startDate ?: now('Asia/Jakarta')->startOfYear()->toDateString();
-        $endDate = $endDate ?: now('Asia/Jakarta')->endOfYear()->toDateString();
-
-        $query = ProjectCashTransaction::query()
-            ->whereBetween('transaction_date', [$startDate, $endDate]);
-
-        if ($projectId) {
-            $query->where('project_id', $projectId);
-        }
-
-        $totalDebit = (float) (clone $query)->where('type', 'debit')->sum('amount');
-        $totalCredit = (float) (clone $query)->where('type', 'credit')->sum('amount');
-        $involvedProjectIds = (clone $query)->distinct()->pluck('project_id');
-        $totalBudget = (float) Project::whereIn('id', $involvedProjectIds)->sum('budget');
-
-        $summary = [
-            'total_projects' => $involvedProjectIds->count(),
-            'total_budget' => $totalBudget,
-            'total_debit' => $totalDebit,
-            'total_credit' => $totalCredit,
-            // Debit = money in, Credit = money out (Indonesian "buku kas"
-            // convention -- see ProjectCashTransactionController).
-            'total_balance' => $totalBudget + $totalDebit - $totalCredit,
-        ];
-
-        $paginated = (clone $query)
-            ->with('project:id,name')
-            ->orderBy('transaction_date', 'desc')
-            ->orderBy('id', 'desc')
-            ->paginate($rowPerPage, ['*'], 'page', $page);
-
-        $rows = collect($paginated->items())->map(fn ($transaction) => [
-            'id' => $transaction->id,
-            'transaction_date' => $transaction->transaction_date->toDateString(),
-            'project_id' => $transaction->project_id,
-            'project_name' => $transaction->project?->name,
-            'description' => $transaction->description,
-            'type' => $transaction->type,
-            'amount' => (float) $transaction->amount,
-        ]);
-
-        return [
-            'period' => ['start_date' => $startDate, 'end_date' => $endDate],
-            'summary' => $summary,
-            'rows' => $rows,
             'meta' => [
                 'current_page' => $paginated->currentPage(),
                 'last_page' => $paginated->lastPage(),
