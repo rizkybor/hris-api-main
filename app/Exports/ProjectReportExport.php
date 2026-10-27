@@ -3,17 +3,19 @@
 namespace App\Exports;
 
 use App\Models\Project;
+use App\Services\ProjectBillingService;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ProjectReportExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithStyles, WithTitle
+class ProjectReportExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithStrictNullComparison, WithStyles, WithTitle
 {
     public function __construct(
         protected ?string $startDate = null,
@@ -38,12 +40,26 @@ class ProjectReportExport implements FromCollection, ShouldAutoSize, WithHeading
             $query->where('status', $this->status);
         }
 
-        return $query->orderBy('start_date', 'desc')->get();
+        $projects = $query->orderBy('start_date', 'desc')->get();
+
+        // Same invoiced/paid figures as the report tab and project detail.
+        $billing = app(ProjectBillingService::class);
+        $invoices = $billing->invoicesFor($projects->pluck('id')->all());
+        $projects->each(fn ($p) => $p->setAttribute('billing', $billing->summary((float) $p->budget, $invoices->get($p->id, collect()))));
+
+        return $projects;
     }
+
+    private const BILLING_STATUS = [
+        'settled' => 'Settled',
+        'outstanding' => 'Outstanding',
+        'overpaid' => 'Overpaid',
+        'not_invoiced' => 'Not invoiced',
+    ];
 
     public function headings(): array
     {
-        return ['No', 'Nama Project', 'Project Leader', 'Client', 'Status', 'Prioritas', 'Tanggal Mulai', 'Tanggal Selesai', 'Budget', 'Task Selesai'];
+        return ['No', 'Nama Project', 'Project Leader', 'Client', 'Status', 'Prioritas', 'Tanggal Mulai', 'Tanggal Selesai', 'Budget', 'Task Selesai', 'Invoiced', 'Paid', 'Outstanding', 'Not Invoiced (DPP)', 'Billing Status'];
     }
 
     public function map($project): array
@@ -62,6 +78,11 @@ class ProjectReportExport implements FromCollection, ShouldAutoSize, WithHeading
             optional($project->end_date)->format('d M Y'),
             (float) ($project->budget ?? 0),
             "{$project->tasks_done_count}/{$project->tasks_total_count}",
+            (float) $project->billing['invoiced_total'],
+            (float) $project->billing['paid_total'],
+            (float) $project->billing['outstanding'],
+            (float) $project->billing['not_invoiced'],
+            self::BILLING_STATUS[$project->billing['status']] ?? $project->billing['status'],
         ];
     }
 

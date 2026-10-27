@@ -342,7 +342,6 @@ Route::prefix('v1')
             Route::get('reports/ppn', [ReportController::class, 'ppn']);
             Route::get('reports/project', [ReportController::class, 'project']);
             Route::get('reports/pph23', [ReportController::class, 'pph23']);
-            Route::get('reports/project-expense', [ReportController::class, 'projectExpense']);
             Route::get('reports/subscription', [ReportController::class, 'subscription']);
             Route::get('reports/maintenance', [ReportController::class, 'maintenance']);
             Route::get('reports/documents', [ReportController::class, 'documents']);
