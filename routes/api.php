@@ -40,6 +40,7 @@ use App\Http\Controllers\LandingPageRateSettingController;
 use App\Http\Controllers\ProjectCalculationController;
 use App\Http\Controllers\ProjectRateSettingController;
 use App\Http\Controllers\ProjectDocumentController;
+use App\Http\Controllers\ProjectBillingController;
 use App\Http\Controllers\ProjectCashTransactionController;
 use App\Http\Controllers\CompanyCashTransactionController;
 use App\Http\Controllers\ProjectTaskController;
@@ -141,6 +142,7 @@ Route::prefix('v1')
 
             // Project Cash Ledger (debit/credit against the project's budget)
             Route::apiResource('project-cash-transactions', ProjectCashTransactionController::class)->except(['show']);
+            Route::get('projects/{projectId}/billing', [ProjectBillingController::class, 'show']);
 
             // Company Cash Book (debit/credit across the whole company --
             // auto-synced from every project's own ledger above, plus
