@@ -12,7 +12,6 @@ use App\Exports\PayrollReportExport;
 use App\Exports\Pph21ReportExport;
 use App\Exports\Pph23ReportExport;
 use App\Exports\PpnReportExport;
-use App\Exports\ProjectExpenseReportExport;
 use App\Exports\ProjectReportExport;
 use App\Exports\SubscriptionReportExport;
 use App\Helpers\ResponseHelper;
@@ -27,9 +26,7 @@ use App\Models\Invoice;
 use App\Models\PaymentReceipt;
 use App\Models\Payroll;
 use App\Models\Project;
-use App\Models\ProjectCashTransaction;
 use App\Models\Subscription;
-use App\Services\CompanyCashLedgerSyncService;
 use App\Services\DocumentReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -53,7 +50,6 @@ class ReportController extends Controller implements HasMiddleware
         'ppn' => [Invoice::class, 'date'],
         'pph23' => [PaymentReceipt::class, 'date'],
         'project' => [Project::class, 'start_date'],
-        'project_expense' => [ProjectCashTransaction::class, 'transaction_date'],
         'subscription' => [Subscription::class, 'start_date'],
     ];
 
@@ -62,13 +58,12 @@ class ReportController extends Controller implements HasMiddleware
         private EmployeeProfileRepositoryInterface $employeeProfileRepository,
         private PayrollRepositoryInterface $payrollRepository,
         private ProjectRepositoryInterface $projectRepository,
-        private CompanyCashLedgerSyncService $companyCashSync,
     ) {}
 
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project', 'pph23', 'projectExpense', 'subscription', 'maintenance', 'documents']),
+            new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project', 'pph23', 'subscription', 'maintenance', 'documents']),
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
             new Middleware(PermissionMiddleware::using(['staff-raport-menu|staff-raport-list']), only: ['staffRaport', 'staffRaportDetail']),
             new Middleware(PermissionMiddleware::using(['staff-raport-export']), only: ['staffRaportPdf']),
@@ -219,23 +214,6 @@ class ReportController extends Controller implements HasMiddleware
             );
 
             return ResponseHelper::jsonResponse(true, 'Project Report Retrieved Successfully', $data, 200);
-        } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
-        }
-    }
-
-    public function projectExpense(Request $request)
-    {
-        try {
-            $data = $this->reportRepository->getProjectExpenseReport(
-                $request->start_date,
-                $request->end_date,
-                $request->project_id ? (int) $request->project_id : null,
-                (int) ($request->page ?? 1),
-                (int) ($request->row_per_page ?? 15)
-            );
-
-            return ResponseHelper::jsonResponse(true, 'Project Cash Ledger Report Retrieved Successfully', $data, 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
@@ -405,7 +383,6 @@ class ReportController extends Controller implements HasMiddleware
             'ppn' => Invoice::findOrFail($id)->delete(),
             'pph23' => PaymentReceipt::findOrFail($id)->delete(),
             'project' => $this->projectRepository->delete((string) $id),
-            'project_expense' => $this->deleteProjectCashTransaction((string) $id),
             'subscription' => Subscription::findOrFail($id)->delete(),
             default => throw new \InvalidArgumentException('Unsupported report type for deletion.'),
         };
@@ -420,13 +397,6 @@ class ReportController extends Controller implements HasMiddleware
         }
 
         $this->employeeProfileRepository->delete($id);
-    }
-
-    private function deleteProjectCashTransaction(string $id): void
-    {
-        $transaction = ProjectCashTransaction::findOrFail($id);
-        $this->companyCashSync->remove($transaction);
-        $transaction->delete();
     }
 
     public function export(Request $request)
@@ -451,7 +421,6 @@ class ReportController extends Controller implements HasMiddleware
                 'ppn' => new PpnReportExport($startDate, $endDate),
                 'project' => new ProjectReportExport($startDate, $endDate, $request->query('status')),
                 'pph23' => new Pph23ReportExport($startDate, $endDate),
-                'project_expense' => new ProjectExpenseReportExport($startDate, $endDate, $request->query('project_id') ? (int) $request->query('project_id') : null),
                 'subscription' => new SubscriptionReportExport($request->query('status')),
                 'documents' => new DocumentReportExport($startDate, $endDate),
                 'maintenance' => new MaintenanceReportExport($request->query('status'), $request->query('month')),
