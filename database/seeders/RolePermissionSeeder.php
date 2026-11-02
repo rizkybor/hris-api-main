@@ -246,6 +246,7 @@ class RolePermissionSeeder extends Seeder
                     'asset-',
                     'performance-review-',
                     'staff-permission-',
+                    'screening-',
                     // attendance-setting-edit is explicitly excluded here despite the
                     // 'attendance-' prefix above -- only Superadmin/Manager may flip the
                     // weekend clock-in toggle, per spec.

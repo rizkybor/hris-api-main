@@ -4,6 +4,9 @@ use App\Http\Controllers\AnalyticsSourceController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceSettingController;
 use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\PublicScreeningController;
+use App\Http\Controllers\ScreeningController;
+use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\PayrollSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CredentialAccountController;
@@ -93,6 +96,12 @@ Route::prefix('v1')
         Route::get('server-agent/agent.py', [ServerAgentController::class, 'agentScript'])->middleware('throttle:30,1')->name('server-agent.script');
         Route::post('server-agent/report', [ServerAgentController::class, 'report'])->middleware('throttle:60,1')->name('server-agent.report');
 
+        // Client Screening form on the company website (no login; never
+        // returns prices) -- open form, or an invite link by token.
+        Route::get('public/screening/form', [PublicScreeningController::class, 'form'])->middleware('throttle:60,1');
+        Route::post('public/screening', [PublicScreeningController::class, 'store'])->middleware('throttle:screening-submit');
+        Route::put('public/screening/{token}', [PublicScreeningController::class, 'update'])->middleware('throttle:60,1');
+
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
             Route::put('me', [AuthController::class, 'updateProfile']);
@@ -175,6 +184,24 @@ Route::prefix('v1')
 
             Route::get('attendance-setting', [AttendanceSettingController::class, 'show']);
             Route::put('attendance-setting', [AttendanceSettingController::class, 'update']);
+            // Client Screening
+            Route::get('screenings', [ScreeningController::class, 'index']);
+            Route::post('screenings', [ScreeningController::class, 'store']);
+            Route::get('screenings/{id}', [ScreeningController::class, 'show']);
+            Route::put('screenings/{id}', [ScreeningController::class, 'update']);
+            Route::delete('screenings/{id}', [ScreeningController::class, 'destroy']);
+            Route::post('screenings/{id}/recalculate', [ScreeningController::class, 'recalculate']);
+            Route::put('screenings/{id}/items', [ScreeningController::class, 'saveItems']);
+            Route::post('screenings/{id}/invite', [ScreeningController::class, 'invite']);
+            Route::get('screenings/{id}/pdf', [ScreeningController::class, 'pdf']);
+            Route::get('service-catalog', [ServiceCatalogController::class, 'index']);
+            Route::post('service-catalog', [ServiceCatalogController::class, 'store']);
+            Route::post('service-catalog/sync', [ServiceCatalogController::class, 'sync']);
+            Route::put('service-catalog/{id}', [ServiceCatalogController::class, 'update']);
+            Route::delete('service-catalog/{id}', [ServiceCatalogController::class, 'destroy']);
+            Route::get('screening-template', [ServiceCatalogController::class, 'template']);
+            Route::put('screening-template', [ServiceCatalogController::class, 'updateTemplate']);
+            Route::post('screening-template/reset', [ServiceCatalogController::class, 'resetTemplate']);
             Route::get('holidays', [HolidayController::class, 'index']);
             Route::post('holidays', [HolidayController::class, 'store']);
             Route::delete('holidays/{id}', [HolidayController::class, 'destroy']);
