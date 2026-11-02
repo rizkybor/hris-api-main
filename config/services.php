@@ -59,7 +59,7 @@ return [
 
     'screening' => [
         'form_url' => env('SCREENING_FORM_URL', 'https://jcdigital.co.id/konsultasi-kebutuhan'),
-        'form_url_en' => env('SCREENING_FORM_URL_EN', 'https://jcdigital.co.id/en/requirements-check'),
+        'form_url_en' => env('SCREENING_FORM_URL_EN', 'https://jcdigital.co.id/en/konsultasi-kebutuhan'),
         'notify_email' => env('SCREENING_NOTIFY_EMAIL', 'contact@jcdigital.co.id'),
         'invite_days' => (int) env('SCREENING_INVITE_DAYS', 30),
     ],
