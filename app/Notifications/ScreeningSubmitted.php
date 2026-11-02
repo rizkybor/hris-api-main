@@ -40,17 +40,24 @@ class ScreeningSubmitted extends Notification implements ShouldQueue
             ->implode(', ') ?: '-';
     }
 
+    /** Text typed by the client, so it can't turn into links/formatting in the email. */
+    private static function plain(?string $text): string
+    {
+        return preg_replace('/([\\\\`*_{}\[\]()#+\-.!|~])/', '\\\\$1', (string) $text);
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
         $s = $this->screening;
-        $who = trim(($s->contact_name ?: 'Tanpa nama').($s->company ? ' — '.$s->company : ''));
+        $whoText = trim(($s->contact_name ?: 'Tanpa nama').($s->company ? ' — '.$s->company : ''));
+        $who = self::plain($whoText);
 
         return (new MailMessage)
-            ->subject("Screening kebutuhan baru: {$who} ({$s->code})")
+            ->subject("Screening kebutuhan baru: {$whoText} ({$s->code})")
             ->greeting('Ada screening kebutuhan baru')
             ->line("**{$who}** mengisi form screening ".($s->source === 'invite' ? 'dari link undangan' : 'di website').'.')
             ->line('Kebutuhan: '.$this->needs())
-            ->line('Email: '.($s->email ?: '-').' · Telepon/WA: '.($s->phone ?: '-'))
+            ->line('Email: '.self::plain($s->email ?: '-').' · Telepon/WA: '.self::plain($s->phone ?: '-'))
             ->line('Bahasa form: '.strtoupper($s->lang))
             ->action('Buka di HRIS', $this->url())
             ->line('Rekomendasi layanan dan estimasi harga sudah disiapkan di HRIS (hanya untuk tim internal).');

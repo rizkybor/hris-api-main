@@ -13,9 +13,22 @@ use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\Cloudinary\CloudinaryResourceType;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Spatie\Permission\Middleware\PermissionMiddleware;
 
-class FilesCompanyController extends Controller
+class FilesCompanyController extends Controller implements HasMiddleware
 {
+    public static function middleware()
+    {
+        return [
+            new Middleware(PermissionMiddleware::using(['files-company-menu|files-company-list']), only: ['index', 'getAllPaginated', 'statistics', 'show']),
+            new Middleware(PermissionMiddleware::using(['files-company-create']), only: ['store']),
+            new Middleware(PermissionMiddleware::using(['files-company-edit']), only: ['update']),
+            new Middleware(PermissionMiddleware::using(['files-company-delete']), only: ['destroy']),
+        ];
+    }
+
     private FilesCompanyRepositoryInterface $filesCompanyRepository;
 
     public function __construct(

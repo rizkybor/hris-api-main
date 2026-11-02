@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use App\Support\HtmlSanitizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -43,5 +45,17 @@ class StaffTask extends Model
     public function isEmployeeAssignee(int $employeeId): bool
     {
         return $this->assignees()->where('employee_id', $employeeId)->exists();
+    }
+
+    /**
+     * Rich-text HTML from the editor, rendered with v-html: cleaned on the
+     * way in, and on the way out for anything saved before this was added
+     * (scripts, event handlers, javascript: links are stripped).
+     */
+    protected function description(): Attribute
+    {
+        $clean = fn ($value) => $value === null || $value === '' ? $value : HtmlSanitizer::clean($value);
+
+        return Attribute::make(get: $clean, set: $clean);
     }
 }

@@ -24,3 +24,7 @@ Homestead.yaml
 Thumbs.db
 featured.md
 __pycache__/
+
+# Local REST client scratch files (may contain tokens/passwords)
+*.rest
+*.http
