@@ -15,6 +15,8 @@ class ClientAttachmentStoreRequest extends FormRequest
             'type_file'     => ['nullable', 'string', 'max:100'],
             'size_file'     => ['nullable', 'string', 'max:50'],
             'description'   => ['nullable', 'string'],
+            // The uploaded file itself (sent to Cloudinary): documents and images only.
+            'file'          => ['nullable', 'file', 'mimes:pdf,doc,docx,xls,xlsx,png,jpg,jpeg', 'max:10240'],
         ];
     }
 

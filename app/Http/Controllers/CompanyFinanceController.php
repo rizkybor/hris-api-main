@@ -31,7 +31,7 @@ class CompanyFinanceController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['company-finance-menu|company-finance-create|company-finance-edit|company-finance-delete|company-finance-statistic']), only: ['index', 'show', 'getStatistic']),
+            new Middleware(PermissionMiddleware::using(['company-finance-menu|company-finance-create|company-finance-edit|company-finance-delete|company-finance-statistic']), only: ['index', 'getAllPaginated', 'show', 'getStatistic']),
             new Middleware(PermissionMiddleware::using(['company-finance-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['company-finance-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['company-finance-delete']), only: ['destroy']),

@@ -24,8 +24,12 @@ class SearchController extends Controller
             ], 200);
         }
 
+        // Each group only for users allowed to see that list.
+        $user = $request->user();
+        $allowed = fn (string ...$permissions) => collect($permissions)->contains(fn ($p) => $user->can($p));
+
         try {
-            $employees = EmployeeProfile::query()
+            $employees = ! $allowed('employee-list', 'employee-menu') ? collect() : EmployeeProfile::query()
                 ->with('user', 'jobInformation.team')
                 ->whereHas('user', function ($q) use ($query) {
                     $q->where('name', 'like', "%{$query}%")->orWhere('email', 'like', "%{$query}%");
@@ -41,17 +45,17 @@ class SearchController extends Controller
                     'department' => $employee->jobInformation?->team?->department,
                 ]);
 
-            $projects = Project::query()
+            $projects = ! $allowed('project-menu', 'project-list') ? collect() : Project::query()
                 ->where('name', 'like', "%{$query}%")
                 ->limit(5)
                 ->get(['id', 'name', 'status', 'priority']);
 
-            $teams = Team::query()
+            $teams = ! $allowed('team-view', 'team-menu', 'team-list') ? collect() : Team::query()
                 ->where('name', 'like', "%{$query}%")
                 ->limit(5)
                 ->get(['id', 'name']);
 
-            $tasks = ProjectTask::query()
+            $tasks = ! $allowed('task-list', 'task-menu', 'project-menu') ? collect() : ProjectTask::query()
                 ->with('project:id,name')
                 ->where('name', 'like', "%{$query}%")
                 ->limit(5)

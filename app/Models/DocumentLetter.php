@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use App\Support\HtmlSanitizer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -83,5 +85,17 @@ class DocumentLetter extends Model
             $q->where('document_number', 'like', '%'.$search.'%')
                 ->orWhere('subject', 'like', '%'.$search.'%');
         });
+    }
+
+    /**
+     * Rich-text HTML from the editor, rendered with v-html: cleaned on the
+     * way in, and on the way out for anything saved before this was added
+     * (scripts, event handlers, javascript: links are stripped).
+     */
+    protected function body(): Attribute
+    {
+        $clean = fn ($value) => $value === null || $value === '' ? $value : HtmlSanitizer::clean($value);
+
+        return Attribute::make(get: $clean, set: $clean);
     }
 }

@@ -180,7 +180,7 @@ Route::prefix('v1')
             Route::get('attendances/last-attendance', [AttendanceController::class, 'getLastAttendance']);
             Route::post('attendances/check-in', [AttendanceController::class, 'checkIn']);
             Route::post('attendances/check-out', [AttendanceController::class, 'checkOut']);
-            Route::apiResource('attendances', AttendanceController::class);
+            Route::apiResource('attendances', AttendanceController::class)->only(['index', 'show', 'update']);
 
             Route::get('attendance-setting', [AttendanceSettingController::class, 'show']);
             Route::put('attendance-setting', [AttendanceSettingController::class, 'update']);
@@ -208,7 +208,7 @@ Route::prefix('v1')
             Route::get('payroll-setting', [PayrollSettingController::class, 'show']);
             Route::put('payroll-setting', [PayrollSettingController::class, 'update']);
 
-            Route::apiResource('leave-requests', LeaveRequestController::class);
+            Route::apiResource('leave-requests', LeaveRequestController::class)->only(['index', 'store', 'show']);
             Route::get('leave-requests/all/paginated', [LeaveRequestController::class, 'getAllPaginated']);
             Route::get('my-leave-requests', [LeaveRequestController::class, 'getMyLeaveRequests']);
             Route::post('leave-requests/approve/{id}', [LeaveRequestController::class, 'approve']);
