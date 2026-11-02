@@ -26,7 +26,7 @@ class FixedCostController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['fixed-cost-list|fixed-cost-create|fixed-cost-edit|fixed-cost-delete']), only: ['index', 'getAllPaginated', 'show']),
+            new Middleware(PermissionMiddleware::using(['fixed-cost-list|fixed-cost-create|fixed-cost-edit|fixed-cost-delete']), only: ['index', 'getAllPaginated', 'show', 'getStatistic']),
             new Middleware(PermissionMiddleware::using(['fixed-cost-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['fixed-cost-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['fixed-cost-delete']), only: ['destroy']),
