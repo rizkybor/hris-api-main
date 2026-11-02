@@ -339,6 +339,19 @@ class PermissionSeeder extends Seeder
             'share',
         ],
 
+        // Client Screening: needs questionnaire (team- or client-filled) that
+        // recommends Rate Card services. "share" makes invite links,
+        // "settings" manages the service catalog and the questionnaire.
+        'screening' => [
+            'menu',
+            'list',
+            'create',
+            'edit',
+            'delete',
+            'share',
+            'settings',
+        ],
+
         'clients' => [
             'menu',
             'list',

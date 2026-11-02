@@ -76,6 +76,10 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Client Screening form on the company website: a few submissions per
+        // visitor per hour (plus the honeypot in PublicScreeningController).
+        RateLimiter::for('screening-submit', fn (Request $request) => Limit::perHour(5)->by($request->ip()));
+
         RateLimiter::for('password-reset', function (Request $request) {
             $emailKey = Str::lower((string) $request->input('email')).'|'.$request->ip();
 

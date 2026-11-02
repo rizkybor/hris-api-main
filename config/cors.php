@@ -26,9 +26,12 @@ return [
     // list via CORS_ALLOWED_ORIGINS for staging/production, falling back to
     // FRONTEND_URL (already used elsewhere for password-reset links) so a
     // single env var change doesn't require touching two places.
-    'allowed_origins' => array_filter(explode(',', env(
-        'CORS_ALLOWED_ORIGINS',
-        env('FRONTEND_URL', 'http://localhost:5173')
+    // Plus the company website, whose Client Screening form posts to the
+    // public screening endpoints (no credentials are ever sent -- see
+    // supports_credentials below).
+    'allowed_origins' => array_values(array_filter(array_merge(
+        explode(',', env('CORS_ALLOWED_ORIGINS', env('FRONTEND_URL', 'http://localhost:5173'))),
+        explode(',', env('SCREENING_ALLOWED_ORIGINS', 'https://jcdigital.co.id,https://www.jcdigital.co.id')),
     ))),
 
     'allowed_origins_patterns' => [],
