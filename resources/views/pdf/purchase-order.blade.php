@@ -64,19 +64,19 @@
                     @if($order->client_wa) WA : {{ $order->client_wa }} @endif
                 </td>
                 <td style="width: 45%; vertical-align: top; border: none; padding: 0;">
+                    {{-- label | : | value, value right-aligned (same as the invoice header) --}}
                     <table style="border: none;">
-                        <tr>
-                            <td style="border: none; padding: 1px 0; width: 30%;">No PO</td>
-                            <td style="border: none; padding: 1px 0;">: {{ $order->po_number }}</td>
-                        </tr>
-                        <tr>
-                            <td style="border: none; padding: 1px 0;">Tanggal</td>
-                            <td style="border: none; padding: 1px 0;">: {{ $order->date->translatedFormat('d F Y') }}</td>
-                        </tr>
-                        <tr>
-                            <td style="border: none; padding: 1px 0;">Dari</td>
-                            <td style="border: none; padding: 1px 0;">: PT. Jendela Cakra Digital</td>
-                        </tr>
+                        @foreach([
+                            'No PO' => $order->po_number,
+                            'Tanggal' => $order->date->translatedFormat('d F Y'),
+                            'Dari' => 'PT. Jendela Cakra Digital',
+                        ] as $k => $v)
+                            <tr>
+                                <td style="border: none; padding: 1px 0; width: 26%; white-space: nowrap;">{{ $k }}</td>
+                                <td style="border: none; padding: 1px 0; width: 4%; text-align: center;">:</td>
+                                <td style="border: none; padding: 1px 0; text-align: right;">{{ $v }}</td>
+                            </tr>
+                        @endforeach
                     </table>
                 </td>
             </tr>
