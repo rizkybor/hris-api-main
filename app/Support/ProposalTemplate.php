@@ -79,14 +79,14 @@ HTML],
 <p>Desain tampilan mendapat maksimal 2 putaran revisi.</p>
 HTML],
             ['Investasi Biaya', <<<'HTML'
-<p>Biaya pembuatan aplikasi adalah <strong>Rp [nominal]</strong>, belum termasuk PPN.</p>
-<table><tbody><tr><th>Komponen</th><th>Biaya</th></tr><tr><td>Pembuatan aplikasi (seluruh fitur di bagian Fitur yang Akan Dibuat)</td><td>Rp [nominal]</td></tr><tr><td>Pemasangan server dan backup</td><td>Rp [nominal]</td></tr><tr><td><strong>Subtotal</strong></td><td><strong>Rp [nominal]</strong></td></tr></tbody></table>
+<p>Biaya pembuatan aplikasi adalah <strong>Rp. [nominal]</strong>, belum termasuk PPN.</p>
+<table><tbody><tr><th>Komponen</th><th>Biaya</th></tr><tr><td>Pembuatan aplikasi (seluruh fitur di bagian Fitur yang Akan Dibuat)</td><td>Rp. [nominal]</td></tr><tr><td>Pemasangan server dan backup</td><td>Rp. [nominal]</td></tr><tr><td><strong>Subtotal</strong></td><td><strong>Rp. [nominal]</strong></td></tr></tbody></table>
 <p>Biaya di atas sudah termasuk analisis, desain tampilan, pembuatan aplikasi, pengujian, pemasangan, panduan penggunaan, dan pelatihan.</p>
-<p>Biaya di luar penawaran ini, dibayarkan langsung oleh perusahaan: sewa server (VPS) sekitar Rp 150.000–400.000 per bulan dan domain sekitar Rp 200.000 per tahun.</p>
+<p>Biaya di luar penawaran ini, dibayarkan langsung oleh perusahaan: sewa server (VPS) sekitar Rp. 150.000–400.000 per bulan dan domain sekitar Rp. 200.000 per tahun.</p>
 HTML],
             ['Termin Pembayaran', <<<'HTML'
 <p>Pembayaran dibagi menjadi empat tahap, termasuk 5% dana retensi sebagai jaminan garansi.</p>
-<table><tbody><tr><th>Tahap</th><th>Waktu pembayaran</th><th>Porsi</th><th>Nominal</th></tr><tr><td>1</td><td>Saat penandatanganan kontrak</td><td>30%</td><td>Rp [nominal]</td></tr><tr><td>2</td><td>Setelah seluruh fitur selesai dan siap diuji bersama</td><td>50%</td><td>Rp [nominal]</td></tr><tr><td>3</td><td>Setelah Berita Acara Serah Terima (BAST) ditandatangani</td><td>15%</td><td>Rp [nominal]</td></tr><tr><td>4</td><td>Retensi, 8 minggu setelah BAST</td><td>5%</td><td>Rp [nominal]</td></tr></tbody></table>
+<table><tbody><tr><th>Tahap</th><th>Waktu pembayaran</th><th>Porsi</th><th>Nominal</th></tr><tr><td>1</td><td>Saat penandatanganan kontrak</td><td>30%</td><td>Rp. [nominal]</td></tr><tr><td>2</td><td>Setelah seluruh fitur selesai dan siap diuji bersama</td><td>50%</td><td>Rp. [nominal]</td></tr><tr><td>3</td><td>Setelah Berita Acara Serah Terima (BAST) ditandatangani</td><td>15%</td><td>Rp. [nominal]</td></tr><tr><td>4</td><td>Retensi, 8 minggu setelah BAST</td><td>5%</td><td>Rp. [nominal]</td></tr></tbody></table>
 <p>Nominal di atas belum termasuk PPN 11%. Setiap tahap disertai invoice dan Faktur Pajak dari kami, dan ditransfer ke rekening PT Jendela Cakra Digital.</p>
 <p>Dana retensi 5% ditahan oleh perusahaan selama 8 minggu setelah BAST. Selama masa ini, kami memastikan aplikasi berjalan lancar dan semua bug yang ditemukan sudah diperbaiki. Setelah masa retensi selesai, dana tersebut dibayarkan kepada kami.</p>
 HTML],
@@ -95,7 +95,7 @@ HTML],
 <table><tbody><tr><th>Jenis masalah</th><th>Contoh</th><th>Waktu tanggapan</th></tr><tr><td>Mendesak</td><td>Aplikasi tidak bisa dibuka, fitur utama tidak bisa dipakai</td><td>Maksimal 1 hari kerja</td></tr><tr><td>Biasa</td><td>Tampilan kurang rapi, filter laporan tidak sesuai</td><td>Maksimal 3 hari kerja</td></tr></tbody></table>
 <p>Garansi tidak berlaku untuk:</p>
 <ul><li>Penambahan fitur baru atau perubahan alur kerja.</li><li>Kesalahan karena salah input data oleh pengguna.</li><li>Gangguan internet, listrik, atau perangkat milik perusahaan.</li><li>Aplikasi atau server yang sudah diubah oleh pihak lain selain JC Digital.</li></ul>
-<p>Setelah masa garansi selesai, kami menyediakan paket perawatan bulanan mulai Rp 1.000.000 per bulan. Isinya pemantauan server, pengecekan backup, pembaruan keamanan, dan perbaikan bug. Paket ini sifatnya pilihan, tidak wajib.</p>
+<p>Setelah masa garansi selesai, kami menyediakan paket perawatan bulanan mulai Rp. 1.000.000 per bulan. Isinya pemantauan server, pengecekan backup, pembaruan keamanan, dan perbaikan bug. Paket ini sifatnya pilihan, tidak wajib.</p>
 HTML],
             ['Yang Tidak Termasuk dalam Penawaran', <<<'HTML'
 <p>Supaya tidak ada salah paham di kemudian hari, berikut hal-hal yang belum termasuk:</p>
