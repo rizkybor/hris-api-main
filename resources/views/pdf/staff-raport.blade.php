@@ -45,8 +45,12 @@
         .stars .empty { color: #d1d5db; }
         .score-label { font-size: 9.5pt; color: #6b7280; }
 
-        .summary-row { display: table; width: 100%; margin: 4mm 0 6mm 0; }
-        .summary-card { display: table-cell; width: 33.33%; padding: 3mm; border: 1px solid #dcdedd; border-radius: 4px; }
+        /* A real table with spacer cells: gives the cards a gap between them
+           while the outer edges stay flush with the content width. */
+        .summary-row { width: 100%; border-collapse: collapse; margin: 4mm 0 6mm 0; }
+        .summary-row td { vertical-align: top; padding: 0; border: none; }
+        .summary-row td.gap { width: 4mm; }
+        .summary-card { height: 13mm; padding: 3mm; border: 1px solid #dcdedd; border-radius: 4px; }
         .summary-card .value { font-size: 14.5pt; font-weight: bold; color: #070b30; }
         .summary-card .label { font-size: 8.5pt; color: #6b7280; }
 
@@ -88,20 +92,24 @@
             </div>
         </div>
 
-        <div class="summary-row">
-            <div class="summary-card">
-                <div class="value">{{ $attendance_rate !== null ? $attendance_rate.'%' : '-' }}</div>
-                <div class="label">Attendance ({{ $attendance['total'] }} working days scored)</div>
-            </div>
-            <div class="summary-card">
-                <div class="value">{{ $task_completion_rate !== null ? $task_completion_rate.'%' : '-' }}</div>
-                <div class="label">Task Completion ({{ $tasks['done'] }}/{{ $tasks['total'] }} tasks due)</div>
-            </div>
-            <div class="summary-card">
-                <div class="value">{{ $overall_score !== null ? $overall_score.'%' : '-' }}</div>
-                <div class="label">Overall Score</div>
-            </div>
-        </div>
+        <table class="summary-row">
+            <tr>
+                <td style="width: 32%;"><div class="summary-card">
+                    <div class="value">{{ $attendance_rate !== null ? $attendance_rate.'%' : '-' }}</div>
+                    <div class="label">Attendance ({{ $attendance['total'] }} working days scored)</div>
+                </div></td>
+                <td class="gap"></td>
+                <td style="width: 32%;"><div class="summary-card">
+                    <div class="value">{{ $task_completion_rate !== null ? $task_completion_rate.'%' : '-' }}</div>
+                    <div class="label">Task Completion ({{ $tasks['done'] }}/{{ $tasks['total'] }} tasks due)</div>
+                </div></td>
+                <td class="gap"></td>
+                <td style="width: 32%;"><div class="summary-card">
+                    <div class="value">{{ $overall_score !== null ? $overall_score.'%' : '-' }}</div>
+                    <div class="label">Overall Score</div>
+                </div></td>
+            </tr>
+        </table>
 
         <h3 class="section-title">Attendance Breakdown</h3>
         <table class="data-table counts">
