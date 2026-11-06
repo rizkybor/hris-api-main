@@ -8,7 +8,9 @@
            page an invoice spans, not just the first -- but a fixed element
            needs a negative offset equal to the margin to still reach the
            physical page edge from within the new, inset content box. */
-        @page { margin: 42mm 15mm 30mm 15mm; }
+        /* Right margin lines the content up with the INVOICE title in the
+           letterhead image (which sits closer to the edge than 15mm). */
+        @page { margin: 42mm 12.5mm 30mm 15mm; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 10.5pt; }
         /* Top/bottom bars, brand name, doc title, watermark, and footer are
            all baked into this flattened letterhead image (matching the
@@ -22,7 +24,15 @@
         .info-table td { border: none; padding: 1px 0; font-size: 10pt; }
         .items-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 6px 4px; font-size: 10pt; }
         .items-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 4px; font-size: 10pt; }
-        .totals-table td { border: none; padding: 2px 0; font-size: 10pt; }
+        /* Amounts: "Rp." in its own column so it lines up on every row, the
+           number right-aligned next to it -- same column widths in the items
+           and totals tables. */
+        .totals-table td { border: none; padding: 3px 0; font-size: 10pt; }
+        .totals-table .t-label { text-align: right; padding-right: 4mm; }
+        .cur { text-align: left; white-space: nowrap; }
+        .amt { text-align: right; white-space: nowrap; }
+        .totals-table .grand td { border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51; padding: 6px 0; font-weight: bold; font-size: 11pt; }
+        .totals-table .grand td.t-label { padding-right: 4mm; }
         .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 9pt; color: #0b1d51; }
         .cancelled-stamp {
             position: fixed; top: 78mm; left: 25mm; width: 130mm; text-align: center;
@@ -37,6 +47,9 @@
         <div class="cancelled-stamp">DIBATALKAN</div>
     @endif
 
+    @php
+        $amount = fn ($v) => (float) $v > 0 ? number_format((float) $v, 0, ',', '.') : '-';
+    @endphp
     <div class="page">
         <table style="margin-top: 0;">
             <tr>
@@ -77,9 +90,9 @@
             <thead>
                 <tr>
                     <th style="width: 46%;">Item Description</th>
-                    <th style="width: 18%;">Quantity</th>
-                    <th style="width: 18%;">Rate</th>
-                    <th style="width: 18%; text-align: right;">Total</th>
+                    <th style="width: 13%;">Quantity</th>
+                    <th style="width: 23%;">Rate</th>
+                    <th colspan="2" style="width: 18%; text-align: right;">Total</th>
                 </tr>
             </thead>
             <tbody>
@@ -88,41 +101,46 @@
                         <td>{{ $item['description'] }}</td>
                         <td>{{ $item['quantity'] ?? '-' }}</td>
                         <td>{{ $item['rate'] ?? '-' }}</td>
-                        <td style="text-align: right;">Rp. {{ number_format($item['total'], 0, ',', '.') }}</td>
+                        <td class="cur" style="width: 4%;">Rp.</td>
+                        <td class="amt" style="width: 14%;">{{ number_format($item['total'], 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
 
-        <table class="totals-table" style="margin-top: 12mm;">
+        <table class="totals-table" style="margin-top: 8mm;">
             <tr>
-                <td style="width: 70%;"></td>
-                <td style="width: 15%; text-align: right;">Subtotal:</td>
-                <td style="width: 15%; text-align: right;">Rp. {{ number_format($invoice->subtotal, 0, ',', '.') }}</td>
+                <td style="width: 46%;"></td>
+                <td class="t-label" style="width: 36%;">Subtotal</td>
+                <td class="cur" style="width: 4%;">Rp.</td>
+                <td class="amt" style="width: 14%;">{{ $amount($invoice->subtotal) }}</td>
             </tr>
             <tr>
                 <td></td>
-                <td style="text-align: right;">Ppn ({{ rtrim(rtrim(number_format($invoice->ppn_percentage, 2), '0'), '.') }}%):</td>
-                <td style="text-align: right;">{{ $invoice->ppn_amount > 0 ? 'Rp. '.number_format($invoice->ppn_amount, 0, ',', '.') : 'Rp. -' }}</td>
+                <td class="t-label">PPN ({{ rtrim(rtrim(number_format($invoice->ppn_percentage, 2), '0'), '.') }}%)</td>
+                <td class="cur">Rp.</td>
+                <td class="amt">{{ $amount($invoice->ppn_amount) }}</td>
             </tr>
             <tr>
                 <td></td>
-                <td style="text-align: right;">Admin Fee:</td>
-                <td style="text-align: right;">{{ $invoice->admin_fee > 0 ? 'Rp. '.number_format($invoice->admin_fee, 0, ',', '.') : 'Rp. -' }}</td>
+                <td class="t-label">Admin Fee</td>
+                <td class="cur">Rp.</td>
+                <td class="amt">{{ $amount($invoice->admin_fee) }}</td>
             </tr>
             @if($invoice->icann_fee > 0)
                 <tr>
                     <td></td>
-                    <td style="text-align: right;">ICANN Fee:</td>
-                    <td style="text-align: right;">Rp. {{ number_format($invoice->icann_fee, 0, ',', '.') }}</td>
+                    <td class="t-label">ICANN Fee</td>
+                    <td class="cur">Rp.</td>
+                    <td class="amt">{{ $amount($invoice->icann_fee) }}</td>
                 </tr>
             @endif
-        </table>
-
-        <table style="margin-top: 3mm; border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51;">
-            <tr>
-                <td style="border: none; padding: 5px 0; text-align: right; font-weight: bold; width: 70%;">Total Amount Due:</td>
-                <td style="border: none; padding: 5px 0; text-align: right; font-weight: bold; width: 30%;">Rp. {{ number_format($invoice->total, 0, ',', '.') }}</td>
+            <tr><td colspan="4" style="padding: 1.5mm 0;"></td></tr>
+            <tr class="grand">
+                <td></td>
+                <td class="t-label">Total Amount Due</td>
+                <td class="cur">Rp.</td>
+                <td class="amt">{{ number_format($invoice->total, 0, ',', '.') }}</td>
             </tr>
         </table>
 
