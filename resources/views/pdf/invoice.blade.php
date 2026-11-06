@@ -22,8 +22,13 @@
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
         .info-table td { border: none; padding: 1px 0; font-size: 10pt; vertical-align: top; }
-        /* One label width for both right-hand blocks so their values line up. */
-        .info-table td.k-right { width: 36%; padding-right: 2mm; }
+        /* label | ":" | value, value right-aligned: one label width per side
+           so the colons line up down each column. */
+        .info-table td.k { width: 32%; white-space: nowrap; }
+        .info-table td.sep { width: 3%; text-align: center; }
+        .info-table td.val { text-align: right; }
+        /* Gap between the left-hand values and the right-hand block. */
+        .half-left { padding-right: 8mm; }
         .items-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 6px 4px; font-size: 10pt; }
         .items-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 4px; font-size: 10pt; }
         /* Amounts: "Rp." in its own column so it lines up on every row, the
@@ -67,15 +72,15 @@
     <div class="page">
         <table style="margin-top: 0;">
             <tr>
-                <td style="width: 50%; border: none; vertical-align: top;">
+                <td class="half-left" style="width: 50%; border: none; vertical-align: top;">
                     <p class="label" style="margin: 0 0 2px 0;">Bill To:</p>
                     <p style="margin: 0;">{{ $invoice->client_name }}</p>
                     @if($invoice->client_pic)<p style="margin: 0;">{{ $invoice->client_pic }}</p>@endif
                 </td>
                 <td style="width: 50%; border: none; vertical-align: top;">
                     <table class="info-table">
-                        <tr><td class="label k-right">Invoice Number</td><td>{{ $invoice->invoice_number }}</td></tr>
-                        <tr><td class="label">Invoice Date</td><td>{{ strtoupper($invoice->date->translatedFormat('d F Y')) }}</td></tr>
+                        <tr><td class="label k">Invoice Number</td><td class="label sep">:</td><td class="val">{{ $invoice->invoice_number }}</td></tr>
+                        <tr><td class="label k">Invoice Date</td><td class="label sep">:</td><td class="val">{{ strtoupper($invoice->date->translatedFormat('d F Y')) }}</td></tr>
                     </table>
                 </td>
             </tr>
@@ -83,18 +88,18 @@
 
         <table style="margin-top: 6mm;">
             <tr>
-                <td style="width: 50%; border: none; vertical-align: top;">
+                <td class="half-left" style="width: 50%; border: none; vertical-align: top;">
                     <p class="label" style="margin: 0 0 2px 0;">Contact information</p>
                     <table class="info-table">
-                        <tr><td style="width: 30%;">Email</td><td>{{ $invoice->client_email ?? '-' }}</td></tr>
-                        <tr><td>Phone</td><td>{{ $invoice->client_phone ?? '-' }}</td></tr>
+                        <tr><td class="k">Email</td><td class="sep">:</td><td class="val">{{ $invoice->client_email ?? '-' }}</td></tr>
+                        <tr><td class="k">Phone</td><td class="sep">:</td><td class="val">{{ $invoice->client_phone ?? '-' }}</td></tr>
                     </table>
                 </td>
                 <td style="width: 50%; border: none; vertical-align: top;">
                     <p class="label" style="margin: 0 0 2px 0;">Payment information</p>
                     <table class="info-table">
-                        <tr><td class="k-right">Bank Name:</td><td>{{ $invoice->bank_name ?? '-' }}</td></tr>
-                        <tr><td>Account Number:</td><td>{{ $invoice->bank_account ?? '-' }}</td></tr>
+                        <tr><td class="k">Bank Name</td><td class="sep">:</td><td class="val">{{ $invoice->bank_name ?? '-' }}</td></tr>
+                        <tr><td class="k">Account Number</td><td class="sep">:</td><td class="val">{{ $invoice->bank_account ?? '-' }}</td></tr>
                     </table>
                 </td>
             </tr>
