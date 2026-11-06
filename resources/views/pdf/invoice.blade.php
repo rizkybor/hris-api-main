@@ -100,7 +100,11 @@
                     <p class="label" style="margin: 0 0 2px 0;">Payment information</p>
                     <table class="info-table">
                         <tr><td class="k">Bank Name</td><td class="sep">:</td><td class="val">{{ $invoice->bank_name ?? '-' }}</td></tr>
-                        <tr><td class="k">Account Number</td><td class="sep">:</td><td class="val">{{ $invoice->bank_account ?? '-' }}</td></tr>
+                        <tr><td class="k">Account Number</td><td class="sep">:</td><td class="val">
+                            {{-- "1234567890 a.n. PT X" -> number, then the account holder on its own line --}}
+                            @php([$accNo, $accName] = array_pad(preg_split('/\s+(?=(?:a\.?\s?n\.?|a\/n)\s)/i', trim((string) $invoice->bank_account), 2), 2, null))
+                            {{ $accNo !== '' ? $accNo : '-' }}@if($accName)<br>{{ $accName }}@endif
+                        </td></tr>
                     </table>
                 </td>
             </tr>
