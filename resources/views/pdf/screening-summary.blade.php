@@ -6,7 +6,8 @@
     @php
         $result = $screening->result ?? [];
         $rp = fn ($v) => 'Rp '.number_format((float) $v, 0, ',', '.');
-        $unitLabel = ['once' => '', 'month' => ' / bulan', 'year' => ' / tahun'];
+        $amt = fn ($v) => number_format((float) $v, 0, ',', '.');
+        $unitLabel = ['once' => '', 'month' => '/ bulan', 'year' => '/ tahun'];
         $complexity = ['S' => 'S (sederhana)', 'M' => 'M (menengah)', 'L' => 'L (besar)', 'XL' => 'XL (sangat besar)'][$result['complexity'] ?? ''] ?? '-';
         $fit = ['fit' => 'Sesuai anggaran', 'over' => 'Melebihi anggaran', 'unknown' => 'Belum bisa dibandingkan'][$estimate['budget_fit']] ?? '-';
         $sourceLabel = ['landing' => 'Form website', 'invite' => 'Link undangan', 'internal' => 'Diisi tim JCD'][$screening->source] ?? $screening->source;
@@ -50,13 +51,20 @@
         .items td { border-bottom: 1px solid #e5e9f0; padding: 1.6mm 2mm; vertical-align: top; }
         .items .no { width: 6mm; color: #64748b; }
         .items .num { text-align: right; white-space: nowrap; }
+        /* Price = Rp | amount | unit, so "Rp" and the figures line up even
+           when some rows carry "/ bulan" or "/ tahun". */
+        .items td.cur { padding-right: 1.5mm; text-align: right; white-space: nowrap; }
+        .items td.amt { width: 22mm; padding-left: 0; padding-right: 1mm; text-align: right; white-space: nowrap; }
+        .items td.unit { width: 13mm; padding-left: 0; white-space: nowrap; color: #64748b; }
         .items .muted { color: #64748b; font-size: 8pt; }
         .items tfoot td { font-weight: bold; border-top: 1.5px solid #0b1d51; border-bottom: none; }
 
         ul.flags { margin: 0; padding-left: 5mm; }
         ul.flags li { margin-bottom: 1mm; }
         .note { color: #64748b; font-size: 8pt; margin-top: 2mm; }
-        .footer { margin-top: 8mm; color: #94a3b8; font-size: 7.5pt; border-top: 1px solid #e5e9f0; padding-top: 2mm; }
+        /* Fixed in the bottom margin so it repeats on every page instead of
+           spilling onto a page of its own. */
+        .footer { position: fixed; bottom: -11mm; left: 0; right: 0; color: #94a3b8; font-size: 7.5pt; border-top: 1px solid #e5e9f0; padding-top: 2mm; }
     </style>
 </head>
 <body>
@@ -106,7 +114,7 @@
                         <th class="no">No</th>
                         <th>Layanan</th>
                         <th>Estimasi Waktu</th>
-                        @if($withPrices)<th class="num">Estimasi Harga</th>@endif
+                        @if($withPrices)<th class="num" colspan="3">Estimasi Harga</th>@endif
                     </tr>
                 </thead>
                 <tbody>
@@ -119,20 +127,22 @@
                             </td>
                             <td>{{ $item->duration_text ?: ($item->hours ? '-' : '-') }}</td>
                             @if($withPrices)
-                                <td class="num">
-                                    @if($item->unit_price === null) <span class="muted">Sesuai penawaran</span>
-                                    @else {{ $rp($item->lineTotal()) }}{{ $unitLabel[$item->price_unit] ?? '' }}
-                                    @endif
-                                </td>
+                                @if($item->unit_price === null)
+                                    <td class="num" colspan="3"><span class="muted">Sesuai penawaran</span></td>
+                                @else
+                                    <td class="cur">Rp</td>
+                                    <td class="amt">{{ $amt($item->lineTotal()) }}</td>
+                                    <td class="unit">{{ $unitLabel[$item->price_unit] ?? '' }}</td>
+                                @endif
                             @endif
                         </tr>
                     @endforeach
                 </tbody>
                 @if($withPrices)
                     <tfoot>
-                        <tr><td></td><td colspan="2">Estimasi biaya sekali bayar (mulai dari)</td><td class="num">{{ $rp($estimate['one_time']) }}</td></tr>
-                        @if($estimate['monthly'])<tr><td></td><td colspan="2">Biaya bulanan</td><td class="num">{{ $rp($estimate['monthly']) }} / bulan</td></tr>@endif
-                        @if($estimate['yearly'])<tr><td></td><td colspan="2">Biaya tahunan</td><td class="num">{{ $rp($estimate['yearly']) }} / tahun</td></tr>@endif
+                        <tr><td></td><td colspan="2">Estimasi biaya sekali bayar (mulai dari)</td><td class="cur">Rp</td><td class="amt">{{ $amt($estimate['one_time']) }}</td><td class="unit"></td></tr>
+                        @if($estimate['monthly'])<tr><td></td><td colspan="2">Biaya bulanan</td><td class="cur">Rp</td><td class="amt">{{ $amt($estimate['monthly']) }}</td><td class="unit">/ bulan</td></tr>@endif
+                        @if($estimate['yearly'])<tr><td></td><td colspan="2">Biaya tahunan</td><td class="cur">Rp</td><td class="amt">{{ $amt($estimate['yearly']) }}</td><td class="unit">/ tahun</td></tr>@endif
                     </tfoot>
                 @endif
             </table>
@@ -157,9 +167,10 @@
     @endif
 
     <div class="section">
-        <div class="section-title">Jawaban Klien</div>
         @foreach($sections as $section)
+            {{-- Title rides inside the first block so it can't be stranded at a page bottom. --}}
             <div class="qa-block">
+                @if($loop->first)<div class="section-title">Jawaban Klien</div>@endif
                 <div class="qa-section">{{ $section['title'] }}</div>
                 <table class="qa">
                     @foreach($section['answers'] as $a)
