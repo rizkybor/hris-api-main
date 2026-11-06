@@ -113,7 +113,7 @@
             <p>Tangerang Selatan, {{ $documentLetter->document_date->locale('id')->translatedFormat('d F Y') }}</p>
             <p>{{ $senderTitle }},</p>
             @include('pdf.partials.signature', ['name' => $senderName, 'enabled' => $documentLetter->use_signature, 'space' => 18])
-            <p class="signature-name">{{ $senderName }}</p>
+            <p class="signature-name">{{ \App\Support\SignatoryName::format($senderName) }}</p>
         </div>
 
         @if(! empty($lampiran['list']))

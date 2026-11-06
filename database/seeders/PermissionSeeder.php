@@ -306,6 +306,12 @@ class PermissionSeeder extends Seeder
             'edit',
         ],
 
+        // Superadmin/Manager only (no other role's grants carry this
+        // prefix): app-wide PDF settings such as degrees in signatory names.
+        'document-setting' => [
+            'edit',
+        ],
+
         'certificate' => [
             'menu',
             'list',

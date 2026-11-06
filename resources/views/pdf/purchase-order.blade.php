@@ -166,14 +166,14 @@
                     <p style="margin: 0;">PIHAK PEMBELI</p>
                     <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
                     @include('pdf.partials.signature', ['name' => $order->buyer_signatory_name, 'enabled' => $order->use_signature])
-                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $order->buyer_signatory_name ?? '________________________' }}</p>
+                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($order->buyer_signatory_name) ?? '________________________' }}</p>
                     <p style="margin: 0;">{{ $order->buyer_signatory_title ?? '' }}</p>
                 </td>
                 <td style="width: 50%; border: none; text-align: center;">
                     <p style="margin: 0;">PIHAK KLIEN</p>
                     <p style="margin: 0; font-weight: bold;">{{ $order->client_name }}</p>
                     <div style="height: 20mm;"></div>
-                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $order->client_signatory_name ?? '________________________' }}</p>
+                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($order->client_signatory_name) ?? '________________________' }}</p>
                     <p style="margin: 0;">{{ $order->client_signatory_title ?? '' }}</p>
                 </td>
             </tr>

@@ -228,14 +228,14 @@
                             <p style="margin: 0;">PIHAK PERTAMA</p>
                             <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
                             @include('pdf.partials.signature', ['name' => $letter->signatory_name, 'enabled' => $letter->use_signature])
-                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
+                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($letter->signatory_name) ?? '________________________' }}</p>
                             <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
                         </td>
                         <td style="border: none; width: 50%; text-align: center;">
                             <p style="margin: 0;">PIHAK KEDUA</p>
                             <p style="margin: 0; font-weight: bold;">{{ $letter->second_party_name }}</p>
                             <div style="height: 20mm;"></div>
-                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->second_party_signatory_name ?? '________________________' }}</p>
+                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($letter->second_party_signatory_name) ?? '________________________' }}</p>
                             <p style="margin: 0;">{{ $letter->second_party_signatory_title ?? '' }}</p>
                         </td>
                     </tr>
@@ -245,7 +245,7 @@
                     <p style="margin: 0;">Hormat kami,</p>
                     <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
                     @include('pdf.partials.signature', ['name' => $letter->signatory_name, 'enabled' => $letter->use_signature])
-                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
+                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($letter->signatory_name) ?? '________________________' }}</p>
                     <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
                 </div>
             @endif

@@ -220,7 +220,7 @@
             @endif
 
             @include('pdf.partials.signature', ['name' => $certificate->signatory_name, 'enabled' => $certificate->use_signature, 'space' => 18])
-            <p class="signature-name">{{ $certificate->signatory_name }}</p>
+            <p class="signature-name">{{ \App\Support\SignatoryName::format($certificate->signatory_name) }}</p>
             <p class="signature-title">{{ $certificate->signatory_title }}</p>
 
             <p class="cert-number">{{ $certificate->certificate_number }}</p>

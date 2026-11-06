@@ -113,7 +113,7 @@
                     <p style="margin: 0;">Tangerang Selatan, {{ $letter->date->locale('id')->translatedFormat('d F Y') }}</p>
                     <p style="margin: 0;">Direktur Utama,</p>
                     @include('pdf.partials.signature', ['name' => $letter->signatory_name, 'enabled' => $letter->use_signature])
-                    <p style="margin: 0; font-weight: bold;">{{ $letter->signatory_name ?? '________________________' }}</p>
+                    <p style="margin: 0; font-weight: bold;">{{ \App\Support\SignatoryName::format($letter->signatory_name) ?? '________________________' }}</p>
                 </td>
             </tr>
         </table>
