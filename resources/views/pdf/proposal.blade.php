@@ -194,7 +194,7 @@
         <p class="company">PT Jendela Cakra Digital</p>
         @include('pdf.partials.signature', ['name' => $proposal->signatory_name, 'enabled' => $proposal->use_signature, 'space' => 20])
         @if($proposal->signatory_name)
-            <p class="signatory">{{ $proposal->signatory_name }}</p>
+            <p class="signatory">{{ \App\Support\SignatoryName::format($proposal->signatory_name) }}</p>
         @endif
         @if($proposal->signatory_title)
             <p class="role">{{ $proposal->signatory_title }}</p>

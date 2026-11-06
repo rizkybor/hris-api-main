@@ -3,22 +3,24 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 0; }
-        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 10.5pt; }
-        .top-bar { position: fixed; top: 0; left: 0; right: 0; height: 10mm; background-color: #0b1d51; }
-        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 5mm; background-color: #0b1d51; }
-        .watermark { position: fixed; top: 110mm; left: 50mm; width: 110mm; height: 93mm; opacity: 0.06; }
-        .page { padding: 18mm 15mm 18mm 15mm; }
+        /* Margins on @page so every page (not just the first) keeps clear of
+           the top bar and the footer; the fixed bars/footer sit in the margin. */
+        @page { margin: 18mm 15mm 17mm 15mm; }
+        body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 9.5pt; }
+        .top-bar { position: fixed; top: -18mm; left: -15mm; right: -15mm; height: 10mm; background-color: #0b1d51; }
+        .bottom-bar { position: fixed; bottom: -17mm; left: -15mm; right: -15mm; height: 5mm; background-color: #0b1d51; }
+        .watermark { position: fixed; top: 92mm; left: 35mm; width: 110mm; height: 93mm; opacity: 0.06; }
+        .page { padding: 0; }
         .header-row { width: 100%; }
         .header-row td { border: none; vertical-align: top; }
-        .brand { font-size: 21pt; font-weight: bold; color: #0b1d51; margin: 0; }
-        .doc-title { font-size: 23pt; font-weight: bold; color: #0b1d51; text-align: right; margin: 0; }
-        .generated-at { text-align: right; color: #64748b; font-size: 9pt; margin: 2px 0 0 0; }
+        .brand { font-size: 15pt; font-weight: bold; color: #0b1d51; margin: 0; }
+        .doc-title { font-size: 16pt; font-weight: bold; color: #0b1d51; text-align: right; margin: 0; }
+        .generated-at { text-align: right; color: #64748b; font-size: 8pt; margin: 2px 0 0 0; }
         .label { color: #0b1d51; font-weight: bold; }
-        .section-title { color: #0b1d51; font-size: 12.5pt; font-weight: bold; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.3px; }
+        .section-title { color: #0b1d51; font-size: 10.5pt; font-weight: bold; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.3px; }
         table { width: 100%; border-collapse: collapse; }
-        .info-table td { border: none; padding: 2px 0; font-size: 10pt; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 9pt; font-weight: bold; }
+        .info-table td { border: none; padding: 1.5px 0; font-size: 9pt; }
+        .badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 7.5pt; font-weight: bold; }
         .badge-status-active, .badge-status-on-track { background-color: #dcfce7; color: #15803d; }
         .badge-status-planning, .badge-status-draft { background-color: #e0e7ff; color: #4338ca; }
         .badge-status-on_hold, .badge-status-behind { background-color: #fef9c3; color: #a16207; }
@@ -28,17 +30,17 @@
         .badge-priority-medium { background-color: #fef9c3; color: #a16207; }
         .badge-priority-high, .badge-priority-urgent { background-color: #fee2e2; color: #b91c1c; }
 
-        .stat-table { margin-top: 6mm; }
-        .stat-box { border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px 10px; text-align: center; }
-        .stat-value { font-size: 19pt; font-weight: bold; color: #0b1d51; margin: 0; }
-        .stat-label { font-size: 8.5pt; color: #64748b; margin: 2px 0 0 0; text-transform: uppercase; letter-spacing: 0.2px; }
+        .stat-table { margin-top: 4mm; }
+        .stat-box { border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 8px; text-align: center; }
+        .stat-value { font-size: 15pt; font-weight: bold; color: #0b1d51; margin: 0; }
+        .stat-label { font-size: 7.5pt; color: #64748b; margin: 2px 0 0 0; text-transform: uppercase; letter-spacing: 0.2px; }
 
         .progress-track { width: 100%; height: 8px; background-color: #e2e8f0; border-radius: 4px; }
         .progress-fill { height: 8px; background-color: #0b1d51; border-radius: 4px; }
 
         .task-table { margin-top: 3mm; }
-        .task-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 5px 4px; font-size: 9.5pt; }
-        .task-table td { border-bottom: 1px solid #e5e7eb; padding: 6px 4px; font-size: 9.5pt; vertical-align: top; }
+        .task-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 4px 4px; font-size: 9pt; }
+        .task-table td { border-bottom: 1px solid #e5e7eb; padding: 5px 4px; font-size: 9pt; vertical-align: top; }
         .empty-note { color: #94a3b8; font-size: 9.5pt; padding: 6px 4px; font-style: italic; }
 
         .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
@@ -47,7 +49,7 @@
         .dot-pending { background-color: #ca8a04; }
         .dot-cancelled { background-color: #dc2626; }
 
-        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 9pt; color: #0b1d51; }
+        .footer { position: fixed; bottom: -11mm; left: 0; right: 0; font-size: 8.5pt; color: #0b1d51; }
     </style>
 </head>
 <body>
@@ -67,10 +69,10 @@
         </table>
 
         {{-- Project Info --}}
-        <table style="margin-top: 8mm;">
+        <table style="margin-top: 6mm;">
             <tr>
-                <td style="width: 60%; border: none; vertical-align: top;">
-                    <p class="label" style="font-size: 14.5pt; margin: 0 0 3px 0;">{{ $project->name }}</p>
+                <td style="width: 60%; border: none; vertical-align: top; padding-right: 6mm;">
+                    <p class="label" style="font-size: 12pt; margin: 0 0 3px 0;">{{ $project->name }}</p>
                     <p style="margin: 0 0 4px 0;">
                         <span class="badge badge-status-{{ $project->status }}">{{ str_replace('_', ' ', strtoupper($project->status)) }}</span>
                         <span class="badge badge-priority-{{ $project->priority }}">{{ strtoupper($project->priority) }} PRIORITY</span>
@@ -97,7 +99,7 @@
         </table>
 
         {{-- Progress Overview --}}
-        <div style="margin-top: 8mm;">
+        <div style="margin-top: 6mm;">
             <p class="section-title">Progress Overview</p>
             <table style="margin-top: 2mm;">
                 <tr>
@@ -107,7 +109,7 @@
                         </div>
                     </td>
                     <td style="width: 30%; border: none; text-align: right; vertical-align: middle;">
-                        <span style="font-size: 17pt; font-weight: bold; color: #0b1d51;">{{ $progress }}% Complete</span>
+                        <span style="font-size: 13pt; font-weight: bold; color: #0b1d51;">{{ $progress }}% Complete</span>
                     </td>
                 </tr>
             </table>
@@ -149,7 +151,7 @@
         </div>
 
         {{-- Completed Tasks --}}
-        <div style="margin-top: 7mm;">
+        <div style="margin-top: 6mm;">
             <p class="section-title"><span class="dot dot-done"></span>Completed ({{ $doneTasks->count() }})</p>
             <table class="task-table">
                 <thead>

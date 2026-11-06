@@ -64,19 +64,19 @@
                     @if($order->client_wa) WA : {{ $order->client_wa }} @endif
                 </td>
                 <td style="width: 45%; vertical-align: top; border: none; padding: 0;">
+                    {{-- label | : | value, value right-aligned (same as the invoice header) --}}
                     <table style="border: none;">
-                        <tr>
-                            <td style="border: none; padding: 1px 0; width: 30%;">No PO</td>
-                            <td style="border: none; padding: 1px 0;">: {{ $order->po_number }}</td>
-                        </tr>
-                        <tr>
-                            <td style="border: none; padding: 1px 0;">Tanggal</td>
-                            <td style="border: none; padding: 1px 0;">: {{ $order->date->translatedFormat('d F Y') }}</td>
-                        </tr>
-                        <tr>
-                            <td style="border: none; padding: 1px 0;">Dari</td>
-                            <td style="border: none; padding: 1px 0;">: PT. Jendela Cakra Digital</td>
-                        </tr>
+                        @foreach([
+                            'No PO' => $order->po_number,
+                            'Tanggal' => $order->date->translatedFormat('d F Y'),
+                            'Dari' => 'PT. Jendela Cakra Digital',
+                        ] as $k => $v)
+                            <tr>
+                                <td style="border: none; padding: 1px 0; width: 26%; white-space: nowrap;">{{ $k }}</td>
+                                <td style="border: none; padding: 1px 0; width: 4%; text-align: center;">:</td>
+                                <td style="border: none; padding: 1px 0; text-align: right;">{{ $v }}</td>
+                            </tr>
+                        @endforeach
                     </table>
                 </td>
             </tr>
@@ -86,30 +86,36 @@
         <table class="doc-table">
             <thead>
                 <tr>
-                    <th style="width: 5%;">No</th>
+                    <th class="c" style="width: 6%;">No</th>
                     <th style="width: 22%;">Deskripsi</th>
-                    <th style="width: 38%;">Spesifikasi</th>
-                    <th style="width: 12%;">Qty</th>
-                    <th style="width: 23%;">Harga</th>
+                    <th style="width: 37%;">Spesifikasi</th>
+                    <th class="c" colspan="2" style="width: 12%;">Qty</th>
+                    <th class="r" style="width: 23%;">Harga</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($order->items as $index => $item)
                     <tr>
-                        <td>{{ $index + 1 }}</td>
+                        <td class="c">{{ $index + 1 }}</td>
                         <td>{{ $item['description'] }}</td>
                         <td>{!! nl2br(e($item['specification'] ?? '')) !!}</td>
-                        <td>{{ $item['qty'] }}</td>
-                        <td>Rp {{ number_format($item['price'], 0, ',', '.') }}</td>
+                        @php([$qn, $qu] = \App\Helpers\QtyHelper::split($item['qty'] ?? null))
+                        @if($qn !== null)
+                            <td class="qn" style="width: 4%;">{{ $qn }}</td>
+                            <td class="qu" style="width: 8%;">{{ $qu }}</td>
+                        @else
+                            <td class="c" colspan="2">{{ $qu !== '' ? $qu : '-' }}</td>
+                        @endif
+                        <td class="money"><span class="rp">Rp.</span>{{ number_format($item['price'], 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
                 <tr>
-                    <td colspan="4" style="text-align: right; font-weight: bold; background: #f3f4f6;">Subtotal</td>
-                    <td style="font-weight: bold; background: #f3f4f6;">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
+                    <td colspan="5" style="text-align: right; font-weight: bold; background: #f3f4f6;">Subtotal</td>
+                    <td class="money" style="font-weight: bold; background: #f3f4f6;"><span class="rp">Rp.</span>{{ number_format($order->total, 0, ',', '.') }}</td>
                 </tr>
                 <tr>
-                    <td colspan="4" style="text-align: right; font-weight: bold; background: #091842; color: #fff;">Total</td>
-                    <td style="font-weight: bold; background: #091842; color: #fff;">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
+                    <td colspan="5" style="text-align: right; font-weight: bold; background: #091842; color: #fff;">Total</td>
+                    <td class="money" style="font-weight: bold; background: #091842; color: #fff;"><span class="rp">Rp.</span>{{ number_format($order->total, 0, ',', '.') }}</td>
                 </tr>
             </tbody>
         </table>
@@ -117,22 +123,26 @@
 
     <div class="page" style="page-break-before: always; margin-top: -30mm;">
         @if(!empty($order->payment_terms))
-            <p class="section-title">C. SKEMA PEMBAYARAN</p>
+            <p class="section-title">B. SKEMA PEMBAYARAN</p>
             <table class="doc-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">No</th>
-                        <th style="width: 25%;">Termin</th>
-                        <th style="width: 22%;">Jumlah</th>
+                        <th class="c" style="width: 6%;">No</th>
+                        <th style="width: 27%;">Termin</th>
+                        <th class="r" style="width: 22%;">Jumlah</th>
                         <th style="width: 45%;">Keterangan</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($order->payment_terms as $index => $term)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            <td class="c">{{ $index + 1 }}</td>
                             <td>{{ $term['termin'] }}</td>
-                            <td>{{ isset($term['amount']) && $term['amount'] !== null ? 'Rp '.number_format($term['amount'], 0, ',', '.') : '-' }}</td>
+                            @if(isset($term['amount']) && $term['amount'] !== null)
+                                <td class="money"><span class="rp">Rp.</span>{{ number_format($term['amount'], 0, ',', '.') }}</td>
+                            @else
+                                <td class="c">-</td>
+                            @endif
                             <td>{{ $term['description'] ?? '' }}</td>
                         </tr>
                     @endforeach
@@ -140,7 +150,7 @@
             </table>
         @endif
 
-        <p class="section-title">D. KETENTUAN UMUM</p>
+        <p class="section-title">{{ !empty($order->payment_terms) ? 'C' : 'B' }}. KETENTUAN UMUM</p>
         <ol style="padding-left: 14px; margin: 0;">
             <li style="margin-bottom: 3px;">PO ini sah setelah ditandatangani oleh kedua belah pihak.</li>
             <li style="margin-bottom: 3px;">Klien wajib mengkonfirmasi penerimaan PO maksimal 2x24 jam setelah diterima.</li>
@@ -156,14 +166,14 @@
                     <p style="margin: 0;">PIHAK PEMBELI</p>
                     <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
                     @include('pdf.partials.signature', ['name' => $order->buyer_signatory_name, 'enabled' => $order->use_signature])
-                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $order->buyer_signatory_name ?? '________________________' }}</p>
+                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($order->buyer_signatory_name) ?? '________________________' }}</p>
                     <p style="margin: 0;">{{ $order->buyer_signatory_title ?? '' }}</p>
                 </td>
                 <td style="width: 50%; border: none; text-align: center;">
                     <p style="margin: 0;">PIHAK KLIEN</p>
                     <p style="margin: 0; font-weight: bold;">{{ $order->client_name }}</p>
                     <div style="height: 20mm;"></div>
-                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $order->client_signatory_name ?? '________________________' }}</p>
+                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($order->client_signatory_name) ?? '________________________' }}</p>
                     <p style="margin: 0;">{{ $order->client_signatory_title ?? '' }}</p>
                 </td>
             </tr>

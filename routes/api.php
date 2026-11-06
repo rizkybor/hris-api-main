@@ -26,6 +26,7 @@ use App\Http\Controllers\MeetingNoteController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CertificateTemplateController;
 use App\Http\Controllers\CertificateSettingController;
+use App\Http\Controllers\DocumentSettingController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\EmployeeProfileController;
@@ -545,6 +546,10 @@ Route::prefix('v1')
             Route::get('staff-tasks/{staffTaskId}/comments', [StaffTaskCommentController::class, 'index']);
             Route::post('staff-tasks/{staffTaskId}/comments', [StaffTaskCommentController::class, 'store']);
             Route::delete('staff-task-comments/{id}', [StaffTaskCommentController::class, 'destroy']);
+
+            // Generated documents (PDF) settings, e.g. degrees in signatory names
+            Route::get('document-setting', [DocumentSettingController::class, 'show']);
+            Route::put('document-setting', [DocumentSettingController::class, 'update']);
 
             // Document Letters: Certificates
             Route::get('certificate-setting', [CertificateSettingController::class, 'show']);

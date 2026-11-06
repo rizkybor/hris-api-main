@@ -45,8 +45,12 @@
         .stars .empty { color: #d1d5db; }
         .score-label { font-size: 9.5pt; color: #6b7280; }
 
-        .summary-row { display: table; width: 100%; margin: 4mm 0 6mm 0; }
-        .summary-card { display: table-cell; width: 33.33%; padding: 3mm; border: 1px solid #dcdedd; border-radius: 4px; }
+        /* A real table with spacer cells: gives the cards a gap between them
+           while the outer edges stay flush with the content width. */
+        .summary-row { width: 100%; border-collapse: collapse; margin: 4mm 0 6mm 0; }
+        .summary-row td { vertical-align: top; padding: 0; border: none; }
+        .summary-row td.gap { width: 4mm; }
+        .summary-card { height: 13mm; padding: 3mm; border: 1px solid #dcdedd; border-radius: 4px; }
         .summary-card .value { font-size: 14.5pt; font-weight: bold; color: #070b30; }
         .summary-card .label { font-size: 8.5pt; color: #6b7280; }
 
@@ -55,6 +59,8 @@
         table.data-table th { background-color: #eef2ff; font-weight: bold; text-align: left; }
 
         h3.section-title { font-size: 11.5pt; margin: 0 0 2mm 0; color: #1f2937; border-bottom: 1px solid #dcdedd; padding-bottom: 1mm; }
+            /* Counts and scores read better centered under their headers. */
+        .data-table.counts th, .data-table.counts td, .data-table .c { text-align: center; }
     </style>
 </head>
 <body>
@@ -86,23 +92,27 @@
             </div>
         </div>
 
-        <div class="summary-row">
-            <div class="summary-card">
-                <div class="value">{{ $attendance_rate !== null ? $attendance_rate.'%' : '-' }}</div>
-                <div class="label">Attendance ({{ $attendance['total'] }} working days scored)</div>
-            </div>
-            <div class="summary-card">
-                <div class="value">{{ $task_completion_rate !== null ? $task_completion_rate.'%' : '-' }}</div>
-                <div class="label">Task Completion ({{ $tasks['done'] }}/{{ $tasks['total'] }} tasks due)</div>
-            </div>
-            <div class="summary-card">
-                <div class="value">{{ $overall_score !== null ? $overall_score.'%' : '-' }}</div>
-                <div class="label">Overall Score</div>
-            </div>
-        </div>
+        <table class="summary-row">
+            <tr>
+                <td style="width: 32%;"><div class="summary-card">
+                    <div class="value">{{ $attendance_rate !== null ? $attendance_rate.'%' : '-' }}</div>
+                    <div class="label">Attendance ({{ $attendance['total'] }} working days scored)</div>
+                </div></td>
+                <td class="gap"></td>
+                <td style="width: 32%;"><div class="summary-card">
+                    <div class="value">{{ $task_completion_rate !== null ? $task_completion_rate.'%' : '-' }}</div>
+                    <div class="label">Task Completion ({{ $tasks['done'] }}/{{ $tasks['total'] }} tasks due)</div>
+                </div></td>
+                <td class="gap"></td>
+                <td style="width: 32%;"><div class="summary-card">
+                    <div class="value">{{ $overall_score !== null ? $overall_score.'%' : '-' }}</div>
+                    <div class="label">Overall Score</div>
+                </div></td>
+            </tr>
+        </table>
 
         <h3 class="section-title">Attendance Breakdown</h3>
-        <table class="data-table">
+        <table class="data-table counts">
             <thead>
                 <tr>
                     <th>Working Days</th>
@@ -137,19 +147,19 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">No</th>
+                        <th class="c" style="width: 8%;">No</th>
                         <th style="width: 52%;">Task</th>
                         <th style="width: 20%;">Source</th>
-                        <th style="width: 20%;">Due Date</th>
+                        <th class="c" style="width: 20%;">Due Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($completed_tasks as $index => $task)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            <td class="c">{{ $index + 1 }}</td>
                             <td>{{ $task['title'] }}{{ $task['project_name'] ? ' ('.$task['project_name'].')' : '' }}</td>
                             <td>{{ $task['source'] === 'project_task' ? 'Project Task' : 'Staff Task' }}</td>
-                            <td>{{ $task['due_date'] ? \Carbon\Carbon::parse($task['due_date'])->translatedFormat('d M Y') : '-' }}</td>
+                            <td class="c">{{ $task['due_date'] ? \Carbon\Carbon::parse($task['due_date'])->translatedFormat('d M Y') : '-' }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -174,7 +184,7 @@
                 </p>
 
                 @if(!empty($performance_review['category_scores']))
-                    <table class="data-table" style="margin-bottom: 3mm;">
+                    <table class="data-table counts" style="margin-bottom: 3mm;">
                         <thead>
                             <tr>
                                 @foreach($performance_review['category_scores'] as $category => $score)
@@ -208,7 +218,7 @@
             <p style="margin: 0;">Tangerang Selatan, {{ $generated_at->translatedFormat('d F Y') }}</p>
             <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
             @include('pdf.partials.signature', ['name' => 'Aldi Pratama Putra, S.Ikom', 'enabled' => $use_signature ?? false])
-            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">Aldi Pratama Putra, S.Ikom</p>
+            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format('Aldi Pratama Putra, S.Ikom') }}</p>
             <p style="margin: 0;">Director</p>
         </div>
     </div>

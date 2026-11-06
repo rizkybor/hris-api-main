@@ -175,31 +175,37 @@
             <table class="doc-table" style="margin-bottom: 14mm;">
                 <thead>
                     <tr>
-                        <th style="width: 6%;">No</th>
-                        <th style="{{ $hasPricing ? 'width: 34%;' : 'width: 50%;' }}">Deskripsi</th>
-                        <th style="{{ $hasPricing ? 'width: 34%;' : 'width: 32%;' }}">Keterangan</th>
-                        <th style="width: 12%;">Qty</th>
+                        <th class="c" style="width: 6%;">No</th>
+                        <th style="{{ $hasPricing ? 'width: 28%;' : 'width: 50%;' }}">Deskripsi</th>
+                        <th style="{{ $hasPricing ? 'width: 32%;' : 'width: 32%;' }}">Keterangan</th>
+                        <th class="c" colspan="2" style="{{ $hasPricing ? 'width: 11%;' : 'width: 12%;' }}">Qty</th>
                         @if($hasPricing)
-                            <th style="width: 14%;">Harga</th>
+                            <th class="r" style="width: 23%;">Harga</th>
                         @endif
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($letter->items as $index => $item)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            <td class="c">{{ $index + 1 }}</td>
                             <td>{{ $item['description'] }}</td>
                             <td>{!! nl2br(e($item['specification'] ?? '')) !!}</td>
-                            <td>{{ $item['qty'] ?? '-' }}</td>
+                            @php([$qn, $qu] = \App\Helpers\QtyHelper::split($item['qty'] ?? null))
+                            @if($qn !== null)
+                                <td class="qn" style="width: 4%;">{{ $qn }}</td>
+                                <td class="qu" style="width: 7%;">{{ $qu }}</td>
+                            @else
+                                <td class="c" colspan="2">{{ $qu !== '' ? $qu : '-' }}</td>
+                            @endif
                             @if($hasPricing)
-                                <td>Rp {{ number_format($item['price'] ?? 0, 0, ',', '.') }}</td>
+                                <td class="money"><span class="rp">Rp.</span>{{ number_format($item['price'] ?? 0, 0, ',', '.') }}</td>
                             @endif
                         </tr>
                     @endforeach
                     @if($hasPricing)
                         <tr>
-                            <td colspan="4" style="text-align: right; font-weight: bold; background: #0c51d9; color: #fff;">Total</td>
-                            <td style="font-weight: bold; background: #0c51d9; color: #fff;">Rp {{ number_format(collect($letter->items)->sum('price'), 0, ',', '.') }}</td>
+                            <td colspan="5" style="text-align: right; font-weight: bold; background: #0c51d9; color: #fff;">Total</td>
+                            <td class="money" style="font-weight: bold; background: #0c51d9; color: #fff;"><span class="rp">Rp.</span>{{ number_format(collect($letter->items)->sum('price'), 0, ',', '.') }}</td>
                         </tr>
                     @endif
                 </tbody>
@@ -222,14 +228,14 @@
                             <p style="margin: 0;">PIHAK PERTAMA</p>
                             <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
                             @include('pdf.partials.signature', ['name' => $letter->signatory_name, 'enabled' => $letter->use_signature])
-                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
+                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($letter->signatory_name) ?? '________________________' }}</p>
                             <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
                         </td>
                         <td style="border: none; width: 50%; text-align: center;">
                             <p style="margin: 0;">PIHAK KEDUA</p>
                             <p style="margin: 0; font-weight: bold;">{{ $letter->second_party_name }}</p>
                             <div style="height: 20mm;"></div>
-                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->second_party_signatory_name ?? '________________________' }}</p>
+                            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($letter->second_party_signatory_name) ?? '________________________' }}</p>
                             <p style="margin: 0;">{{ $letter->second_party_signatory_title ?? '' }}</p>
                         </td>
                     </tr>
@@ -239,7 +245,7 @@
                     <p style="margin: 0;">Hormat kami,</p>
                     <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
                     @include('pdf.partials.signature', ['name' => $letter->signatory_name, 'enabled' => $letter->use_signature])
-                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ $letter->signatory_name ?? '________________________' }}</p>
+                    <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format($letter->signatory_name) ?? '________________________' }}</p>
                     <p style="margin: 0;">{{ $letter->signatory_title ?? '' }}</p>
                 </div>
             @endif
