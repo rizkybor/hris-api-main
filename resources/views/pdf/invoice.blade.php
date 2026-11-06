@@ -28,7 +28,7 @@
         .info-table td.sep { width: 3%; text-align: center; }
         .info-table td.val { text-align: right; }
         /* Gap between the left-hand values and the right-hand block. */
-        .half-left { padding-right: 8mm; }
+        .half-left { padding-right: 15mm; }
         .items-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 6px 4px; font-size: 10pt; }
         .items-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 4px; font-size: 10pt; }
         /* Amounts: "Rp." in its own column so it lines up on every row, the
