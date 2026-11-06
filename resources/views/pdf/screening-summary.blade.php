@@ -5,7 +5,6 @@
     <title>Ringkasan Kebutuhan - {{ $screening->code }}</title>
     @php
         $result = $screening->result ?? [];
-        $rp = fn ($v) => 'Rp '.number_format((float) $v, 0, ',', '.');
         $amt = fn ($v) => number_format((float) $v, 0, ',', '.');
         $unitLabel = ['once' => '', 'month' => '/ bulan', 'year' => '/ tahun'];
         $complexity = ['S' => 'S (sederhana)', 'M' => 'M (menengah)', 'L' => 'L (besar)', 'XL' => 'XL (sangat besar)'][$result['complexity'] ?? ''] ?? '-';
@@ -130,7 +129,7 @@
                                 @if($item->unit_price === null)
                                     <td class="num" colspan="3"><span class="muted">Sesuai penawaran</span></td>
                                 @else
-                                    <td class="cur">Rp</td>
+                                    <td class="cur">Rp.</td>
                                     <td class="amt">{{ $amt($item->lineTotal()) }}</td>
                                     <td class="unit">{{ $unitLabel[$item->price_unit] ?? '' }}</td>
                                 @endif
@@ -140,9 +139,9 @@
                 </tbody>
                 @if($withPrices)
                     <tfoot>
-                        <tr><td></td><td colspan="2">Estimasi biaya sekali bayar (mulai dari)</td><td class="cur">Rp</td><td class="amt">{{ $amt($estimate['one_time']) }}</td><td class="unit"></td></tr>
-                        @if($estimate['monthly'])<tr><td></td><td colspan="2">Biaya bulanan</td><td class="cur">Rp</td><td class="amt">{{ $amt($estimate['monthly']) }}</td><td class="unit">/ bulan</td></tr>@endif
-                        @if($estimate['yearly'])<tr><td></td><td colspan="2">Biaya tahunan</td><td class="cur">Rp</td><td class="amt">{{ $amt($estimate['yearly']) }}</td><td class="unit">/ tahun</td></tr>@endif
+                        <tr><td></td><td colspan="2">Estimasi biaya sekali bayar (mulai dari)</td><td class="cur">Rp.</td><td class="amt">{{ $amt($estimate['one_time']) }}</td><td class="unit"></td></tr>
+                        @if($estimate['monthly'])<tr><td></td><td colspan="2">Biaya bulanan</td><td class="cur">Rp.</td><td class="amt">{{ $amt($estimate['monthly']) }}</td><td class="unit">/ bulan</td></tr>@endif
+                        @if($estimate['yearly'])<tr><td></td><td colspan="2">Biaya tahunan</td><td class="cur">Rp.</td><td class="amt">{{ $amt($estimate['yearly']) }}</td><td class="unit">/ tahun</td></tr>@endif
                     </tfoot>
                 @endif
             </table>

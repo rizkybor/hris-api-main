@@ -36,7 +36,10 @@
            and totals tables. */
         .totals-table td { border: none; padding: 3px 0; font-size: 10pt; }
         .totals-table .t-label { text-align: right; padding-right: 4mm; }
-        .items-table .qty { text-align: center; }
+        /* Qty as number | unit (App\Helpers\QtyHelper). */
+        .items-table td.qn { text-align: right; padding-right: 1mm; white-space: nowrap; }
+        .items-table td.qu { text-align: left; padding-left: 0; white-space: nowrap; }
+        .items-table .c { text-align: center; }
         .cur { text-align: left; white-space: nowrap; }
         .amt { text-align: right; white-space: nowrap; }
         .totals-table .grand td { border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51; padding: 6px 0; font-weight: bold; font-size: 11pt; }
@@ -115,7 +118,7 @@
             <thead>
                 <tr>
                     <th style="width: 48%;">Item Description</th>
-                    <th style="width: 12%; text-align: center;">Quantity</th>
+                    <th colspan="2" style="width: 12%; text-align: center;">Quantity</th>
                     <th colspan="2" style="width: 18%; text-align: right;">Rate</th>
                     {{-- spacer so the Rate and Total money columns don't read as one --}}
                     <th style="width: 4%;"></th>
@@ -127,7 +130,13 @@
                     @php($rate = $rateNumber($item['rate'] ?? null))
                     <tr>
                         <td>{{ $item['description'] }}</td>
-                        <td class="qty">{{ filled($item['quantity'] ?? null) ? $item['quantity'] : '-' }}</td>
+                        @php([$qn, $qu] = \App\Helpers\QtyHelper::split($item['quantity'] ?? null))
+                        @if($qn !== null)
+                            <td class="qn" style="width: 5%;">{{ $qn }}</td>
+                            <td class="qu" style="width: 7%;">{{ $qu }}</td>
+                        @else
+                            <td class="c" colspan="2">{{ $qu !== '' ? $qu : '-' }}</td>
+                        @endif
                         @if($rate !== null)
                             <td class="cur" style="width: 4%;">Rp.</td>
                             <td class="amt" style="width: 14%;">{{ $rate }}</td>

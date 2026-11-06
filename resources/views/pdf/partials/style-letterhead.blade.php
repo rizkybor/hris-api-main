@@ -129,6 +129,10 @@
     .doc-table th.r { text-align: right; }
     .doc-table td.money { text-align: right; white-space: nowrap; }
     .doc-table td.money .rp { float: left; }
+    /* Qty split into number | unit (App\Helpers\QtyHelper): number hugs
+       the unit from the right, unit left-aligned, no rule between them. */
+    .doc-table td.qn { text-align: right; padding-right: 1mm; border-right: none; white-space: nowrap; }
+    .doc-table td.qu { text-align: left; padding-left: 0; border-left: none; white-space: nowrap; }
 
     .section-title {
         font-weight: bold;

@@ -52,7 +52,7 @@
             <tr><td class="label">Received From</td><td>: {{ $receipt->received_from }}</td></tr>
             <tr><td class="label">Amount</td><td>: {{ strtoupper(\App\Helpers\TerbilangHelper::toRupiah((float) $receipt->amount)) }}</td></tr>
             @if($receipt->pph23_amount)
-                <tr><td class="label">Note</td><td>: Net of {{ number_format((float) $receipt->pph23_percent, 0) }}% PPh 23 withholding (Rp {{ number_format((float) $receipt->pph23_amount, 0, ',', '.') }})</td></tr>
+                <tr><td class="label">Note</td><td>: Net of {{ number_format((float) $receipt->pph23_percent, 0) }}% PPh 23 withholding (Rp. {{ number_format((float) $receipt->pph23_amount, 0, ',', '.') }})</td></tr>
             @endif
             <tr>
                 <td class="label">For Payment of</td>

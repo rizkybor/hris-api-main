@@ -17,8 +17,8 @@
         table { width: 100%; border-collapse: collapse; }
         .info-table td { border: none; padding: 6px 0; font-size: 10.5pt; vertical-align: top; }
         .breakdown-table td { border: none; padding: 5px 0; font-size: 10.5pt; }
-        /* label | sign | Rp | amount: "Rp" lines up down the column even on
-           the "- Rp" deduction row. */
+        /* label | sign | Rp. | amount: "Rp." lines up down the column even on
+           the "- Rp." deduction row. */
         .breakdown-table .sign { width: 4%; text-align: right; padding-right: 1mm; }
         .breakdown-table .cur { width: 8%; }
         .breakdown-table .amount { width: 30%; text-align: right; white-space: nowrap; }
@@ -57,21 +57,21 @@
                 <td style="width: 50%; vertical-align: top; padding-right: 6mm;">
                     <p class="section-title">EARNINGS</p>
                     <table class="breakdown-table">
-                        <tr><td>Basic Salary</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($basicSalary, 0, ',', '.') }}</td></tr>
+                        <tr><td>Basic Salary</td><td class="sign"></td><td class="cur">Rp.</td><td class="amount">{{ number_format($basicSalary, 0, ',', '.') }}</td></tr>
                         @if($attendanceDeduction > 0)
-                        <tr><td>Attendance Deduction</td><td class="sign">-</td><td class="cur">Rp</td><td class="amount">{{ number_format($attendanceDeduction, 0, ',', '.') }}</td></tr>
+                        <tr><td>Attendance Deduction</td><td class="sign">-</td><td class="cur">Rp.</td><td class="amount">{{ number_format($attendanceDeduction, 0, ',', '.') }}</td></tr>
                         @endif
-                        <tr class="total-row"><td>Gross Salary</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($grossSalary, 0, ',', '.') }}</td></tr>
+                        <tr class="total-row"><td>Gross Salary</td><td class="sign"></td><td class="cur">Rp.</td><td class="amount">{{ number_format($grossSalary, 0, ',', '.') }}</td></tr>
                     </table>
                 </td>
                 <td style="width: 50%; vertical-align: top; padding-left: 6mm;">
                     <p class="section-title">DEDUCTIONS</p>
                     <table class="breakdown-table">
-                        <tr><td>BPJS Kesehatan</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($bpjsKesehatan, 0, ',', '.') }}</td></tr>
-                        <tr><td>BPJS JHT</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($bpjsJht, 0, ',', '.') }}</td></tr>
-                        <tr><td>BPJS JP</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($bpjsJp, 0, ',', '.') }}</td></tr>
-                        <tr><td>PPh 21</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($pph21, 0, ',', '.') }}</td></tr>
-                        <tr class="total-row"><td>Total Deductions</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($totalDeductions, 0, ',', '.') }}</td></tr>
+                        <tr><td>BPJS Kesehatan</td><td class="sign"></td><td class="cur">Rp.</td><td class="amount">{{ number_format($bpjsKesehatan, 0, ',', '.') }}</td></tr>
+                        <tr><td>BPJS JHT</td><td class="sign"></td><td class="cur">Rp.</td><td class="amount">{{ number_format($bpjsJht, 0, ',', '.') }}</td></tr>
+                        <tr><td>BPJS JP</td><td class="sign"></td><td class="cur">Rp.</td><td class="amount">{{ number_format($bpjsJp, 0, ',', '.') }}</td></tr>
+                        <tr><td>PPh 21</td><td class="sign"></td><td class="cur">Rp.</td><td class="amount">{{ number_format($pph21, 0, ',', '.') }}</td></tr>
+                        <tr class="total-row"><td>Total Deductions</td><td class="sign"></td><td class="cur">Rp.</td><td class="amount">{{ number_format($totalDeductions, 0, ',', '.') }}</td></tr>
                     </table>
                 </td>
             </tr>
@@ -81,7 +81,7 @@
             <tr>
                 <td>
                     <p style="margin: 0; font-size: 9.5pt; opacity: 0.85;">NET SALARY (TAKE HOME)</p>
-                    <p style="margin: 4px 0 0 0; font-size: 19pt; font-weight: bold;">Rp {{ number_format($netSalary, 0, ',', '.') }}</p>
+                    <p style="margin: 4px 0 0 0; font-size: 19pt; font-weight: bold;">Rp. {{ number_format($netSalary, 0, ',', '.') }}</p>
                 </td>
             </tr>
         </table>

@@ -89,7 +89,7 @@
                     <th class="c" style="width: 6%;">No</th>
                     <th style="width: 22%;">Deskripsi</th>
                     <th style="width: 37%;">Spesifikasi</th>
-                    <th class="c" style="width: 12%;">Qty</th>
+                    <th class="c" colspan="2" style="width: 12%;">Qty</th>
                     <th class="r" style="width: 23%;">Harga</th>
                 </tr>
             </thead>
@@ -99,17 +99,23 @@
                         <td class="c">{{ $index + 1 }}</td>
                         <td>{{ $item['description'] }}</td>
                         <td>{!! nl2br(e($item['specification'] ?? '')) !!}</td>
-                        <td class="c">{{ $item['qty'] }}</td>
-                        <td class="money"><span class="rp">Rp</span>{{ number_format($item['price'], 0, ',', '.') }}</td>
+                        @php([$qn, $qu] = \App\Helpers\QtyHelper::split($item['qty'] ?? null))
+                        @if($qn !== null)
+                            <td class="qn" style="width: 4%;">{{ $qn }}</td>
+                            <td class="qu" style="width: 8%;">{{ $qu }}</td>
+                        @else
+                            <td class="c" colspan="2">{{ $qu !== '' ? $qu : '-' }}</td>
+                        @endif
+                        <td class="money"><span class="rp">Rp.</span>{{ number_format($item['price'], 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
                 <tr>
-                    <td colspan="4" style="text-align: right; font-weight: bold; background: #f3f4f6;">Subtotal</td>
-                    <td class="money" style="font-weight: bold; background: #f3f4f6;"><span class="rp">Rp</span>{{ number_format($order->total, 0, ',', '.') }}</td>
+                    <td colspan="5" style="text-align: right; font-weight: bold; background: #f3f4f6;">Subtotal</td>
+                    <td class="money" style="font-weight: bold; background: #f3f4f6;"><span class="rp">Rp.</span>{{ number_format($order->total, 0, ',', '.') }}</td>
                 </tr>
                 <tr>
-                    <td colspan="4" style="text-align: right; font-weight: bold; background: #091842; color: #fff;">Total</td>
-                    <td class="money" style="font-weight: bold; background: #091842; color: #fff;"><span class="rp">Rp</span>{{ number_format($order->total, 0, ',', '.') }}</td>
+                    <td colspan="5" style="text-align: right; font-weight: bold; background: #091842; color: #fff;">Total</td>
+                    <td class="money" style="font-weight: bold; background: #091842; color: #fff;"><span class="rp">Rp.</span>{{ number_format($order->total, 0, ',', '.') }}</td>
                 </tr>
             </tbody>
         </table>
@@ -133,7 +139,7 @@
                             <td class="c">{{ $index + 1 }}</td>
                             <td>{{ $term['termin'] }}</td>
                             @if(isset($term['amount']) && $term['amount'] !== null)
-                                <td class="money"><span class="rp">Rp</span>{{ number_format($term['amount'], 0, ',', '.') }}</td>
+                                <td class="money"><span class="rp">Rp.</span>{{ number_format($term['amount'], 0, ',', '.') }}</td>
                             @else
                                 <td class="c">-</td>
                             @endif
