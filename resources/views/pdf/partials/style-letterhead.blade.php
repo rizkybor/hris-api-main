@@ -123,6 +123,13 @@
         font-size: 10pt;
     }
 
+    /* Item tables: counters/quantities centered; money right-aligned with
+       "Rp" pinned to the cell's left edge so it lines up down the column. */
+    .doc-table .c { text-align: center; }
+    .doc-table th.r { text-align: right; }
+    .doc-table td.money { text-align: right; white-space: nowrap; }
+    .doc-table td.money .rp { float: left; }
+
     .section-title {
         font-weight: bold;
         font-size: 11.5pt;

@@ -86,30 +86,30 @@
         <table class="doc-table">
             <thead>
                 <tr>
-                    <th style="width: 5%;">No</th>
+                    <th class="c" style="width: 6%;">No</th>
                     <th style="width: 22%;">Deskripsi</th>
-                    <th style="width: 38%;">Spesifikasi</th>
-                    <th style="width: 12%;">Qty</th>
-                    <th style="width: 23%;">Harga</th>
+                    <th style="width: 37%;">Spesifikasi</th>
+                    <th class="c" style="width: 12%;">Qty</th>
+                    <th class="r" style="width: 23%;">Harga</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($order->items as $index => $item)
                     <tr>
-                        <td>{{ $index + 1 }}</td>
+                        <td class="c">{{ $index + 1 }}</td>
                         <td>{{ $item['description'] }}</td>
                         <td>{!! nl2br(e($item['specification'] ?? '')) !!}</td>
-                        <td>{{ $item['qty'] }}</td>
-                        <td>Rp {{ number_format($item['price'], 0, ',', '.') }}</td>
+                        <td class="c">{{ $item['qty'] }}</td>
+                        <td class="money"><span class="rp">Rp</span>{{ number_format($item['price'], 0, ',', '.') }}</td>
                     </tr>
                 @endforeach
                 <tr>
                     <td colspan="4" style="text-align: right; font-weight: bold; background: #f3f4f6;">Subtotal</td>
-                    <td style="font-weight: bold; background: #f3f4f6;">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
+                    <td class="money" style="font-weight: bold; background: #f3f4f6;"><span class="rp">Rp</span>{{ number_format($order->total, 0, ',', '.') }}</td>
                 </tr>
                 <tr>
                     <td colspan="4" style="text-align: right; font-weight: bold; background: #091842; color: #fff;">Total</td>
-                    <td style="font-weight: bold; background: #091842; color: #fff;">Rp {{ number_format($order->total, 0, ',', '.') }}</td>
+                    <td class="money" style="font-weight: bold; background: #091842; color: #fff;"><span class="rp">Rp</span>{{ number_format($order->total, 0, ',', '.') }}</td>
                 </tr>
             </tbody>
         </table>
@@ -117,22 +117,26 @@
 
     <div class="page" style="page-break-before: always; margin-top: -30mm;">
         @if(!empty($order->payment_terms))
-            <p class="section-title">C. SKEMA PEMBAYARAN</p>
+            <p class="section-title">B. SKEMA PEMBAYARAN</p>
             <table class="doc-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">No</th>
-                        <th style="width: 25%;">Termin</th>
-                        <th style="width: 22%;">Jumlah</th>
+                        <th class="c" style="width: 6%;">No</th>
+                        <th style="width: 27%;">Termin</th>
+                        <th class="r" style="width: 22%;">Jumlah</th>
                         <th style="width: 45%;">Keterangan</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($order->payment_terms as $index => $term)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            <td class="c">{{ $index + 1 }}</td>
                             <td>{{ $term['termin'] }}</td>
-                            <td>{{ isset($term['amount']) && $term['amount'] !== null ? 'Rp '.number_format($term['amount'], 0, ',', '.') : '-' }}</td>
+                            @if(isset($term['amount']) && $term['amount'] !== null)
+                                <td class="money"><span class="rp">Rp</span>{{ number_format($term['amount'], 0, ',', '.') }}</td>
+                            @else
+                                <td class="c">-</td>
+                            @endif
                             <td>{{ $term['description'] ?? '' }}</td>
                         </tr>
                     @endforeach
@@ -140,7 +144,7 @@
             </table>
         @endif
 
-        <p class="section-title">D. KETENTUAN UMUM</p>
+        <p class="section-title">{{ !empty($order->payment_terms) ? 'C' : 'B' }}. KETENTUAN UMUM</p>
         <ol style="padding-left: 14px; margin: 0;">
             <li style="margin-bottom: 3px;">PO ini sah setelah ditandatangani oleh kedua belah pihak.</li>
             <li style="margin-bottom: 3px;">Klien wajib mengkonfirmasi penerimaan PO maksimal 2x24 jam setelah diterima.</li>

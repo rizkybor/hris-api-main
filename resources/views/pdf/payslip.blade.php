@@ -17,12 +17,18 @@
         table { width: 100%; border-collapse: collapse; }
         .info-table td { border: none; padding: 6px 0; font-size: 10.5pt; vertical-align: top; }
         .breakdown-table td { border: none; padding: 5px 0; font-size: 10.5pt; }
-        .breakdown-table .amount { text-align: right; }
+        /* label | sign | Rp | amount: "Rp" lines up down the column even on
+           the "- Rp" deduction row. */
+        .breakdown-table .sign { width: 4%; text-align: right; padding-right: 1mm; }
+        .breakdown-table .cur { width: 8%; }
+        .breakdown-table .amount { width: 30%; text-align: right; white-space: nowrap; }
         .section-title { color: #0b1d51; font-weight: bold; font-size: 11.5pt; margin: 0 0 4px 0; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1; }
         .total-row td { border-top: 1.5px solid #0b1d51; font-weight: bold; padding-top: 8px; }
         .net-box { margin-top: 10mm; background-color: #0b1d51; color: #ffffff; padding: 10px 14px; }
         .net-box td { border: none; color: #ffffff; }
-        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 9pt; color: #0b1d51; }
+        .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 8pt; color: #0b1d51; }
+        /* Same icon treatment as the invoice/receipt contact footer. */
+        .footer img { width: 2.6mm; height: 2.6mm; vertical-align: baseline; margin-right: 1.5mm; position: relative; top: 0.3mm; }
     </style>
 </head>
 <body>
@@ -51,21 +57,21 @@
                 <td style="width: 50%; vertical-align: top; padding-right: 6mm;">
                     <p class="section-title">EARNINGS</p>
                     <table class="breakdown-table">
-                        <tr><td>Basic Salary</td><td class="amount">Rp {{ number_format($basicSalary, 0, ',', '.') }}</td></tr>
+                        <tr><td>Basic Salary</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($basicSalary, 0, ',', '.') }}</td></tr>
                         @if($attendanceDeduction > 0)
-                        <tr><td>Attendance Deduction</td><td class="amount">- Rp {{ number_format($attendanceDeduction, 0, ',', '.') }}</td></tr>
+                        <tr><td>Attendance Deduction</td><td class="sign">-</td><td class="cur">Rp</td><td class="amount">{{ number_format($attendanceDeduction, 0, ',', '.') }}</td></tr>
                         @endif
-                        <tr class="total-row"><td>Gross Salary</td><td class="amount">Rp {{ number_format($grossSalary, 0, ',', '.') }}</td></tr>
+                        <tr class="total-row"><td>Gross Salary</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($grossSalary, 0, ',', '.') }}</td></tr>
                     </table>
                 </td>
                 <td style="width: 50%; vertical-align: top; padding-left: 6mm;">
                     <p class="section-title">DEDUCTIONS</p>
                     <table class="breakdown-table">
-                        <tr><td>BPJS Kesehatan</td><td class="amount">Rp {{ number_format($bpjsKesehatan, 0, ',', '.') }}</td></tr>
-                        <tr><td>BPJS JHT</td><td class="amount">Rp {{ number_format($bpjsJht, 0, ',', '.') }}</td></tr>
-                        <tr><td>BPJS JP</td><td class="amount">Rp {{ number_format($bpjsJp, 0, ',', '.') }}</td></tr>
-                        <tr><td>PPh 21</td><td class="amount">Rp {{ number_format($pph21, 0, ',', '.') }}</td></tr>
-                        <tr class="total-row"><td>Total Deductions</td><td class="amount">Rp {{ number_format($totalDeductions, 0, ',', '.') }}</td></tr>
+                        <tr><td>BPJS Kesehatan</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($bpjsKesehatan, 0, ',', '.') }}</td></tr>
+                        <tr><td>BPJS JHT</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($bpjsJht, 0, ',', '.') }}</td></tr>
+                        <tr><td>BPJS JP</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($bpjsJp, 0, ',', '.') }}</td></tr>
+                        <tr><td>PPh 21</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($pph21, 0, ',', '.') }}</td></tr>
+                        <tr class="total-row"><td>Total Deductions</td><td class="sign"></td><td class="cur">Rp</td><td class="amount">{{ number_format($totalDeductions, 0, ',', '.') }}</td></tr>
                     </table>
                 </td>
             </tr>
@@ -94,9 +100,9 @@
     <div class="footer">
         <table>
             <tr>
-                <td style="border: none; width: 33%;">contact@jcdigital.co.id</td>
-                <td style="border: none; width: 34%; text-align: center;">www.jcdigital.co.id</td>
-                <td style="border: none; width: 33%; text-align: right;">Phone +62 878-8279-2511</td>
+                <td style="border: none; width: 33%;"><img src="{{ public_path('images/icons/mail.svg') }}">contact@jcdigital.co.id</td>
+                <td style="border: none; width: 34%; text-align: center;"><img src="{{ public_path('images/icons/globe.svg') }}">www.jcdigital.co.id</td>
+                <td style="border: none; width: 33%; text-align: right;"><img src="{{ public_path('images/icons/phone.svg') }}">+62 878-8279-2511</td>
             </tr>
         </table>
     </div>

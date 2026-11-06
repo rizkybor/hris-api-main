@@ -69,31 +69,31 @@
             <table class="doc-table" style="margin-bottom: 14mm;">
                 <thead>
                     <tr>
-                        <th style="width: 6%;">No</th>
-                        <th style="{{ $hasPricing ? 'width: 34%;' : 'width: 50%;' }}">Deskripsi</th>
-                        <th style="{{ $hasPricing ? 'width: 34%;' : 'width: 32%;' }}">Keterangan</th>
-                        <th style="width: 12%;">Qty</th>
+                        <th class="c" style="width: 6%;">No</th>
+                        <th style="{{ $hasPricing ? 'width: 28%;' : 'width: 50%;' }}">Deskripsi</th>
+                        <th style="{{ $hasPricing ? 'width: 32%;' : 'width: 32%;' }}">Keterangan</th>
+                        <th class="c" style="{{ $hasPricing ? 'width: 11%;' : 'width: 12%;' }}">Qty</th>
                         @if($hasPricing)
-                            <th style="width: 14%;">Harga</th>
+                            <th class="r" style="width: 23%;">Harga</th>
                         @endif
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($letter->items as $index => $item)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            <td class="c">{{ $index + 1 }}</td>
                             <td>{{ $item['description'] }}</td>
                             <td>{!! nl2br(e($item['specification'] ?? '')) !!}</td>
-                            <td>{{ $item['qty'] ?? '-' }}</td>
+                            <td class="c">{{ $item['qty'] ?? '-' }}</td>
                             @if($hasPricing)
-                                <td>Rp {{ number_format($item['price'] ?? 0, 0, ',', '.') }}</td>
+                                <td class="money"><span class="rp">Rp</span>{{ number_format($item['price'] ?? 0, 0, ',', '.') }}</td>
                             @endif
                         </tr>
                     @endforeach
                     @if($hasPricing)
                         <tr>
                             <td colspan="4" style="text-align: right; font-weight: bold; background: #0c51d9; color: #fff;">Total</td>
-                            <td style="font-weight: bold; background: #0c51d9; color: #fff;">Rp {{ number_format(collect($letter->items)->sum('price'), 0, ',', '.') }}</td>
+                            <td class="money" style="font-weight: bold; background: #0c51d9; color: #fff;"><span class="rp">Rp</span>{{ number_format(collect($letter->items)->sum('price'), 0, ',', '.') }}</td>
                         </tr>
                     @endif
                 </tbody>
