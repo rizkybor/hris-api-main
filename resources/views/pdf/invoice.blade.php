@@ -31,6 +31,7 @@
            and totals tables. */
         .totals-table td { border: none; padding: 3px 0; font-size: 10pt; }
         .totals-table .t-label { text-align: right; padding-right: 4mm; }
+        .items-table .qty { text-align: center; }
         .cur { text-align: left; white-space: nowrap; }
         .amt { text-align: right; white-space: nowrap; }
         .totals-table .grand td { border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51; padding: 6px 0; font-weight: bold; font-size: 11pt; }
@@ -51,6 +52,17 @@
 
     @php
         $amount = fn ($v) => (float) $v > 0 ? number_format((float) $v, 0, ',', '.') : '-';
+        // Rate is free text on the form. A plain rupiah figure ("Rp. 10.000.000",
+        // "10000000", "Rp 1.500.000,00") is reformatted into the Rp./amount
+        // columns like Total; anything else ("500.000 / bulan") prints as typed.
+        $rateNumber = function ($rate) {
+            $v = trim(preg_replace('/^rp\.?\s*/i', '', trim((string) $rate)));
+            if (! preg_match('/^\d{1,3}(\.\d{3})*(,\d+)?$|^\d+(,\d+)?$/', $v)) {
+                return null;
+            }
+
+            return number_format((float) str_replace(['.', ','], ['', '.'], $v), 0, ',', '.');
+        };
     @endphp
     <div class="page">
         <table style="margin-top: 0;">
@@ -91,18 +103,27 @@
         <table class="items-table" style="margin-top: 8mm;">
             <thead>
                 <tr>
-                    <th style="width: 46%;">Item Description</th>
-                    <th style="width: 13%;">Quantity</th>
-                    <th style="width: 23%;">Rate</th>
+                    <th style="width: 48%;">Item Description</th>
+                    <th style="width: 12%; text-align: center;">Quantity</th>
+                    <th colspan="2" style="width: 18%; text-align: right;">Rate</th>
+                    {{-- spacer so the Rate and Total money columns don't read as one --}}
+                    <th style="width: 4%;"></th>
                     <th colspan="2" style="width: 18%; text-align: right;">Total</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($invoice->items as $item)
+                    @php($rate = $rateNumber($item['rate'] ?? null))
                     <tr>
                         <td>{{ $item['description'] }}</td>
-                        <td>{{ $item['quantity'] ?? '-' }}</td>
-                        <td>{{ $item['rate'] ?? '-' }}</td>
+                        <td class="qty">{{ filled($item['quantity'] ?? null) ? $item['quantity'] : '-' }}</td>
+                        @if($rate !== null)
+                            <td class="cur" style="width: 4%;">Rp.</td>
+                            <td class="amt" style="width: 14%;">{{ $rate }}</td>
+                        @else
+                            <td colspan="2" style="text-align: right;">{{ filled($item['rate'] ?? null) ? $item['rate'] : '-' }}</td>
+                        @endif
+                        <td style="width: 4%;"></td>
                         <td class="cur" style="width: 4%;">Rp.</td>
                         <td class="amt" style="width: 14%;">{{ number_format($item['total'], 0, ',', '.') }}</td>
                     </tr>
