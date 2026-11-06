@@ -39,6 +39,7 @@
 </head>
 <body>
     <img class="letterhead" src="{{ public_path('images/template-payment-receipt.png') }}">
+    @include('pdf.partials.contact-footer', ['marginTop' => 42, 'marginLeft' => 15])
     @if($receipt->status === 'cancelled')
         <div class="cancelled-stamp">DIBATALKAN</div>
     @endif
