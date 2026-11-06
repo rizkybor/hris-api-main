@@ -45,7 +45,7 @@
         .body-content h3 { font-size: 12.5pt; font-weight: bold; margin: 0 0 3mm 0; }
         .body-content h4 { font-size: 11.5pt; font-weight: bold; color: #374151; margin: 0 0 3mm 0; }
 
-        .signature-block { margin-top: 10mm; width: 60mm; page-break-inside: avoid; }
+        .signature-block { margin-top: 10mm; width: 80mm; page-break-inside: avoid; }
         .signature-block p { margin: 0; line-height: 1.5; }
         .signature-name { font-weight: bold; text-decoration: underline; }
 
