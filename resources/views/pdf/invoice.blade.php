@@ -21,7 +21,9 @@
         .page { position: relative; z-index: 1; }
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
-        .info-table td { border: none; padding: 1px 0; font-size: 10pt; }
+        .info-table td { border: none; padding: 1px 0; font-size: 10pt; vertical-align: top; }
+        /* One label width for both right-hand blocks so their values line up. */
+        .info-table td.k-right { width: 36%; padding-right: 2mm; }
         .items-table th { border-bottom: 1.5px solid #0b1d51; color: #0b1d51; text-align: left; padding: 6px 4px; font-size: 10pt; }
         .items-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 4px; font-size: 10pt; }
         /* Amounts: "Rp." in its own column so it lines up on every row, the
@@ -60,7 +62,7 @@
                 </td>
                 <td style="width: 50%; border: none; vertical-align: top;">
                     <table class="info-table">
-                        <tr><td style="width: 45%;" class="label">Invoice Number</td><td>{{ $invoice->invoice_number }}</td></tr>
+                        <tr><td class="label k-right">Invoice Number</td><td>{{ $invoice->invoice_number }}</td></tr>
                         <tr><td class="label">Invoice Date</td><td>{{ strtoupper($invoice->date->translatedFormat('d F Y')) }}</td></tr>
                     </table>
                 </td>
@@ -79,7 +81,7 @@
                 <td style="width: 50%; border: none; vertical-align: top;">
                     <p class="label" style="margin: 0 0 2px 0;">Payment information</p>
                     <table class="info-table">
-                        <tr><td style="width: 40%;">Bank Name:</td><td>{{ $invoice->bank_name ?? '-' }}</td></tr>
+                        <tr><td class="k-right">Bank Name:</td><td>{{ $invoice->bank_name ?? '-' }}</td></tr>
                         <tr><td>Account Number:</td><td>{{ $invoice->bank_account ?? '-' }}</td></tr>
                     </table>
                 </td>
