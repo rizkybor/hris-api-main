@@ -55,6 +55,8 @@
         table.data-table th { background-color: #eef2ff; font-weight: bold; text-align: left; }
 
         h3.section-title { font-size: 11.5pt; margin: 0 0 2mm 0; color: #1f2937; border-bottom: 1px solid #dcdedd; padding-bottom: 1mm; }
+            /* Counts and scores read better centered under their headers. */
+        .data-table.counts th, .data-table.counts td, .data-table .c { text-align: center; }
     </style>
 </head>
 <body>
@@ -102,7 +104,7 @@
         </div>
 
         <h3 class="section-title">Attendance Breakdown</h3>
-        <table class="data-table">
+        <table class="data-table counts">
             <thead>
                 <tr>
                     <th>Working Days</th>
@@ -137,19 +139,19 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">No</th>
+                        <th class="c" style="width: 8%;">No</th>
                         <th style="width: 52%;">Task</th>
                         <th style="width: 20%;">Source</th>
-                        <th style="width: 20%;">Due Date</th>
+                        <th class="c" style="width: 20%;">Due Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($completed_tasks as $index => $task)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            <td class="c">{{ $index + 1 }}</td>
                             <td>{{ $task['title'] }}{{ $task['project_name'] ? ' ('.$task['project_name'].')' : '' }}</td>
                             <td>{{ $task['source'] === 'project_task' ? 'Project Task' : 'Staff Task' }}</td>
-                            <td>{{ $task['due_date'] ? \Carbon\Carbon::parse($task['due_date'])->translatedFormat('d M Y') : '-' }}</td>
+                            <td class="c">{{ $task['due_date'] ? \Carbon\Carbon::parse($task['due_date'])->translatedFormat('d M Y') : '-' }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -174,7 +176,7 @@
                 </p>
 
                 @if(!empty($performance_review['category_scores']))
-                    <table class="data-table" style="margin-bottom: 3mm;">
+                    <table class="data-table counts" style="margin-bottom: 3mm;">
                         <thead>
                             <tr>
                                 @foreach($performance_review['category_scores'] as $category => $score)
