@@ -6,7 +6,7 @@
     @php
         $result = $screening->result ?? [];
         $amt = fn ($v) => number_format((float) $v, 0, ',', '.');
-        $unitLabel = ['once' => '', 'month' => '/ bulan', 'year' => '/ tahun'];
+        $unitLabel = ['month' => 'Biaya per bulan', 'year' => 'Biaya per tahun'];
         $complexity = ['S' => 'S (sederhana)', 'M' => 'M (menengah)', 'L' => 'L (besar)', 'XL' => 'XL (sangat besar)'][$result['complexity'] ?? ''] ?? '-';
         $fit = ['fit' => 'Sesuai anggaran', 'over' => 'Melebihi anggaran', 'unknown' => 'Belum bisa dibandingkan'][$estimate['budget_fit']] ?? '-';
         $sourceLabel = ['landing' => 'Form website', 'invite' => 'Link undangan', 'internal' => 'Diisi tim JCD'][$screening->source] ?? $screening->source;
@@ -50,11 +50,12 @@
         .items td { border-bottom: 1px solid #e5e9f0; padding: 1.6mm 2mm; vertical-align: top; }
         .items .no { width: 6mm; color: #64748b; }
         .items .num { text-align: right; white-space: nowrap; }
-        /* Price = Rp | amount | unit, so "Rp" and the figures line up even
-           when some rows carry "/ bulan" or "/ tahun". */
-        .items td.cur { padding-right: 1.5mm; text-align: right; white-space: nowrap; }
-        .items td.amt { width: 22mm; padding-left: 0; padding-right: 1mm; text-align: right; white-space: nowrap; }
-        .items td.unit { width: 13mm; padding-left: 0; white-space: nowrap; color: #64748b; }
+        /* One price column: "Rp." pinned left, figure right-aligned to the
+           table edge (same as the PO/letter tables). Billing period goes
+           under the service name instead of after the figure. */
+        .items th.price { width: 34mm; text-align: right; }
+        .items td.money { text-align: right; white-space: nowrap; }
+        .items td.money .rp { float: left; }
         .items .muted { color: #64748b; font-size: 8pt; }
         .items tfoot td { font-weight: bold; border-top: 1.5px solid #0b1d51; border-bottom: none; }
 
@@ -113,7 +114,7 @@
                         <th class="no">No</th>
                         <th>Layanan</th>
                         <th>Estimasi Waktu</th>
-                        @if($withPrices)<th class="num" colspan="3">Estimasi Harga</th>@endif
+                        @if($withPrices)<th class="price">Estimasi Harga</th>@endif
                     </tr>
                 </thead>
                 <tbody>
@@ -122,16 +123,15 @@
                             <td class="no">{{ $i + 1 }}</td>
                             <td>
                                 {{ $item->name }}@if((float) $item->qty > 1) &times; {{ rtrim(rtrim(number_format((float) $item->qty, 2, ',', '.'), '0'), ',') }}@endif
+                                @if($withPrices && isset($unitLabel[$item->price_unit]))<div class="muted">{{ $unitLabel[$item->price_unit] }}</div>@endif
                                 @if($item->hours)<div class="muted">± {{ rtrim(rtrim(number_format((float) $item->hours, 1, ',', '.'), '0'), ',') }} jam kerja</div>@endif
                             </td>
                             <td>{{ $item->duration_text ?: ($item->hours ? '-' : '-') }}</td>
                             @if($withPrices)
                                 @if($item->unit_price === null)
-                                    <td class="num" colspan="3"><span class="muted">Sesuai penawaran</span></td>
+                                    <td class="num"><span class="muted">Sesuai penawaran</span></td>
                                 @else
-                                    <td class="cur">Rp.</td>
-                                    <td class="amt">{{ $amt($item->lineTotal()) }}</td>
-                                    <td class="unit">{{ $unitLabel[$item->price_unit] ?? '' }}</td>
+                                    <td class="money"><span class="rp">Rp.</span>{{ $amt($item->lineTotal()) }}</td>
                                 @endif
                             @endif
                         </tr>
@@ -139,9 +139,9 @@
                 </tbody>
                 @if($withPrices)
                     <tfoot>
-                        <tr><td></td><td colspan="2">Estimasi biaya sekali bayar (mulai dari)</td><td class="cur">Rp.</td><td class="amt">{{ $amt($estimate['one_time']) }}</td><td class="unit"></td></tr>
-                        @if($estimate['monthly'])<tr><td></td><td colspan="2">Biaya bulanan</td><td class="cur">Rp.</td><td class="amt">{{ $amt($estimate['monthly']) }}</td><td class="unit">/ bulan</td></tr>@endif
-                        @if($estimate['yearly'])<tr><td></td><td colspan="2">Biaya tahunan</td><td class="cur">Rp.</td><td class="amt">{{ $amt($estimate['yearly']) }}</td><td class="unit">/ tahun</td></tr>@endif
+                        <tr><td></td><td colspan="2">Estimasi biaya sekali bayar (mulai dari)</td><td class="money"><span class="rp">Rp.</span>{{ $amt($estimate['one_time']) }}</td></tr>
+                        @if($estimate['monthly'])<tr><td></td><td colspan="2">Biaya bulanan</td><td class="money"><span class="rp">Rp.</span>{{ $amt($estimate['monthly']) }}</td></tr>@endif
+                        @if($estimate['yearly'])<tr><td></td><td colspan="2">Biaya tahunan</td><td class="money"><span class="rp">Rp.</span>{{ $amt($estimate['yearly']) }}</td></tr>@endif
                     </tfoot>
                 @endif
             </table>
@@ -149,7 +149,7 @@
                 <p class="note">
                     Harga mengikuti Rate Card JCD ("start from"); modul/fitur tambahan dihitung dari estimasi jam kerja.
                     @if($estimate['by_quote']->isNotEmpty()) Sesuai penawaran: {{ $estimate['by_quote']->implode(', ') }}. @endif
-                    @if(!empty($result['budget'])) Anggaran klien: {{ $result['budget']['label'] }} — {{ $fit }}.@endif
+                    @if(!empty($result['budget'])) Anggaran klien: {{ preg_replace('/\bRp\s(?=\d)/', 'Rp. ', $result['budget']['label']) }} — {{ $fit }}.@endif
                     @if($estimate['deferrable']) Bisa ditunda ke tahap berikutnya: {{ implode(', ', $estimate['deferrable']) }}. @endif
                 </p>
             @endif
