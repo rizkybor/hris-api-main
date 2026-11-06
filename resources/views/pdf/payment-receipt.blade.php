@@ -8,7 +8,9 @@
            page a receipt spans, not just the first -- but a fixed element
            needs a negative offset equal to the margin to still reach the
            physical page edge from within the new, inset content box. */
-        @page { margin: 42mm 15mm 30mm 15mm; }
+        /* Right margin lines the content up with the PAYMENT RECEIPT title
+           in the letterhead image (which sits closer to the edge than 15mm). */
+        @page { margin: 42mm 12.5mm 30mm 15mm; }
         body { font-family: "Helvetica", "Arial", sans-serif; color: #1e293b; margin: 0; font-size: 10.5pt; }
         /* Top/bottom bars, brand name, doc title, watermark, and footer are
            all baked into this flattened letterhead image (matching the
@@ -20,6 +22,14 @@
         .label { color: #0b1d51; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
         .info-table td { border: none; padding: 6px 0; font-size: 10.5pt; vertical-align: top; }
+        /* Amounts: "Rp." in its own column so it lines up on every row (the
+           minus sign for the withheld PPh sits in a column before it), the
+           number right-aligned next to it -- same pattern as the invoice. */
+        .amount-table td { border: none; padding: 3px 0; }
+        .amount-table .sign { text-align: right; padding-right: 1.5mm; white-space: nowrap; }
+        .amount-table .cur { text-align: left; white-space: nowrap; }
+        .amount-table .amt { text-align: right; white-space: nowrap; }
+        .amount-table .total td { border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51; padding: 8px 0; font-weight: bold; font-size: 11pt; }
         .cancelled-stamp {
             position: fixed; top: 78mm; left: 25mm; width: 130mm; text-align: center;
             font-size: 42px; font-weight: bold; color: #dc2626; opacity: 0.35;
@@ -54,22 +64,27 @@
             </tr>
         </table>
 
-        @if($receipt->pph23_amount)
-            <table style="margin-top: 14mm;">
+        <table class="amount-table" style="margin-top: 14mm;">
+            @if($receipt->pph23_amount)
                 <tr>
-                    <td style="border: none; padding: 3px 0;">Gross Amount</td>
-                    <td style="border: none; padding: 3px 0; text-align: right;">Rp. {{ number_format((float) $receipt->amount + (float) $receipt->pph23_amount, 0, ',', '.') }}</td>
+                    <td style="width: 78%;">Gross Amount</td>
+                    <td class="sign" style="width: 4%;"></td>
+                    <td class="cur" style="width: 4%;">Rp.</td>
+                    <td class="amt" style="width: 14%;">{{ number_format((float) $receipt->amount + (float) $receipt->pph23_amount, 0, ',', '.') }}</td>
                 </tr>
                 <tr>
-                    <td style="border: none; padding: 3px 0;">PPh 23 Withheld ({{ number_format((float) $receipt->pph23_percent, 0) }}%)</td>
-                    <td style="border: none; padding: 3px 0; text-align: right;">- Rp. {{ number_format((float) $receipt->pph23_amount, 0, ',', '.') }}</td>
+                    <td>PPh 23 Withheld ({{ number_format((float) $receipt->pph23_percent, 0) }}%)</td>
+                    <td class="sign">-</td>
+                    <td class="cur">Rp.</td>
+                    <td class="amt">{{ number_format((float) $receipt->pph23_amount, 0, ',', '.') }}</td>
                 </tr>
-            </table>
-        @endif
-        <table style="margin-top: {{ $receipt->pph23_amount ? '2mm' : '14mm' }}; border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51;">
-            <tr>
-                <td style="border: none; padding: 8px 0; font-weight: bold;">{{ $receipt->pph23_amount ? 'Net Amount Received:' : 'Amount:' }}</td>
-                <td style="border: none; padding: 8px 0; font-weight: bold; text-align: right;">Rp. {{ number_format($receipt->amount, 0, ',', '.') }}</td>
+                <tr><td colspan="4" style="padding: 1mm 0;"></td></tr>
+            @endif
+            <tr class="total">
+                <td style="width: 78%;">{{ $receipt->pph23_amount ? 'Net Amount Received' : 'Amount' }}</td>
+                <td class="sign" style="width: 4%;"></td>
+                <td class="cur" style="width: 4%;">Rp.</td>
+                <td class="amt" style="width: 14%;">{{ number_format((float) $receipt->amount, 0, ',', '.') }}</td>
             </tr>
         </table>
 
