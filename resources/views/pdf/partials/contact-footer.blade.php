@@ -20,5 +20,6 @@
 </table>
 <style>
     .contact-footer td { border: none; padding: 0 1mm; line-height: 3.4mm; font-size: 8pt; color: #0b1d51; letter-spacing: 0.2px; white-space: nowrap; }
-    .contact-footer img { width: 2.8mm; height: 2.8mm; vertical-align: middle; margin-right: 1.5mm; position: relative; top: -0.3mm; }
+    /* Baseline-aligned, then nudged down so the icon centers on the 8pt text's cap height. */
+    .contact-footer img { width: 2.6mm; height: 2.6mm; vertical-align: baseline; margin-right: 1.5mm; position: relative; top: 0.3mm; }
 </style>
