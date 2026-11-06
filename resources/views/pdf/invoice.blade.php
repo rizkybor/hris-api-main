@@ -41,6 +41,7 @@
         .amt { text-align: right; white-space: nowrap; }
         .totals-table .grand td { border-top: 1.5px solid #0b1d51; border-bottom: 1.5px solid #0b1d51; padding: 6px 0; font-weight: bold; font-size: 11pt; }
         .totals-table .grand td.t-label { padding-right: 4mm; }
+        .terms-box { margin-top: 8mm; padding: 3mm 4mm; border: 0.75px solid #d1d5db; border-radius: 1.5mm; background: #f9fafb; font-size: 9.5pt; }
         .footer { position: fixed; bottom: 7mm; left: 15mm; right: 15mm; font-size: 9pt; color: #0b1d51; }
         .cancelled-stamp {
             position: fixed; top: 78mm; left: 25mm; width: 130mm; text-align: center;
@@ -184,8 +185,8 @@
         @endif
 
         @if($invoice->terms)
-            <div style="margin-top: 8mm;">
-                <p class="label" style="margin: 0 0 2px 0;">Terms and Conditions</p>
+            <div class="terms-box">
+                <p class="label" style="margin: 0 0 1.5mm 0;">Terms and Conditions</p>
                 <p style="margin: 0; white-space: pre-line;">{{ $invoice->terms }}</p>
             </div>
         @endif
