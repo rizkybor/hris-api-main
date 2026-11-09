@@ -1,88 +1,114 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnalyticsSourceController;
+use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\AssetMaintenanceLogController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceSettingController;
-use App\Http\Controllers\HolidayController;
-use App\Http\Controllers\PublicScreeningController;
-use App\Http\Controllers\ScreeningController;
-use App\Http\Controllers\ServiceCatalogController;
-use App\Http\Controllers\PayrollSettingController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CredentialAccountController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DashboardWidgetController;
-use App\Http\Controllers\DivisionCodeController;
-use App\Http\Controllers\BankAccountController;
-use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\LetterCodeController;
-use App\Http\Controllers\LetterController;
-use App\Http\Controllers\DocumentLetterController;
-use App\Http\Controllers\MeetingNoteCommentController;
-use App\Http\Controllers\DashboardInsightsController;
-use App\Http\Controllers\MaintenanceContractController;
-use App\Http\Controllers\MaintenanceWorkController;
-use App\Http\Controllers\MeetingNoteController;
-use App\Http\Controllers\CertificateController;
-use App\Http\Controllers\CertificateTemplateController;
-use App\Http\Controllers\CertificateSettingController;
-use App\Http\Controllers\DocumentSettingController;
-use App\Http\Controllers\PaymentReceiptController;
-use App\Http\Controllers\PurchaseOrderController;
-use App\Http\Controllers\EmployeeProfileController;
-use App\Http\Controllers\EmployeeFileController;
-use App\Http\Controllers\FilesCompanyController;
-use App\Http\Controllers\LeaveRequestController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\OptionController;
-use App\Http\Controllers\PayrollController;
-use App\Http\Controllers\PayslipController;
-use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\StaffTaskCommentController;
-use App\Http\Controllers\StaffTaskController;
-use App\Http\Controllers\LandingPageRateSettingController;
-use App\Http\Controllers\ProjectCalculationController;
-use App\Http\Controllers\ProjectRateSettingController;
-use App\Http\Controllers\ProjectDocumentController;
-use App\Http\Controllers\ProjectBillingController;
-use App\Http\Controllers\ProjectCashTransactionController;
-use App\Http\Controllers\CompanyCashTransactionController;
-use App\Http\Controllers\ProjectTaskController;
-use App\Http\Controllers\ProjectTaskCommentController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\ConfigurableOptionController;
-use App\Http\Controllers\RoleController;
-use App\Http\Controllers\StaffPermissionController;
 use App\Http\Controllers\BackupController;
-use App\Http\Controllers\ActivityLogController;
-use App\Http\Controllers\FlowchartController;
-use App\Http\Controllers\ProposalController;
-use App\Http\Controllers\ServerMonitorController;
-use App\Http\Controllers\ServerAgentController;
-use App\Http\Controllers\AnnouncementController;
-use App\Http\Controllers\GreetingController;
-use App\Http\Controllers\AssetMaintenanceLogController;
-use App\Http\Controllers\CompanyAssetController;
-use App\Http\Controllers\SubscriptionController;
-use App\Http\Controllers\SupplierController;
-use App\Http\Controllers\EmployeeResignationController;
-use App\Http\Controllers\PerformanceReviewController;
-use App\Http\Controllers\SearchController;
-use App\Http\Controllers\TeamController;
-use App\Http\Controllers\FixedCostController;
-use App\Http\Controllers\InfrastructureToolController;
-use App\Http\Controllers\CompanyFinanceController;
-use App\Http\Controllers\SdmResourceController;
-use App\Http\Controllers\SdmFieldController;
-use App\Http\Controllers\CompanyAboutController;
-use App\Http\Controllers\ClientEvaluationController;
-use App\Http\Controllers\ClientController;
+use App\Http\Controllers\BankAccountController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\CertificateSettingController;
+use App\Http\Controllers\CertificateTemplateController;
 use App\Http\Controllers\ClientAttachmentController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ClientEvaluationController;
 use App\Http\Controllers\ClientTaskListController;
 use App\Http\Controllers\ClientTaskPaymentController;
 use App\Http\Controllers\ClientTaskPivotController;
 use App\Http\Controllers\ClientTaskScopeController;
+use App\Http\Controllers\CompanyAboutController;
+use App\Http\Controllers\CompanyAssetController;
+use App\Http\Controllers\CompanyCashTransactionController;
+use App\Http\Controllers\CompanyFinanceController;
+use App\Http\Controllers\ConfigurableOptionController;
+use App\Http\Controllers\CredentialAccountController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardInsightsController;
+use App\Http\Controllers\DashboardWidgetController;
+use App\Http\Controllers\DivisionCodeController;
+use App\Http\Controllers\DocumentLetterController;
+use App\Http\Controllers\DocumentSettingController;
+use App\Http\Controllers\EmployeeFileController;
+use App\Http\Controllers\EmployeeProfileController;
+use App\Http\Controllers\EmployeeResignationController;
+use App\Http\Controllers\FilesCompanyController;
+use App\Http\Controllers\FixedCostController;
+use App\Http\Controllers\FlowchartController;
+use App\Http\Controllers\GreetingController;
+use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\InfrastructureToolController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\LandingPageRateSettingController;
+use App\Http\Controllers\LeaveRequestController;
+use App\Http\Controllers\LetterCodeController;
+use App\Http\Controllers\LetterController;
+use App\Http\Controllers\LicenseCertificateController;
+use App\Http\Controllers\LicenseController;
+use App\Http\Controllers\LicenseProductController;
+use App\Http\Controllers\LicensePublicController;
+use App\Http\Controllers\MaintenanceContractController;
+use App\Http\Controllers\MaintenanceWorkController;
+use App\Http\Controllers\MeetingNoteCommentController;
+use App\Http\Controllers\MeetingNoteController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OptionController;
+use App\Http\Controllers\PaymentReceiptController;
+use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\PayrollSettingController;
+use App\Http\Controllers\PayslipController;
+use App\Http\Controllers\PerformanceReviewController;
+use App\Http\Controllers\ProjectBillingController;
+use App\Http\Controllers\ProjectCalculationController;
+use App\Http\Controllers\ProjectCashTransactionController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectDocumentController;
+use App\Http\Controllers\ProjectRateSettingController;
+use App\Http\Controllers\ProjectTaskCommentController;
+use App\Http\Controllers\ProjectTaskController;
+use App\Http\Controllers\ProposalController;
+use App\Http\Controllers\PublicScreeningController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\RegionController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ScreeningController;
+use App\Http\Controllers\SdmFieldController;
+use App\Http\Controllers\SdmResourceController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\ServerAgentController;
+use App\Http\Controllers\ServerMonitorController;
+use App\Http\Controllers\ServiceCatalogController;
+use App\Http\Controllers\StaffPermissionController;
+use App\Http\Controllers\StaffTaskCommentController;
+use App\Http\Controllers\StaffTaskController;
+use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
+
+// License Manager public activation API (no user session in the apps).
+// Lives outside v1 because the paths are compiled into the apps.
+// {product} is the product code (e.g. occa).
+Route::prefix('licenses/{product}')
+    ->where(['product' => '[a-z0-9]+(?:-[a-z0-9]+)*'])
+    ->middleware('throttle:20,1')
+    ->group(function () {
+        Route::post('activate', [LicensePublicController::class, 'activate']);
+        Route::post('refresh', [LicensePublicController::class, 'refresh']);
+        Route::post('deactivate', [LicensePublicController::class, 'deactivate']);
+    });
+
+// The path the OCCA app already uses: alias for product "occa".
+Route::prefix('occa/license')
+    ->middleware('throttle:20,1')
+    ->group(function () {
+        Route::post('activate', [LicensePublicController::class, 'activate'])->defaults('product', 'occa');
+        Route::post('refresh', [LicensePublicController::class, 'refresh'])->defaults('product', 'occa');
+        Route::post('deactivate', [LicensePublicController::class, 'deactivate'])->defaults('product', 'occa');
+    });
 
 Route::prefix('v1')
     ->group(function () {
@@ -263,6 +289,39 @@ Route::prefix('v1')
             // Credential Account routes
             Route::get('credential-accounts/all/paginated', [CredentialAccountController::class, 'getAllPaginated']);
             Route::apiResource('credential-accounts', CredentialAccountController::class);
+
+            // Indonesian regions (cascading address pickers; any signed-in user).
+            Route::prefix('regions')
+                ->where(['code' => '[0-9.]+'])
+                ->group(function () {
+                    Route::get('provinces', [RegionController::class, 'provinces']);
+                    Route::get('provinces/{code}/regencies', [RegionController::class, 'regencies']);
+                    Route::get('regencies/{code}/districts', [RegionController::class, 'districts']);
+                    Route::get('districts/{code}/villages', [RegionController::class, 'villages']);
+                });
+
+            // License Manager (license keys for the owner's apps; OCCA first).
+            // Admin endpoints are nested under the product code.
+            Route::prefix('license-manager')
+                ->where(['product' => '[a-z0-9]+(?:-[a-z0-9]+)*', 'license' => '[0-9]+', 'activation' => '[0-9]+'])
+                ->group(function () {
+                    Route::get('summary', [LicenseController::class, 'overview']);
+                    Route::get('expiring', [LicenseController::class, 'expiring']);
+                    Route::get('events/recent', [LicenseController::class, 'recentEvents']);
+                    Route::get('products/{product}/licenses/{license}/certificate', [LicenseCertificateController::class, 'download']);
+                    Route::apiResource('products', LicenseProductController::class)->parameters(['products' => 'product'])->names('license-manager.products');
+                    Route::prefix('products/{product}/licenses')->group(function () {
+                        Route::get('all/paginated', [LicenseController::class, 'getAllPaginated']);
+                        Route::get('summary', [LicenseController::class, 'summary']);
+                        Route::get('{license}/events', [LicenseController::class, 'events']);
+                        Route::delete('{license}/activations/{activation}', [LicenseController::class, 'releaseActivation']);
+                        Route::get('/', [LicenseController::class, 'index']);
+                        Route::post('/', [LicenseController::class, 'store']);
+                        Route::get('{license}', [LicenseController::class, 'show']);
+                        Route::put('{license}', [LicenseController::class, 'update']);
+                        Route::delete('{license}', [LicenseController::class, 'destroy']);
+                    });
+                });
 
             // Files Company routes
             Route::get('files-companies/all/paginated', [FilesCompanyController::class, 'getAllPaginated']);

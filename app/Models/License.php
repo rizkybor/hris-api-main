@@ -1,0 +1,501 @@
+<?php
+
+namespace App\Models;
+
+use App\Support\IndonesianRegions;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+
+class License extends Model
+{
+    use HasFactory, LogsActivity, SoftDeletes;
+
+    public const TYPE_LIFETIME = 'lifetime';
+
+    public const TYPE_TERM = 'term';
+
+    public const TYPES = [self::TYPE_LIFETIME, self::TYPE_TERM];
+
+    /**
+     * Stored plans. Starter (free) is the app's mode without a key, so it is
+     * never stored as a license.
+     */
+    public const PLAN_PROFESSIONAL = 'professional';
+
+    /**
+     * Time-limited individual license; always a term license, never lifetime.
+     */
+    public const PLAN_TRIAL = 'trial';
+
+    /**
+     * One-time payment individual license; always a lifetime license, never
+     * term (the mirror of the trial rule). Was "enterprise" before
+     * 2026_11_09_000006.
+     */
+    public const PLAN_LIFETIME = 'lifetime';
+
+    public const PLAN_ORGANIZATION = 'organization';
+
+    public const PLANS = [self::PLAN_PROFESSIONAL, self::PLAN_TRIAL, self::PLAN_LIFETIME, self::PLAN_ORGANIZATION];
+
+    /**
+     * The license type follows the plan: only the Lifetime plan is
+     * lifetime; every other plan is a term license.
+     */
+    public const TERM_ONLY_PLANS = [self::PLAN_TRIAL, self::PLAN_PROFESSIONAL, self::PLAN_ORGANIZATION];
+
+    public const PLAN_LABELS = [
+        self::PLAN_PROFESSIONAL => 'Professional',
+        self::PLAN_TRIAL => 'Trial',
+        self::PLAN_LIFETIME => 'Lifetime',
+        self::PLAN_ORGANIZATION => 'Organization',
+    ];
+
+    public const CATEGORY_INDIVIDUAL = 'individual';
+
+    public const CATEGORY_ORGANIZATION = 'organization';
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_INACTIVE = 'inactive';
+
+    public const STATUS_EXPIRED = 'expired';
+
+    /**
+     * Active, term, and EXPIRING_SOON_DAYS or fewer days left.
+     */
+    public const STATUS_EXPIRING_SOON = 'expiring_soon';
+
+    public const STATUSES = [self::STATUS_ACTIVE, self::STATUS_INACTIVE, self::STATUS_EXPIRED, self::STATUS_EXPIRING_SOON];
+
+    public const EXPIRING_SOON_DAYS = 14;
+
+    public const ORGANIZATION_TYPES = ['team', 'community', 'club', 'federation'];
+
+    public const ORGANIZATION_TYPE_LABELS = [
+        'team' => 'Team',
+        'community' => 'Community',
+        'club' => 'Club',
+        'federation' => 'Federation',
+    ];
+
+    public const DEFAULT_COUNTRY = 'Indonesia';
+
+    /**
+     * Location (both categories). For Indonesia the region codes are the
+     * source of truth and the names are filled from them; elsewhere the
+     * names are free text and the codes / village stay empty. "regency" is
+     * the city / regency (Kota/Kabupaten).
+     */
+    public const LOCATION_FIELDS = [
+        'country', 'province', 'regency', 'district', 'village', 'postal_code',
+        'province_code', 'regency_code', 'district_code', 'village_code', 'address',
+    ];
+
+    public const REGION_CODE_FIELDS = ['province_code', 'regency_code', 'district_code', 'village_code'];
+
+    /**
+     * Licensee details per category. Shared fields are kept when the
+     * category changes; the other category's own fields are cleared.
+     */
+    public const SHARED_FIELDS = ['licensee_name', 'licensee_email', 'phone', ...self::LOCATION_FIELDS];
+
+    public const INDIVIDUAL_FIELDS = ['occupation', 'affiliation'];
+
+    public const ORGANIZATION_FIELDS = ['organization_type', 'contact_name', 'contact_position', 'website', 'tax_id', 'member_count'];
+
+    /**
+     * Required per category, apart from the location (see
+     * requiredLocationFields()).
+     */
+    public const REQUIRED_FIELDS = [
+        self::CATEGORY_INDIVIDUAL => ['licensee_name', 'licensee_email', 'phone'],
+        self::CATEGORY_ORGANIZATION => ['licensee_name', 'organization_type', 'contact_name', 'licensee_email', 'phone'],
+    ];
+
+    /**
+     * Required location fields: Indonesia needs the full region code chain
+     * and a postal code; elsewhere state / province, city and postal code.
+     * Organizations also need the street address.
+     */
+    public static function requiredLocationFields(string $category, ?string $country): array
+    {
+        $fields = IndonesianRegions::isIndonesia($country)
+            ? ['country', 'province_code', 'regency_code', 'district_code', 'village_code', 'postal_code']
+            : ['country', 'province', 'regency', 'postal_code'];
+
+        if ($category === self::CATEGORY_ORGANIZATION) {
+            $fields[] = 'address';
+        }
+
+        return $fields;
+    }
+
+    public static function requiredFields(string $category, ?string $country): array
+    {
+        return array_merge(self::REQUIRED_FIELDS[$category], self::requiredLocationFields($category, $country));
+    }
+
+    /**
+     * Random key groups: A-Z and 2-9 without the easily confused 0/O, 1/I/L.
+     */
+    public const KEY_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+    /**
+     * Two-digit plan code in the key ({prefix}{planCode}-...). A key never
+     * changes, so the code is the plan at creation.
+     */
+    public const PLAN_CODES = [
+        self::PLAN_TRIAL => '01',
+        self::PLAN_PROFESSIONAL => '02',
+        self::PLAN_LIFETIME => '03',
+        self::PLAN_ORGANIZATION => '04',
+    ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(array_merge(
+                ['key', 'plan', 'type', 'starts_at', 'expires_at', 'max_devices', 'is_active', 'notes'],
+                self::SHARED_FIELDS,
+                self::INDIVIDUAL_FIELDS,
+                self::ORGANIZATION_FIELDS,
+            ))
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->useLogName('License Manager');
+    }
+
+    protected $fillable = [
+        'product_id',
+        'key',
+        'sequence',
+        'licensee_name',
+        'licensee_email',
+        'phone',
+        'province',
+        'regency',
+        'district',
+        'village',
+        'postal_code',
+        'province_code',
+        'regency_code',
+        'district_code',
+        'village_code',
+        'country',
+        'occupation',
+        'affiliation',
+        'organization_type',
+        'contact_name',
+        'contact_position',
+        'address',
+        'website',
+        'tax_id',
+        'member_count',
+        'plan',
+        'type',
+        'starts_at',
+        'expires_at',
+        'max_devices',
+        'is_active',
+        'notes',
+        'terms_version',
+        'last_activated_at',
+    ];
+
+    protected $casts = [
+        'starts_at' => 'datetime',
+        'expires_at' => 'datetime',
+        'last_activated_at' => 'datetime',
+        'max_devices' => 'integer',
+        'sequence' => 'integer',
+        'member_count' => 'integer',
+        'is_active' => 'boolean',
+    ];
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(LicenseProduct::class, 'product_id');
+    }
+
+    public function scopeForProduct(Builder $query, LicenseProduct|int $product): Builder
+    {
+        return $query->where('product_id', $product instanceof LicenseProduct ? $product->id : $product);
+    }
+
+    public function activations(): HasMany
+    {
+        return $this->hasMany(LicenseActivation::class);
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(LicenseEvent::class);
+    }
+
+    /**
+     * Highest sequence per product: the last key group is always 4 digits,
+     * so an OCCA key is always 20 characters (OC01-XXXX-XXXX-XXXX-0001),
+     * the length the app accepts.
+     */
+    public const MAX_SEQUENCE = 9999;
+
+    /**
+     * A new, unused key: {prefix}{planCode}-XXXX-XXXX-XXXX-{sequence}, e.g.
+     * OC01-7KQM-2XRT-9HZP-0001. The sequence is the license's number within
+     * its product (4 digits, 0001-9999); the three random groups make the key
+     * hard to guess. Keys are unique across all products.
+     */
+    public static function generateKey(string $prefix, string $plan, int $sequence): string
+    {
+        $alphabetLength = strlen(self::KEY_ALPHABET);
+        $head = strtoupper($prefix).(self::PLAN_CODES[$plan] ?? '00');
+        $tail = str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+
+        do {
+            $groups = [];
+            for ($g = 0; $g < 3; $g++) {
+                $group = '';
+                for ($i = 0; $i < 4; $i++) {
+                    $group .= self::KEY_ALPHABET[random_int(0, $alphabetLength - 1)];
+                }
+                $groups[] = $group;
+            }
+            $key = $head.'-'.implode('-', $groups).'-'.$tail;
+        } while (self::withTrashed()->where('key', $key)->exists());
+
+        return $key;
+    }
+
+    /**
+     * Keys are matched case-insensitively and ignoring surrounding spaces.
+     */
+    public static function normalizeKey(?string $key): string
+    {
+        return strtoupper(trim((string) $key));
+    }
+
+    public function isLifetime(): bool
+    {
+        return $this->type === self::TYPE_LIFETIME;
+    }
+
+    public function planLabel(): string
+    {
+        return self::PLAN_LABELS[$this->plan] ?? ucfirst((string) $this->plan);
+    }
+
+    /**
+     * individual (professional, trial, lifetime) | organization.
+     */
+    public function category(): string
+    {
+        return self::categoryForPlan($this->plan);
+    }
+
+    /**
+     * lifetime for the Lifetime plan, term for every other plan.
+     */
+    public static function typeForPlan(?string $plan): string
+    {
+        return $plan === self::PLAN_LIFETIME ? self::TYPE_LIFETIME : self::TYPE_TERM;
+    }
+
+    public static function categoryForPlan(?string $plan): string
+    {
+        return $plan === self::PLAN_ORGANIZATION
+            ? self::CATEGORY_ORGANIZATION
+            : self::CATEGORY_INDIVIDUAL;
+    }
+
+    /**
+     * The category's own fields (not shared). Used to clear the other
+     * category's fields when a license switches category.
+     */
+    public static function categoryOnlyFields(string $category): array
+    {
+        return $category === self::CATEGORY_ORGANIZATION ? self::ORGANIZATION_FIELDS : self::INDIVIDUAL_FIELDS;
+    }
+
+    public static function otherCategoryFields(string $category): array
+    {
+        return $category === self::CATEGORY_ORGANIZATION ? self::INDIVIDUAL_FIELDS : self::ORGANIZATION_FIELDS;
+    }
+
+    /**
+     * One line: street, village, district, city / regency, province,
+     * postal code, country (empty parts left out).
+     */
+    public function fullAddress(): ?string
+    {
+        $parts = array_filter([
+            $this->address,
+            $this->village,
+            $this->district,
+            $this->regency,
+            trim(($this->province ?? '').' '.($this->postal_code ?? '')),
+            $this->country,
+        ], fn ($part) => $part !== null && trim((string) $part) !== '');
+
+        return $parts ? implode(', ', array_map('trim', $parts)) : null;
+    }
+
+    public function organizationTypeLabel(): ?string
+    {
+        return $this->organization_type ? (self::ORGANIZATION_TYPE_LABELS[$this->organization_type] ?? ucfirst($this->organization_type)) : null;
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
+    }
+
+    /**
+     * Start of the active period; falls back to created_at for rows that
+     * never got a starts_at.
+     */
+    public function periodStart(): ?Carbon
+    {
+        return $this->starts_at ?? $this->created_at;
+    }
+
+    /**
+     * Total days from starts_at to expires_at (partial days count as a
+     * day); null for lifetime.
+     */
+    public function durationDays(): ?int
+    {
+        $start = $this->periodStart();
+        if ($this->expires_at === null || $start === null) {
+            return null;
+        }
+
+        return max(0, (int) ceil(($this->expires_at->getTimestamp() - $start->getTimestamp()) / 86400));
+    }
+
+    /**
+     * Whole days left, rounded up; 0 once expired; null for lifetime.
+     */
+    public function remainingDays(): ?int
+    {
+        if ($this->expires_at === null) {
+            return null;
+        }
+
+        return max(0, (int) ceil(($this->expires_at->getTimestamp() - now()->getTimestamp()) / 86400));
+    }
+
+    /**
+     * Share of the active period already used, 0-100 (one decimal); null
+     * for lifetime.
+     */
+    public function elapsedPercent(): ?float
+    {
+        $start = $this->periodStart();
+        if ($this->expires_at === null || $start === null) {
+            return null;
+        }
+
+        $total = $this->expires_at->getTimestamp() - $start->getTimestamp();
+        if ($total <= 0) {
+            return 100.0;
+        }
+
+        $elapsed = now()->getTimestamp() - $start->getTimestamp();
+
+        return round(min(100, max(0, $elapsed / $total * 100)), 1);
+    }
+
+    public function isExpiringSoon(): bool
+    {
+        return $this->is_active
+            && $this->type === self::TYPE_TERM
+            && $this->expires_at !== null
+            && ! $this->isExpired()
+            && $this->expires_at->lte(now()->addDays(self::EXPIRING_SOON_DAYS));
+    }
+
+    /**
+     * active | inactive | expired | expiring_soon (inactive wins over
+     * expired, expired over expiring_soon).
+     */
+    public function getStatusAttribute(): string
+    {
+        if (! $this->is_active) {
+            return self::STATUS_INACTIVE;
+        }
+
+        if ($this->isExpired()) {
+            return self::STATUS_EXPIRED;
+        }
+
+        return $this->isExpiringSoon() ? self::STATUS_EXPIRING_SOON : self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Latest sign of life from the app: the newest device check-in or the
+     * last activation.
+     */
+    public function lastActivityAt(): ?Carbon
+    {
+        $lastSeen = $this->activations_max_last_seen_at ?? null;
+        if ($lastSeen === null && $this->relationLoaded('activations')) {
+            $lastSeen = $this->activations->max('last_seen_at');
+        }
+
+        $candidates = array_filter([
+            $lastSeen ? Carbon::parse($lastSeen) : null,
+            $this->last_activated_at,
+        ]);
+
+        return $candidates ? max($candidates) : null;
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where(function ($q) use ($search) {
+            $q->where('key', 'like', '%'.$search.'%')
+                ->orWhere('licensee_name', 'like', '%'.$search.'%')
+                ->orWhere('licensee_email', 'like', '%'.$search.'%')
+                ->orWhere('contact_name', 'like', '%'.$search.'%')
+                ->orWhere('phone', 'like', '%'.$search.'%')
+                ->orWhere('regency', 'like', '%'.$search.'%');
+        });
+    }
+
+    /**
+     * Filter by status. "inactive" = switched off; "expired" = a term license
+     * past its expiry (whether or not it is switched off); "expiring_soon" =
+     * switched on, term, and 14 days or fewer left; "active" = switched on,
+     * not expired and not expiring soon (matches the status field).
+     */
+    public function scopeStatus(Builder $query, string $status): Builder
+    {
+        return match ($status) {
+            self::STATUS_INACTIVE => $query->where('is_active', false),
+            // Expired regardless of the active toggle, so an expired license
+            // that was also switched off still shows up here.
+            self::STATUS_EXPIRED => $query->where('type', self::TYPE_TERM)
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '<', now()),
+            self::STATUS_EXPIRING_SOON => $query->where('is_active', true)
+                ->where('type', self::TYPE_TERM)
+                ->where('expires_at', '>=', now())
+                ->where('expires_at', '<=', now()->addDays(self::EXPIRING_SOON_DAYS)),
+            self::STATUS_ACTIVE => $query->where('is_active', true)
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')
+                        ->orWhere('type', '!=', self::TYPE_TERM)
+                        ->orWhere('expires_at', '>', now()->addDays(self::EXPIRING_SOON_DAYS));
+                }),
+            default => $query,
+        };
+    }
+}

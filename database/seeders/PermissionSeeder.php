@@ -133,13 +133,29 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
+        // License Manager: license keys for the owner's apps (OCCA first,
+        // more on the Products page). Granted to Super Admin and Manager through
+        // their "all except" sets in RolePermissionSeeder; no other role
+        // gets them by default. Existing databases were renamed from
+        // occa-license-* by a migration.
+        // Products (apps) are managed with the same permissions: create /
+        // edit (incl. icon, terms, on / off) / delete.
+        'license-manager' => [
+            'menu',
+            'list',
+            'view',
+            'create',
+            'edit',
+            'delete',
+        ],
+
         'company-finance' => [
             'menu',
             'list',
             'create',
             'edit',
             'delete',
-            'statistic'
+            'statistic',
         ],
 
         'project-calculator' => [
