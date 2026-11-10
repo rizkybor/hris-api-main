@@ -155,8 +155,11 @@ class LicenseCertificateService
             // in the configured variant; product-specific when available.
             // Key box and plan chip in the plan's colours (as in the app).
             'foil' => self::embed(self::asset('cert-foil', $product, $license->plan)),
-            // The ring names the category (INDIVIDUAL / ORGANIZATION).
-            'seal' => self::embed(self::asset('cert-seal', $product, $license->category())),
+            // The ring names the category (INDIVIDUAL / ORGANIZATION); a
+            // Trial certificate has no seal.
+            'seal' => $license->plan === License::PLAN_TRIAL
+                ? null
+                : self::embed(self::asset('cert-seal', $product, $license->category())),
             'chip' => self::embed(self::asset('cert-chip', null, $license->plan)),
             'planInk' => self::PLAN_INK[$license->plan] ?? '#14161F',
             'band' => self::embed(resource_path('license-products/certificate-band.png')),

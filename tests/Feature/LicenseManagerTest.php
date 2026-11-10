@@ -2234,3 +2234,15 @@ test('a Mac + iPad bundle has one certificate with both keys, the same from eith
         ->and($service->data($single)['keys'])->toHaveCount(1)
         ->and($service->data($single)['reference'])->toBe('LIC-OCCA-MAC-0002');
 });
+
+test('a Trial certificate has no seal, every other plan does', function () {
+    Sanctum::actingAs($this->admin);
+    $service = app(LicenseCertificateService::class);
+
+    $trial = License::find($this->postJson(lmLicenses(), occaIndividual(['plan' => 'trial', 'duration' => '14_days']))->json('data.id'));
+    $pro = License::find($this->postJson(lmLicenses(), occaIndividual())->json('data.id'));
+
+    expect($service->data($trial)['seal'])->toBeNull()
+        ->and($service->data($pro)['seal'])->toStartWith('data:image/png;base64,')
+        ->and(view('pdf.license-certificate', $service->data($trial))->render())->not->toContain('class="seal"');
+});
