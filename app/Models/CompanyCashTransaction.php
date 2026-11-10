@@ -4,13 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 class CompanyCashTransaction extends Model
 {
-    use SoftDeletes, LogsActivity;
+    use LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -25,6 +24,8 @@ class CompanyCashTransaction extends Model
         'project_id',
         'project_cash_transaction_id',
         'type',
+        'category',
+        'employee_id',
         'description',
         'amount',
         'transaction_date',
@@ -51,6 +52,25 @@ class CompanyCashTransaction extends Model
     public function projectCashTransaction()
     {
         return $this->belongsTo(ProjectCashTransaction::class);
+    }
+
+    /**
+     * Spending: an entry recorded on behalf of an employee. Always a Debit
+     * row (owner's convention), see CompanyCashTransactionController.
+     */
+    public const CATEGORY_SPENDING = 'spending';
+
+    public const CATEGORIES = [self::CATEGORY_SPENDING];
+
+    /** The employee a spending entry is on behalf of. */
+    public function employee()
+    {
+        return $this->belongsTo(EmployeeProfile::class, 'employee_id')->withTrashed();
+    }
+
+    public function isSpending(): bool
+    {
+        return $this->category === self::CATEGORY_SPENDING;
     }
 
     public function creator()
