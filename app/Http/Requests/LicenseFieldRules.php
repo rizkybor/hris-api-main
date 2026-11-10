@@ -125,9 +125,29 @@ class LicenseFieldRules
         }
     }
 
+    /**
+     * iPad has no Trial: a plan must be one sold on the license's platform.
+     */
+    public static function addPlatformPlanError(Validator $validator, ?string $platform, ?string $plan): void
+    {
+        if (! in_array($platform, License::CREATE_PLATFORMS, true) || ! in_array($plan, License::PLANS, true) || $validator->errors()->has('plan')) {
+            return;
+        }
+
+        // "both" needs the plan on Mac and on iPad.
+        foreach (License::platformsFor($platform) as $one) {
+            if (! License::planAllowedOn($one, $plan)) {
+                $validator->errors()->add('plan', 'The '.License::PLAN_LABELS[$plan].' plan is not available for '.License::PLATFORM_LABELS[$one].' licenses.');
+
+                return;
+            }
+        }
+    }
+
     public static function attributes(): array
     {
         return [
+            'platform' => 'Platform',
             'licensee_name' => 'Name',
             'licensee_email' => 'Email',
             'phone' => 'Phone',
@@ -164,6 +184,7 @@ class LicenseFieldRules
     {
         return [
             'postal_code.regex' => 'The :attribute must be 5 digits for Indonesia, or 2-20 letters, digits, spaces or "-" elsewhere.',
+            'platform.in' => 'The :attribute must be Mac or iPad, and cannot be changed after the license is created.',
             'phone.regex' => 'The :attribute may only contain digits, spaces, "+" and "-" (6-20 characters).',
         ];
     }

@@ -32,6 +32,8 @@ class LicenseDto
         public readonly string $plan = License::PLAN_PROFESSIONAL,
         /** Licensee details (phone, location, ... see License::*_FIELDS). */
         public readonly array $profile = [],
+        /** Set on create only; fixed afterwards (null on update). */
+        public readonly ?string $platform = null,
     ) {}
 
     /**
@@ -40,7 +42,7 @@ class LicenseDto
      */
     public function toArray(): array
     {
-        return array_merge($this->profile, [
+        return array_merge($this->profile, $this->platform ? ['platform' => $this->platform] : [], [
             'licensee_name' => $this->licensee_name,
             'licensee_email' => $this->licensee_email,
             'plan' => $this->plan,
@@ -74,6 +76,7 @@ class LicenseDto
             notes: $data['notes'] ?? null,
             plan: $plan,
             profile: self::profile($data, [], $plan, defaultCountry: true),
+            platform: $data['platform'] ?? License::PLATFORM_MAC,
         );
     }
 

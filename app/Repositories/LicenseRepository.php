@@ -13,6 +13,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LicenseRepository implements LicenseRepositoryInterface
@@ -30,7 +31,8 @@ class LicenseRepository implements LicenseRepositoryInterface
         ?int $limit,
         bool $execute,
         ?string $sortBy = null,
-        ?string $sortDir = null
+        ?string $sortDir = null,
+        ?string $platform = null
     ): Builder|Collection {
         $query = License::query()
             ->forProduct($product)
@@ -44,7 +46,8 @@ class LicenseRepository implements LicenseRepositoryInterface
             })
             ->when($status, fn ($query) => $query->status($status))
             ->when($type, fn ($query) => $query->where('type', $type))
-            ->when($plan, fn ($query) => $query->where('plan', $plan));
+            ->when($plan, fn ($query) => $query->where('plan', $plan))
+            ->when($platform, fn ($query) => $query->where('platform', $platform));
 
         $direction = $sortDir === 'asc' ? 'asc' : 'desc';
         if ($sortBy === 'expires_at') {
@@ -74,7 +77,8 @@ class LicenseRepository implements LicenseRepositoryInterface
         ?string $plan,
         int $rowPerPage,
         ?string $sortBy = null,
-        ?string $sortDir = null
+        ?string $sortDir = null,
+        ?string $platform = null
     ): LengthAwarePaginator {
         $query = $this->getAll(
             $product,
@@ -85,7 +89,8 @@ class LicenseRepository implements LicenseRepositoryInterface
             null,
             false,
             $sortBy,
-            $sortDir
+            $sortDir,
+            $platform
         );
 
         return $query->paginate($rowPerPage);
@@ -100,7 +105,7 @@ class LicenseRepository implements LicenseRepositoryInterface
     ): License {
         return License::query()
             ->forProduct($product)
-            ->with(['product', 'activations' => fn ($query) => $query->orderByDesc('last_seen_at')])
+            ->with(['product', 'bundleMembers', 'activations' => fn ($query) => $query->orderByDesc('last_seen_at')])
             ->withCount('activations')
             ->withMax('activations', 'last_seen_at')
             ->findOrFail($id);
@@ -111,40 +116,61 @@ class LicenseRepository implements LicenseRepositoryInterface
         array $data
     ): License {
         $licenseDto = LicenseDto::fromArray($data);
+        // "both" generates a Mac and an iPad license together (one bundle).
+        $platforms = License::platformsFor($licenseDto->platform);
+        $bundleId = count($platforms) > 1 ? (string) Str::uuid() : null;
 
-        // The product row is locked while its counter moves, so concurrent
-        // creates never get the same number; numbers are never reused.
-        $license = DB::transaction(function () use ($product, $licenseDto) {
+        // The product row is locked while the platforms' counters move, so
+        // concurrent creates never get the same number; numbers are never
+        // reused. Mac and iPad count separately. A bundle is all or nothing.
+        $licenses = DB::transaction(function () use ($product, $licenseDto, $platforms, $bundleId) {
             $locked = LicenseProduct::query()->lockForUpdate()->findOrFail($product->id);
-            $sequence = $locked->license_sequence + 1;
-            // The key's last group is 4 digits (the app accepts 20-character keys).
-            if ($sequence > License::MAX_SEQUENCE) {
-                throw ValidationException::withMessages([
-                    'plan' => "{$locked->name} has reached ".License::MAX_SEQUENCE.' licenses, the most a 4-digit key number allows.',
-                ]);
-            }
-            $locked->forceFill(['license_sequence' => $sequence])->save();
+            $created = [];
 
-            return License::create(array_merge(
-                $licenseDto->toArray(),
-                [
-                    'product_id' => $locked->id,
-                    'sequence' => $sequence,
-                    'key' => License::generateKey($locked->key_prefix, $licenseDto->plan, $sequence),
-                    // The terms the license is issued under.
-                    'terms_version' => $locked->terms ? $locked->terms_version : null,
-                ]
-            ));
+            foreach ($platforms as $platform) {
+                $column = LicenseProduct::sequenceColumn($platform);
+                $sequence = $locked->{$column} + 1;
+                // The key's last group is 4 digits (the app accepts 20-character keys).
+                if ($sequence > License::MAX_SEQUENCE) {
+                    $label = License::PLATFORM_LABELS[$platform];
+                    throw ValidationException::withMessages([
+                        'platform' => "{$locked->name} has reached ".License::MAX_SEQUENCE." {$label} licenses, the most a 4-digit key number allows.",
+                    ]);
+                }
+                $locked->forceFill([$column => $sequence])->save();
+
+                $created[] = License::create(array_merge(
+                    $licenseDto->toArray(),
+                    [
+                        'product_id' => $locked->id,
+                        'platform' => $platform,
+                        'bundle_id' => $bundleId,
+                        'sequence' => $sequence,
+                        'key' => License::generateKey($locked->key_prefix, $platform, $licenseDto->plan, $sequence),
+                        // The terms the license is issued under.
+                        'terms_version' => $locked->terms ? $locked->terms_version : null,
+                    ]
+                ));
+            }
+
+            return $created;
         });
 
-        $this->eventLogger->log($license, LicenseEvent::CREATED, ['meta' => array_filter([
-            'plan' => $license->plan,
-            'type' => $license->type,
-            'expires_at' => $license->expires_at?->utc()->toIso8601ZuluString(),
-            'max_devices' => $license->max_devices,
-            // "cli" from license:create, otherwise the back office.
-            'source' => $data['source'] ?? 'admin',
-        ], fn ($value) => $value !== null)]);
+        foreach ($licenses as $created) {
+            $this->eventLogger->log($created, LicenseEvent::CREATED, ['meta' => array_filter([
+                'plan' => $created->plan,
+                'platform' => $created->platform,
+                'bundle' => $bundleId ? true : null,
+                'type' => $created->type,
+                'expires_at' => $created->expires_at?->utc()->toIso8601ZuluString(),
+                'max_devices' => $created->max_devices,
+                // "cli" from license:create, otherwise the back office.
+                'source' => $data['source'] ?? 'admin',
+            ], fn ($value) => $value !== null)]);
+        }
+
+        // The first one (the Mac key of a bundle); its bundle_siblings carry the rest.
+        $license = $licenses[0];
 
         return $this->getById($product, (string) $license->id);
     }
