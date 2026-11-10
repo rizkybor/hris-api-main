@@ -2556,3 +2556,22 @@ test('sharing the certificate needs license-manager-view', function () {
     $this->postJson(lmLicenses()."/{$license->id}/certificate/email", ['to' => 'a@example.com'])->assertStatus(403);
     $this->postJson(lmLicenses()."/{$license->id}/certificate/share-link")->assertStatus(403);
 });
+
+test('an empty region list is never cached, so rows added later (not via the import) show up at once', function () {
+    Sanctum::actingAs($this->admin);
+    DB::table('regions_provinces')->delete();
+
+    // Opened while the table is still empty: no list, and not cacheable.
+    $this->getJson('/api/v1/regions/provinces')->assertOk()->assertJsonPath('data', [])
+        ->assertHeader('Cache-Control', 'no-store, private');
+
+    // Filled by plain SQL (no regions:import, so no cache version bump).
+    DB::table('regions_provinces')->insert([['code' => '32', 'name' => 'Jawa Barat'], ['code' => '31', 'name' => 'DKI Jakarta']]);
+
+    $this->getJson('/api/v1/regions/provinces')->assertOk()
+        ->assertJsonPath('data', [['code' => '31', 'name' => 'DKI Jakarta'], ['code' => '32', 'name' => 'Jawa Barat']])
+        ->assertHeader('Cache-Control', 'max-age=86400, private');
+
+    // A non-empty list is cached as before.
+    expect(Illuminate\Support\Facades\Cache::get(App\Support\IndonesianRegions::cacheKey('province', null)))->toHaveCount(2);
+});
