@@ -32,6 +32,15 @@ class LicenseEvent extends Model
 
     public const CERTIFICATE_DOWNLOADED = 'certificate_downloaded';
 
+    /** Certificate sent to the licensee by email (PDF attached). */
+    public const CERTIFICATE_EMAILED = 'certificate_emailed';
+
+    /** A 7-day download link made to send over WhatsApp. */
+    public const CERTIFICATE_SHARED_WHATSAPP = 'certificate_shared_whatsapp';
+
+    /** The certificate opened from a shared link. */
+    public const CERTIFICATE_LINK_OPENED = 'certificate_link_opened';
+
     // App events (public API).
     public const DEVICE_ACTIVATED = 'device_activated';
 
@@ -64,6 +73,9 @@ class LicenseEvent extends Model
         self::DEVICE_RELEASED_BY_ADMIN,
         self::DELETED,
         self::CERTIFICATE_DOWNLOADED,
+        self::CERTIFICATE_EMAILED,
+        self::CERTIFICATE_SHARED_WHATSAPP,
+        self::CERTIFICATE_LINK_OPENED,
         self::DEVICE_ACTIVATED,
         self::DEVICE_REACTIVATED,
         self::REFRESHED,
@@ -85,6 +97,9 @@ class LicenseEvent extends Model
         self::DEVICE_RELEASED_BY_ADMIN => 'Device released by admin',
         self::DELETED => 'License deleted',
         self::CERTIFICATE_DOWNLOADED => 'Certificate PDF downloaded',
+        self::CERTIFICATE_EMAILED => 'Certificate sent by email',
+        self::CERTIFICATE_SHARED_WHATSAPP => 'Certificate shared via WhatsApp',
+        self::CERTIFICATE_LINK_OPENED => 'Certificate opened from a shared link',
         self::DEVICE_ACTIVATED => 'Device activated',
         self::DEVICE_REACTIVATED => 'Device re-activated',
         self::REFRESHED => 'License refreshed',

@@ -2489,3 +2489,70 @@ test('versions have their own permission module, copied from license manager on 
     Sanctum::actingAs($licenseOnly);
     $this->postJson('/api/v1/license-manager/products/occa/releases', occaRelease(['status' => 'draft']))->assertStatus(403);
 });
+
+// ---------------------------------------------------------------------
+// Sharing the certificate: email (PDF attached) and a 7-day WhatsApp link
+// ---------------------------------------------------------------------
+
+test('the certificate can be emailed with the PDF attached, for a bundle once with both keys', function () {
+    Illuminate\Support\Facades\Mail::fake();
+    Sanctum::actingAs($this->admin);
+
+    $mac = License::find($this->postJson(lmLicenses(), occaIndividual(['platform' => 'both']))->json('data.id'));
+    $ipad = License::where('bundle_id', $mac->bundle_id)->where('platform', 'ipad')->first();
+
+    $this->postJson(lmLicenses()."/{$ipad->id}/certificate/email", [
+        'to' => 'jane@example.com', 'cc' => ['boss@example.com'], 'recipient_name' => 'Jane', 'message' => 'Welcome aboard!',
+    ])->assertOk()->assertJsonPath('data.to', 'jane@example.com');
+
+    Illuminate\Support\Facades\Mail::assertSent(App\Mail\LicenseCertificateMail::class, function ($mail) use ($mac, $ipad) {
+        $html = $mail->render();
+
+        return $mail->hasTo('jane@example.com') && $mail->hasCc('boss@example.com')
+            && count($mail->attachments()) === 1
+            && str_starts_with($mail->pdf, '%PDF')
+            && $mail->filename === "occa-License-{$mac->key}_{$ipad->key}.pdf"
+            && str_contains($html, $mac->key) && str_contains($html, $ipad->key)
+            && str_contains($html, 'Dear Jane,') && str_contains($html, 'Welcome aboard!');
+    });
+    expect(occaEvents($ipad, LicenseEvent::CERTIFICATE_EMAILED)->first()->meta)
+        ->toMatchArray(['to' => 'jane@example.com', 'cc' => ['boss@example.com'], 'reference' => 'LIC-OCCA-MAC-0001+IPAD-0001']);
+
+    $this->postJson(lmLicenses()."/{$ipad->id}/certificate/email", ['to' => 'not-an-email'])->assertStatus(422)->assertJsonValidationErrors('to');
+    $this->postJson(lmLicenses().'/999999/certificate/email', ['to' => 'a@example.com'])->assertStatus(404);
+});
+
+test('a WhatsApp share link opens the certificate without login for 7 days, and a tampered or expired link is refused', function () {
+    Sanctum::actingAs($this->admin);
+    $license = License::find($this->postJson(lmLicenses(), occaIndividual())->json('data.id'));
+
+    $response = $this->postJson(lmLicenses()."/{$license->id}/certificate/share-link", ['phone' => '0812 3456 7890'])->assertOk();
+    $url = $response->json('data.url');
+    expect($url)->toContain('/license-certificate/'.$license->id)->toContain('signature=')
+        ->and(Carbon::parse($response->json('data.expires_at'))->diffInDays(now(), true))->toBeGreaterThan(6.9)
+        ->and(occaEvents($license, LicenseEvent::CERTIFICATE_SHARED_WHATSAPP)->first()->meta['phone'])->toBe('0812 3456 7890');
+
+    // Public: no auth needed.
+    app('auth')->forgetGuards();
+    $path = parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY);
+    $this->get($path)->assertOk()->assertHeader('Content-Type', 'application/pdf');
+    expect(occaEvents($license, LicenseEvent::CERTIFICATE_LINK_OPENED)->count())->toBe(1);
+
+    // Another license id with the same signature, or no signature: refused.
+    $this->get(str_replace("/license-certificate/{$license->id}?", '/license-certificate/'.($license->id + 1).'?', $path))->assertStatus(403)->assertSee('not available');
+    $this->get("/license-certificate/{$license->id}")->assertStatus(403);
+
+    // After 7 days the link no longer works.
+    Carbon::setTestNow(now()->addDays(7)->addMinute());
+    $this->get($path)->assertStatus(403)->assertSee('expired');
+    Carbon::setTestNow();
+});
+
+test('sharing the certificate needs license-manager-view', function () {
+    $license = License::factory()->create();
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $this->postJson(lmLicenses()."/{$license->id}/certificate/email", ['to' => 'a@example.com'])->assertStatus(403);
+    $this->postJson(lmLicenses()."/{$license->id}/certificate/share-link")->assertStatus(403);
+});

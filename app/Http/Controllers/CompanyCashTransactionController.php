@@ -6,6 +6,7 @@ use App\Helpers\ResponseHelper;
 use App\Http\Resources\CompanyCashTransactionResource;
 use App\Models\CompanyCashBalance;
 use App\Models\CompanyCashTransaction;
+use App\Models\EmployeeProfile;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\CompanyCashBookService;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class CompanyCashTransactionController extends Controller implements HasMiddleware
@@ -22,7 +24,7 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['company-cash-book-list']), only: ['index']),
+            new Middleware(PermissionMiddleware::using(['company-cash-book-list']), only: ['index', 'employeeOptions']),
             new Middleware(PermissionMiddleware::using(['company-cash-book-create']), only: ['store', 'updateOpeningBalance']),
             new Middleware(PermissionMiddleware::using(['company-cash-book-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['company-cash-book-delete']), only: ['destroy']),
@@ -50,6 +52,8 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'type' => ['nullable', 'in:debit,credit'],
             'source' => ['nullable', 'in:manual,project'],
+            'category' => ['nullable', Rule::in(CompanyCashTransaction::CATEGORIES)],
+            'employee_id' => ['nullable', 'integer', 'exists:employee_profiles,id'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'search' => ['nullable', 'string', 'max:100'],
@@ -69,6 +73,9 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
 
             $totalDebit = (float) $filtered->where('type', 'debit')->sum(fn ($t) => (float) $t->amount);
             $totalCredit = (float) $filtered->where('type', 'credit')->sum(fn ($t) => (float) $t->amount);
+            // Spending is part of total_debit; reported on its own too so the
+            // page can show Debit without and with spending.
+            $totalSpending = (float) $filtered->filter(fn ($t) => $t->isSpending())->sum(fn ($t) => (float) $t->amount);
 
             $newestFirst = $filtered->reverse()->values();
             $total = $newestFirst->count();
@@ -81,7 +88,10 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
                 ...$this->openingBalanceStamp($balanceRow),
                 'total_debit' => $totalDebit,
                 'total_credit' => $totalCredit,
+                'total_spending' => $totalSpending,
                 'closing_balance' => $closingBalance,
+                // Spending per person (on behalf of), over the filtered rows.
+                'spending_by_employee' => $this->spendingByEmployee($filtered),
                 'meta' => [
                     'current_page' => $page,
                     'last_page' => (int) max(1, ceil($total / $rowPerPage)),
@@ -105,6 +115,7 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
     {
         $validated = $request->validate([
             'type' => ['required', 'string', 'in:debit,credit'],
+            ...self::SPENDING_RULES,
             'description' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'transaction_date' => ['required', 'date'],
@@ -114,12 +125,12 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
 
         try {
             $transaction = CompanyCashTransaction::create([
-                ...collect($validated)->except('proof')->all(),
+                ...self::normalizeSpending(collect($validated)->except('proof')->all()),
                 ...$this->storeProof($request),
                 'created_by' => $request->user()->id,
             ]);
 
-            return ResponseHelper::jsonResponse(true, 'Cash Transaction Recorded Successfully', new CompanyCashTransactionResource($transaction->load('creator')), 201);
+            return ResponseHelper::jsonResponse(true, 'Cash Transaction Recorded Successfully', new CompanyCashTransactionResource($transaction->load(['creator', 'employee.user'])), 201);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
@@ -129,6 +140,7 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
     {
         $validated = $request->validate([
             'type' => ['sometimes', 'required', 'string', 'in:debit,credit'],
+            ...self::SPENDING_RULES,
             'description' => ['sometimes', 'required', 'string', 'max:255'],
             'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'],
             'transaction_date' => ['sometimes', 'required', 'date'],
@@ -149,8 +161,15 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
                 ? $this->storeProof($request)
                 : ($request->boolean('remove_proof') ? ['proof_file' => null, 'proof_name' => null, 'proof_mime' => null] : []);
 
+            $fields = collect($validated)->except(['proof', 'remove_proof'])->all();
+            // A row that is (or becomes) spending stays a Debit with a person.
+            $isSpending = array_key_exists('category', $fields) ? $fields['category'] === CompanyCashTransaction::CATEGORY_SPENDING : $transaction->isSpending();
+            if ($isSpending && empty($fields['employee_id'] ?? $transaction->employee_id)) {
+                return ResponseHelper::jsonResponse(false, 'Choose the employee this spending is on behalf of.', ['errors' => ['employee_id' => ['Choose the employee this spending is on behalf of.']]], 422);
+            }
+
             $transaction->update([
-                ...collect($validated)->except(['proof', 'remove_proof'])->all(),
+                ...self::normalizeSpending($fields, $isSpending),
                 ...$proofChange,
             ]);
 
@@ -159,7 +178,7 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
                 $this->deleteProofFile($previousProof);
             }
 
-            return ResponseHelper::jsonResponse(true, 'Cash Transaction Updated Successfully', new CompanyCashTransactionResource($transaction->load('creator')), 200);
+            return ResponseHelper::jsonResponse(true, 'Cash Transaction Updated Successfully', new CompanyCashTransactionResource($transaction->load(['creator', 'employee.user'])), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Cash Transaction Not Found', null, 404);
         } catch (\Throwable $e) {
@@ -186,10 +205,75 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
         }
     }
 
+    /**
+     * Spending: category "spending" with the employee it is on behalf of
+     * (required then). Spending is always recorded as a Debit.
+     */
+    private const SPENDING_RULES = [
+        'category' => ['nullable', 'string', 'in:spending'],
+        'employee_id' => ['nullable', 'required_if:category,spending', 'integer', 'exists:employee_profiles,id'],
+    ];
+
+    private static function normalizeSpending(array $fields, ?bool $isSpending = null): array
+    {
+        $isSpending ??= ($fields['category'] ?? null) === CompanyCashTransaction::CATEGORY_SPENDING;
+
+        if ($isSpending) {
+            $fields['category'] = CompanyCashTransaction::CATEGORY_SPENDING;
+            $fields['type'] = 'debit';
+        } elseif (array_key_exists('category', $fields)) {
+            // Turned back into a plain entry: no longer on anyone's behalf.
+            $fields['category'] = null;
+            $fields['employee_id'] = null;
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Total spending per employee in the given rows, largest first.
+     *
+     * @return list<array{employee_id: int|null, name: string, total: float, count: int}>
+     */
+    private function spendingByEmployee($rows): array
+    {
+        return $rows->filter(fn ($t) => $t->isSpending())
+            ->groupBy('employee_id')
+            ->map(fn ($group, $employeeId) => [
+                'employee_id' => $employeeId === '' ? null : (int) $employeeId,
+                'name' => $group->first()->employee?->user?->name ?? 'Unknown',
+                'total' => (float) $group->sum(fn ($t) => (float) $t->amount),
+                'count' => $group->count(),
+            ])
+            ->sortByDesc('total')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Employees a spending entry can be on behalf of (for the dropdown),
+     * readable with the cash book permission alone.
+     */
+    public function employeeOptions()
+    {
+        try {
+            $employees = EmployeeProfile::with('user:id,name,is_active')
+                ->get(['id', 'user_id'])
+                ->filter(fn ($employee) => $employee->user && $employee->user->is_active !== false)
+                ->map(fn ($employee) => ['id' => $employee->id, 'name' => $employee->user->name])
+                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
+
+            return ResponseHelper::jsonResponse(true, 'Employees Retrieved Successfully', $employees, 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
     // Optional proof of transaction: a photo/scan or PDF of the receipt.
     private const PROOF_RULE = ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'];
 
-    private const PROOF_ATTRIBUTES = ['proof' => 'Bukti Transaksi'];
+    private const PROOF_ATTRIBUTES = ['proof' => 'Proof of transaction', 'employee_id' => 'On behalf of'];
 
     /** Uploads the request's proof file, if any, and returns its columns. */
     private function storeProof(Request $request): array

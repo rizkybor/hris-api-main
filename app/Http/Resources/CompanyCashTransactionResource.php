@@ -21,6 +21,12 @@ class CompanyCashTransactionResource extends JsonResource
             'project_name' => $this->whenLoaded('project', fn () => $this->project?->name),
             'is_synced' => $this->isSynced(),
             'type' => $this->type,
+            // "spending" (on behalf of an employee) or null for a plain entry.
+            'category' => $this->category,
+            'employee' => $this->employee_id ? [
+                'id' => $this->employee_id,
+                'name' => $this->relationLoaded('employee') ? $this->employee?->user?->name : null,
+            ] : null,
             'description' => $this->description,
             'amount' => (float) (string) $this->amount,
             'transaction_date' => $this->transaction_date?->toDateString(),
