@@ -76,52 +76,54 @@
        (cert-seal*.png, 27 mm) with the product icon on its centre
        disc, and an embossed key (a white copy 0.3 mm down / right under
        the dark one). Everything is absolutely positioned for dompdf. */
-    /* Single key: a compact 38 mm box (a Mac + iPad bundle: 42 mm, below). */
-    .holo { position: relative; margin-top: 5mm; height: 38mm; }
-    .holo .foil { position: absolute; top: 0; left: 0; width: 176mm; height: 38mm; }
-    .holo .content { position: absolute; top: 4.2mm; left: 0; width: 176mm; text-align: center; }
-    .holo .label { font-size: 6.6pt; letter-spacing: 3pt; text-transform: uppercase; color: #4b4f63; font-weight: bold; }
-    /* Mac + iPad bundle: a shorter box (41 mm) with two smaller keys, each
+    /* Single key: a compact 32 mm box (a Mac + iPad bundle: 36 mm, below). */
+    /* 140 mm wide, centred on the 176 mm content width. */
+    .holo { position: relative; width: 140mm; margin: 5mm 0 0 18mm; height: 32mm; }
+    .holo .foil { position: absolute; top: 0; left: 0; width: 140mm; height: 32mm; }
+    .holo .content { position: absolute; top: 3.6mm; left: 0; width: 140mm; text-align: center; }
+    .holo .label { font-size: 5.6pt; letter-spacing: 2.6pt; text-transform: uppercase; color: #4b4f63; font-weight: bold; }
+    /* Mac + iPad bundle: a 36 mm box with two keys, each
        tagged with its platform, and even spacing between the rows:
        label, Mac key, iPad key, plan chip, rule, issued / reference. */
-    .holo.bundle { height: 42mm; }
-    .holo.bundle .foil { height: 42mm; }
-    .holo.bundle .content { top: 4.4mm; }
+    .holo.bundle { height: 36mm; }
+    .holo.bundle .foil { height: 36mm; }
+    .holo.bundle .content { top: 3.6mm; }
     /* Platform tag column (right-aligned) + key column (left-aligned), so
        both keys start at the same x whatever the tag's width. */
-    .holo .key-rows { width: auto; margin: 1.2mm auto 0 auto; border-collapse: collapse; }
-    .holo .key-rows.next { margin-top: 0.4mm; }
-    .holo .key-rows.last { margin-bottom: 1.2mm; }
+    .holo .key-rows { width: auto; margin: 1mm auto 0 auto; border-collapse: collapse; }
+    .holo .key-rows.next { margin-top: 0.2mm; }
+    .holo .key-rows.last { margin-bottom: 1mm; }
     .holo .key-rows td { padding: 0; vertical-align: middle; }
     .holo .key-rows .plat {
-        width: 13mm; padding-right: 3mm; text-align: right;
-        font-family: "DejaVu Sans", sans-serif; font-size: 6.4pt; letter-spacing: 1.6pt; font-weight: bold; color: #4b4f63;
+        width: 11mm; padding-right: 2.5mm; text-align: right;
+        font-family: "DejaVu Sans", sans-serif; font-size: 5.4pt; letter-spacing: 1.4pt; font-weight: bold; color: #4b4f63;
     }
-    .holo .key-rows .k { position: relative; height: 5.8mm; }
+    .holo .key-rows .k { position: relative; height: 5mm; }
     .holo .key-rows .k div {
-        font-size: 14.5pt; font-weight: bold; letter-spacing: 1.9pt; color: #14161F; white-space: nowrap; line-height: 5.8mm;
+        font-size: 12.5pt; font-weight: bold; letter-spacing: 1.6pt; color: #14161F; white-space: nowrap; line-height: 5mm;
     }
     .holo .key-rows .k .emboss { position: absolute; top: 0.3mm; left: 0.3mm; color: #ffffff; }
     .holo .key-rows .k .ink { position: relative; }
     .holo .key-rows.single { margin-top: 0.8mm; }
-    .holo .key-rows.single.last { margin-bottom: 2mm; }
-    .holo .key-rows.single .k { height: 8mm; }
-    .holo .key-rows.single .k div { font-size: 18pt; letter-spacing: 2.4pt; line-height: 8mm; }
+    .holo .key-rows.single.last { margin-bottom: 1.6mm; }
+    .holo .key-rows.single .k { height: 6.6mm; }
+    .holo .key-rows.single .k div { font-size: 14pt; letter-spacing: 2pt; line-height: 6.6mm; }
     .holo.bundle .chips { margin-top: 0; }
-    .holo.bundle .meta { margin-top: 1.2mm; padding-top: 1.4mm; }
-    .holo .seal { position: absolute; top: -8.5mm; right: -5.5mm; width: 27mm; height: 27mm; }
-    .holo .seal-icon { position: absolute; top: 0.75mm; right: 3.75mm; width: 8.5mm; height: 8.5mm; border-radius: 2mm; }
+    .holo.bundle .meta { margin-top: 1mm; padding-top: 1.2mm; }
+    /* Seal on the top-right corner, mostly outside the narrower box. */
+    .holo .seal { position: absolute; top: -9mm; right: -15mm; width: 27mm; height: 27mm; }
+    .holo .seal-icon { position: absolute; top: 0.25mm; right: -5.75mm; width: 8.5mm; height: 8.5mm; border-radius: 2mm; }
     .holo .meta {
-        width: 112mm; margin: 1.4mm auto 0 auto; padding-top: 1.4mm; border-top: 0.3pt solid #9aa0b4;
-        font-size: 6.4pt; letter-spacing: 1.4pt; text-transform: uppercase; color: #3d4152;
+        width: 116mm; margin: 1.2mm auto 0 auto; padding-top: 1.2mm; border-top: 0.3pt solid #9aa0b4;
+        font-size: 5.4pt; letter-spacing: 1.2pt; text-transform: uppercase; color: #3d4152;
     }
     .chips { width: auto; margin: 0 auto; }
     .chips td { padding: 0 1mm; vertical-align: middle; }
-    .chip-holo { position: relative; width: 34mm; height: 6.1mm; }
-    .chip-holo img { position: absolute; top: 0; left: 0; width: 34mm; height: 6.1mm; }
+    .chip-holo { position: relative; width: 28mm; height: 5mm; }
+    .chip-holo img { position: absolute; top: 0; left: 0; width: 28mm; height: 5mm; }
     .chip-holo div {
-        position: absolute; top: 0; left: 0; width: 34mm; height: 4.9mm; padding-top: 1.2mm; line-height: 1; text-align: center;
-        font-size: 7.2pt; font-weight: bold; letter-spacing: 1.2pt; color: {{ $planInk }};
+        position: absolute; top: 0; left: 0; width: 28mm; height: 4mm; padding-top: 1mm; line-height: 1; text-align: center;
+        font-size: 6pt; font-weight: bold; letter-spacing: 1pt; color: {{ $planInk }};
     }
     .chip {
         display: inline-block; padding: 0.7mm 2.6mm; border-radius: 3mm;
