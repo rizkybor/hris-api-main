@@ -242,6 +242,7 @@ class License extends Model
         'platform',
         'bundle_id',
         'type',
+        'updates_major',
         'starts_at',
         'expires_at',
         'max_devices',
@@ -256,6 +257,7 @@ class License extends Model
         'expires_at' => 'datetime',
         'last_activated_at' => 'datetime',
         'max_devices' => 'integer',
+        'updates_major' => 'integer',
         'sequence' => 'integer',
         'member_count' => 'integer',
         'is_active' => 'boolean',
@@ -395,6 +397,43 @@ class License extends Model
             in_array($value, ['ipados', 'ipad', 'ios'], true) => self::PLATFORM_IPAD,
             default => null,
         };
+    }
+
+    /**
+     * The major version a license gets updates for: Lifetime licenses cover
+     * one major version (set at creation to the product's current major,
+     * raised by a paid upgrade); every other plan gets every version while
+     * it runs (null).
+     */
+    public static function updatesMajorFor(?string $plan, ?int $requested, LicenseProduct $product): ?int
+    {
+        if ($plan !== self::PLAN_LIFETIME) {
+            return null;
+        }
+
+        return $requested ?: $product->currentMajor();
+    }
+
+    /**
+     * Whether this license may use the given app version ("2.1.0").
+     */
+    public function coversVersion(?string $version): bool
+    {
+        $parsed = LicenseRelease::parse($version);
+
+        return $this->updates_major === null || $parsed === null || $parsed[0] <= $this->updates_major;
+    }
+
+    /**
+     * "OCCA 1.x and its updates" (Lifetime) or "Every version while active".
+     */
+    public function updatesLabel(): string
+    {
+        $name = $this->product?->name ?? 'App';
+
+        return $this->updates_major === null
+            ? 'Every version while active'
+            : "{$name} {$this->updates_major}.x and its updates";
     }
 
     public function platformLabel(): string

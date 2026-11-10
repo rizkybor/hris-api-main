@@ -1,0 +1,35 @@
+[
+  {
+    "version": "1.0.0",
+    "build": 1,
+    "platforms": "both",
+    "title": "First release",
+    "is_critical": false,
+    "changes": [
+      {"type": "feature", "area": "Map making", "text": "Georeferenced A4 map frame in UTM (WGS84): scales 1:1000-1:15000 in steps of 500, portrait or landscape, margins, corner snap, lock, unlock and reselect the area."},
+      {"type": "feature", "area": "Map making", "text": "Basemaps: Apple Maps Satellite, Hybrid and Standard as a saved HD image of the locked area or Live, your own GeoTIFF, one opacity control and Map data info."},
+      {"type": "feature", "area": "Map making", "text": "ISOM 2017-2 and ISSprOM 2019-2 symbol sets (Rev. 6) with the OCAD color hierarchy, area patterns and line decorations; import and export symbol sets (.occasym, OCAD .ocd, OOM .omap / .xmap)."},
+      {"type": "feature", "area": "Map making", "text": "Vector tools like OCAD and OOM: bezier Pen, Freehand, Rectangle, Ellipse, Move Tool, Node Tool (sharp, smooth, smart points) and Measure Tool."},
+      {"type": "feature", "area": "Map making", "text": "Shape editing: follow object, auto-join, Join / Merge, fill area, cut line, split area, scale, parallel, reverse direction and precise Shift rotation."},
+      {"type": "feature", "area": "Map making", "text": "Multi-select with selection box, move, duplicate, delete and change the symbol of every selected object."},
+      {"type": "feature", "area": "Map making", "text": "Apple Pencil sketching with ISOM pen presets, stroke eraser, undo and redo."},
+      {"type": "feature", "area": "Map making", "text": "Contours from a DEM (built-in Terrain Tiles, GeoTIFF, ASCII Grid, GeoJSON) with interval, index and form lines; convert contours to map objects."},
+      {"type": "feature", "area": "Map making", "text": "North lines grid (grid or magnetic north), labeled scale bar and frame corners in UTM, decimal degrees and DMS."},
+      {"type": "feature", "area": "Map making", "text": "Symbol guide: the IOF omapwiki page of the active symbol in a side panel."},
+      {"type": "feature", "area": "Course planning", "text": "Course Settings page: start, controls and finish, several courses sharing controls, automatic codes, lengths, climb, competitors and checks."},
+      {"type": "feature", "area": "Course planning", "text": "Illustrated IOF 2018 control descriptions, course objects (text, shapes, images, IOF course symbols 702-715) and one-page race maps with an All controls master map."},
+      {"type": "feature", "area": "Course planning", "text": "Import courses from OCCA projects, OCAD course setting files and OOM maps."},
+      {"type": "feature", "area": "Fieldwork", "text": "Field panel: GPS position, field notes with photos and photo markup, position averaging, bearing and distance offset, quick vegetation notes and external GNSS receivers."},
+      {"type": "feature", "area": "Fieldwork", "text": "Track recording on iPad Wi-Fi + Cellular, field mode with big buttons and touch lock, and a Ready check before going out."},
+      {"type": "feature", "area": "Fieldwork", "text": "GPX import and export, track to line, survey coverage and a field report PDF."},
+      {"type": "feature", "area": "Fieldwork", "text": "Field data between devices with .occafield files: only new tracks and notes are added, desk work is kept."},
+      {"type": "feature", "area": "Files and export", "text": ".occa project files that open on both iPad and Mac (Files, Finder, AirDrop)."},
+      {"type": "feature", "area": "Files and export", "text": "Import OCAD 10-2018 (.ocd) and OOM (.omap / .xmap) maps into a project or as a new project."},
+      {"type": "feature", "area": "Files and export", "text": "Export PNG / TIFF / JPEG with world file, georeferenced PDF, OOM .omap, DXF, IOF XML 3.0 and contours to Shapefile / KML / KMZ, optionally with the basemap underneath."},
+      {"type": "feature", "area": "App", "text": "iPad and Mac with the same features and a layout for each device: touch and Apple Pencil on iPad, mouse, trackpad and keyboard shortcuts on Mac."},
+      {"type": "feature", "area": "App", "text": "Project list with previews, search and sort; splash screen; short guide for new users; light, dark or system appearance."},
+      {"type": "feature", "area": "License", "text": "License keys from Jendela Cakra Digital: a Mac key (OC31-OC34) activates on a Mac and an iPad key (OC52-OC54) on an iPad; works offline for up to 30 days between checks."},
+      {"type": "feature", "area": "License", "text": "Starter on Mac (up to 3 projects at 1:4000 or 1:10000, up to 4 courses) and view-only projects on iPad without a license; a small STARTER / TRIAL label on Starter and Trial."}
+    ]
+  }
+]

@@ -59,6 +59,28 @@ class LicenseProduct extends Model
         return $this->hasMany(License::class, 'product_id');
     }
 
+    public function releases(): HasMany
+    {
+        return $this->hasMany(LicenseRelease::class, 'product_id');
+    }
+
+    /**
+     * The newest published release (optionally for one platform), or null.
+     */
+    public function latestRelease(?string $platform = null): ?LicenseRelease
+    {
+        return $this->releases()->published()->forPlatform($platform)->ordered()->first();
+    }
+
+    /**
+     * Major version on sale now: the newest published release's major,
+     * 1 before the first release. New Lifetime licenses cover it.
+     */
+    public function currentMajor(): int
+    {
+        return $this->latestRelease()?->major ?: 1;
+    }
+
     /**
      * Full URL of the app icon, or null. asset() (the codebase's pattern for
      * the public disk) follows the host of the current request, so the URL

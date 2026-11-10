@@ -49,6 +49,7 @@ use App\Http\Controllers\LicenseCertificateController;
 use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\LicenseProductController;
 use App\Http\Controllers\LicensePublicController;
+use App\Http\Controllers\LicenseReleaseController;
 use App\Http\Controllers\MaintenanceContractController;
 use App\Http\Controllers\MaintenanceWorkController;
 use App\Http\Controllers\MeetingNoteCommentController;
@@ -99,6 +100,11 @@ Route::prefix('licenses/{product}')
         Route::post('activate', [LicensePublicController::class, 'activate']);
         Route::post('refresh', [LicensePublicController::class, 'refresh']);
         Route::post('deactivate', [LicensePublicController::class, 'deactivate']);
+        // Version list and update check (no device or key needed for the list).
+        Route::get('releases', [LicensePublicController::class, 'releases']);
+        Route::get('releases/latest', [LicensePublicController::class, 'latestRelease']);
+        // The installer of a published version, for a license key that covers it.
+        Route::get('releases/{version}/download', [LicensePublicController::class, 'download'])->where('version', '[0-9]+\.[0-9]+\.[0-9]+');
     });
 
 // The path the OCCA app already uses: alias for product "occa".
@@ -310,6 +316,15 @@ Route::prefix('v1')
                     Route::get('events/recent', [LicenseController::class, 'recentEvents']);
                     Route::get('products/{product}/licenses/{license}/certificate', [LicenseCertificateController::class, 'download']);
                     Route::apiResource('products', LicenseProductController::class)->parameters(['products' => 'product'])->names('license-manager.products');
+                    // Version list (release history) of a product.
+                    Route::get('products/{product}/releases', [LicenseReleaseController::class, 'index']);
+                    Route::post('products/{product}/releases', [LicenseReleaseController::class, 'store']);
+                    Route::get('products/{product}/releases/{release}', [LicenseReleaseController::class, 'show'])->whereNumber('release');
+                    Route::put('products/{product}/releases/{release}', [LicenseReleaseController::class, 'update'])->whereNumber('release');
+                    Route::delete('products/{product}/releases/{release}', [LicenseReleaseController::class, 'destroy'])->whereNumber('release');
+                    Route::get('products/{product}/releases/{release}/file', [LicenseReleaseController::class, 'downloadFile'])->whereNumber('release');
+                    Route::post('products/{product}/releases/{release}/file', [LicenseReleaseController::class, 'uploadFile'])->whereNumber('release');
+                    Route::delete('products/{product}/releases/{release}/file', [LicenseReleaseController::class, 'deleteFile'])->whereNumber('release');
                     Route::prefix('products/{product}/licenses')->group(function () {
                         Route::get('all/paginated', [LicenseController::class, 'getAllPaginated']);
                         Route::get('summary', [LicenseController::class, 'summary']);

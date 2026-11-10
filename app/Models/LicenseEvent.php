@@ -39,6 +39,9 @@ class LicenseEvent extends Model
 
     public const REFRESHED = 'refreshed';
 
+    /** The app on a device reported a different version (meta: from, to). */
+    public const APP_UPDATED = 'app_updated';
+
     public const DEVICE_RELEASED = 'device_released';
 
     // Denied attempts (activate / refresh on an existing key).
@@ -64,6 +67,7 @@ class LicenseEvent extends Model
         self::DEVICE_ACTIVATED,
         self::DEVICE_REACTIVATED,
         self::REFRESHED,
+        self::APP_UPDATED,
         self::DEVICE_RELEASED,
         self::DENIED_DEVICE_LIMIT,
         self::DENIED_INACTIVE,
@@ -84,6 +88,7 @@ class LicenseEvent extends Model
         self::DEVICE_ACTIVATED => 'Device activated',
         self::DEVICE_REACTIVATED => 'Device re-activated',
         self::REFRESHED => 'License refreshed',
+        self::APP_UPDATED => 'App updated',
         self::DEVICE_RELEASED => 'Device released from the app',
         self::DENIED_DEVICE_LIMIT => 'Denied: device limit reached',
         self::DENIED_INACTIVE => 'Denied: license switched off',
