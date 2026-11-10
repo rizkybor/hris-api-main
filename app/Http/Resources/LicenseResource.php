@@ -81,6 +81,8 @@ class LicenseResource extends JsonResource
             'remaining_days' => $this->remainingDays(),
             'elapsed_percent' => $this->elapsedPercent(),
 
+            'updates_major' => $this->updates_major,
+            'updates_label' => $this->updatesLabel(),
             'max_devices' => $this->max_devices,
             'devices_used' => $this->activations_count ?? $this->activations()->count(),
             'is_active' => $this->is_active,

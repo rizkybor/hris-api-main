@@ -27,6 +27,8 @@ class LicenseProductResource extends JsonResource
             'terms' => $this->terms,
             'terms_version' => $this->terms_version,
             'terms_effective_at' => $this->terms_effective_at?->toDateString(),
+            'current_major' => $this->currentMajor(),
+            'latest_version' => $this->latestRelease()?->version,
             'is_active' => $this->is_active,
             'licenses_count' => $this->licenses_count,
             'created_at' => $this->created_at,

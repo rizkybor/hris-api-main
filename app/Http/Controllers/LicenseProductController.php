@@ -16,8 +16,9 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 /**
  * Products (apps) of the License Manager. {product} is the product code.
  * Products use the License Manager permissions: reading needs
- * license-manager-menu or -list (the sidebar and the per-product pages need
- * the product list); adding needs -create, editing (incl. icon, terms,
+ * license-manager-menu or -list, or license-release-menu / -list / -view
+ * (the sidebar and the per-product pages, Versions included, need the
+ * product list); adding needs -create, editing (incl. icon, terms,
  * on / off) needs -edit, deleting needs -delete.
  */
 class LicenseProductController extends Controller implements HasMiddleware
@@ -25,7 +26,8 @@ class LicenseProductController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['license-manager-menu|license-manager-list']), only: ['index', 'show']),
+            // The Versions pages (license-release-*) need the product list too.
+            new Middleware(PermissionMiddleware::using(['license-manager-menu|license-manager-list|license-release-menu|license-release-list|license-release-view']), only: ['index', 'show']),
             new Middleware(PermissionMiddleware::using(['license-manager-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['license-manager-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['license-manager-delete']), only: ['destroy']),

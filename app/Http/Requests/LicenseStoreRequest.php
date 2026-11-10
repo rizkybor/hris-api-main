@@ -52,6 +52,8 @@ class LicenseStoreRequest extends FormRequest
             'duration' => ['nullable', Rule::in(LicenseDto::DURATIONS)],
             'expires_at' => ['required_if:duration,'.LicenseDto::DURATION_CUSTOM, 'nullable', 'date_format:Y-m-d', 'after:today'],
             'max_devices' => ['nullable', 'integer', 'min:1', 'max:100'],
+            // Lifetime only: the major version it gets updates for (default: the current one).
+            'updates_major' => ['nullable', 'integer', 'min:1', 'max:99'],
             'notes' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);

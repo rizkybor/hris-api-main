@@ -45,6 +45,8 @@ class LicenseTokenService
             'plan' => $license->plan,
             'platform' => $license->platform,
             'type' => $license->type,
+            // Lifetime: the app's major version must not be above this (null = every version).
+            'updates_major' => $license->updates_major,
             'licensee' => $license->licensee_name,
             'expires_at' => self::isoUtc($license),
             'device_id' => $deviceId,

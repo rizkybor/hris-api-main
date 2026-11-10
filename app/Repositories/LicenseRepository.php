@@ -147,6 +147,8 @@ class LicenseRepository implements LicenseRepositoryInterface
                         'bundle_id' => $bundleId,
                         'sequence' => $sequence,
                         'key' => License::generateKey($locked->key_prefix, $platform, $licenseDto->plan, $sequence),
+                        // Lifetime: the major version it gets updates for.
+                        'updates_major' => License::updatesMajorFor($licenseDto->plan, $data['updates_major'] ?? null, $locked),
                         // The terms the license is issued under.
                         'terms_version' => $locked->terms ? $locked->terms_version : null,
                     ]
@@ -184,7 +186,13 @@ class LicenseRepository implements LicenseRepositoryInterface
         $licenseDto = LicenseDto::fromArrayForUpdate($data, $license);
 
         $original = $license->getRawOriginal();
-        $license->update($licenseDto->toArray());
+        // Lifetime keeps (or upgrades to) a major version; other plans get every version.
+        $updatesMajor = License::updatesMajorFor(
+            $licenseDto->plan,
+            array_key_exists('updates_major', $data) ? $data['updates_major'] : $license->updates_major,
+            $product
+        );
+        $license->update(array_merge($licenseDto->toArray(), ['updates_major' => $updatesMajor]));
         $this->eventLogger->logAdminChanges($license, $original, $license->getChanges());
 
         return $this->getById($product, $id);
