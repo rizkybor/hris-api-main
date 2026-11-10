@@ -33,21 +33,34 @@ class IndonesianRegions
 
     /**
      * [{code, name}] sorted by name; children of $parentCode for every level
-     * below province. Cached for a day (the import clears the cache).
+     * below province. Cached for a day (the import clears the cache). An
+     * empty list is never cached: the tables may be filled later by other
+     * means than the import (e.g. a SQL import), and the lists must show
+     * up right away then.
      */
     public static function list(string $level, ?string $parentCode = null): array
     {
         [$table, $parentColumn] = self::LEVELS[$level];
+        $key = self::cacheKey($level, $parentCode);
 
-        return Cache::remember(self::cacheKey($level, $parentCode), self::CACHE_TTL, function () use ($table, $parentColumn, $parentCode) {
-            return DB::table($table)
-                ->when($parentColumn, fn ($query) => $query->where($parentColumn, $parentCode))
-                ->orderBy('name')
-                ->orderBy('code')
-                ->get(['code', 'name'])
-                ->map(fn ($row) => ['code' => $row->code, 'name' => $row->name])
-                ->all();
-        });
+        $cached = Cache::get($key);
+        if (is_array($cached) && $cached !== []) {
+            return $cached;
+        }
+
+        $items = DB::table($table)
+            ->when($parentColumn, fn ($query) => $query->where($parentColumn, $parentCode))
+            ->orderBy('name')
+            ->orderBy('code')
+            ->get(['code', 'name'])
+            ->map(fn ($row) => ['code' => $row->code, 'name' => $row->name])
+            ->all();
+
+        if ($items !== []) {
+            Cache::put($key, $items, self::CACHE_TTL);
+        }
+
+        return $items;
     }
 
     public static function exists(string $level, string $code): bool
