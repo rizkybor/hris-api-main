@@ -76,16 +76,11 @@
        (cert-seal*.png, 27 mm) with the product icon on its centre
        disc, and an embossed key (a white copy 0.3 mm down / right under
        the dark one). Everything is absolutely positioned for dompdf. */
-    .holo { position: relative; margin-top: 5mm; height: 45.7mm; }
-    .holo .foil { position: absolute; top: 0; left: 0; width: 176mm; height: 45.7mm; }
-    .holo .content { position: absolute; top: 6.8mm; left: 0; width: 176mm; text-align: center; }
+    /* Single key: a compact 38 mm box (a Mac + iPad bundle: 42 mm, below). */
+    .holo { position: relative; margin-top: 5mm; height: 38mm; }
+    .holo .foil { position: absolute; top: 0; left: 0; width: 176mm; height: 38mm; }
+    .holo .content { position: absolute; top: 4.2mm; left: 0; width: 176mm; text-align: center; }
     .holo .label { font-size: 6.6pt; letter-spacing: 3pt; text-transform: uppercase; color: #4b4f63; font-weight: bold; }
-    .holo .key-wrap { position: relative; height: 10.5mm; margin: 1.6mm 0 2.4mm 0; }
-    .holo .key {
-        position: absolute; top: 0; left: 0; width: 176mm; text-align: center;
-        font-size: 20pt; font-weight: bold; letter-spacing: 2.6pt; color: #14161F;
-    }
-    .holo .key.emboss { top: 0.3mm; left: 0.3mm; color: #ffffff; }
     /* Mac + iPad bundle: a shorter box (41 mm) with two smaller keys, each
        tagged with its platform, and even spacing between the rows:
        label, Mac key, iPad key, plan chip, rule, issued / reference. */
@@ -108,12 +103,16 @@
     }
     .holo .key-rows .k .emboss { position: absolute; top: 0.3mm; left: 0.3mm; color: #ffffff; }
     .holo .key-rows .k .ink { position: relative; }
+    .holo .key-rows.single { margin-top: 0.8mm; }
+    .holo .key-rows.single.last { margin-bottom: 2mm; }
+    .holo .key-rows.single .k { height: 8mm; }
+    .holo .key-rows.single .k div { font-size: 18pt; letter-spacing: 2.4pt; line-height: 8mm; }
     .holo.bundle .chips { margin-top: 0; }
     .holo.bundle .meta { margin-top: 1.2mm; padding-top: 1.4mm; }
     .holo .seal { position: absolute; top: -8.5mm; right: -5.5mm; width: 27mm; height: 27mm; }
     .holo .seal-icon { position: absolute; top: 0.75mm; right: 3.75mm; width: 8.5mm; height: 8.5mm; border-radius: 2mm; }
     .holo .meta {
-        width: 112mm; margin: 2.6mm auto 0 auto; padding-top: 1.6mm; border-top: 0.3pt solid #9aa0b4;
+        width: 112mm; margin: 1.4mm auto 0 auto; padding-top: 1.4mm; border-top: 0.3pt solid #9aa0b4;
         font-size: 6.4pt; letter-spacing: 1.4pt; text-transform: uppercase; color: #3d4152;
     }
     .chips { width: auto; margin: 0 auto; }
@@ -249,10 +248,15 @@
                 </table>
             @endforeach
         @else
-            <div class="key-wrap">
-                <div class="key mono emboss">{{ $license->key }}</div>
-                <div class="key mono">{{ $license->key }}</div>
-            </div>
+            {{-- Same table layout as the bundle (its margins hold in dompdf). --}}
+            <table class="key-rows single last">
+                <tr>
+                    <td class="k">
+                        <div class="mono emboss">{{ $license->key }}</div>
+                        <div class="mono ink">{{ $license->key }}</div>
+                    </td>
+                </tr>
+            </table>
         @endif
         <table class="chips">
             <tr>
