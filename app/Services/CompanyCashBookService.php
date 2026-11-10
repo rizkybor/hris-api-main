@@ -16,12 +16,12 @@ use Illuminate\Support\Collection;
 class CompanyCashBookService
 {
     /**
-     * @param  array{project_id?: int|string|null, type?: string|null, source?: string|null, start_date?: string|null, end_date?: string|null, search?: string|null}  $filters
+     * @param  array{project_id?: int|string|null, type?: string|null, source?: string|null, category?: string|null, employee_id?: int|string|null, start_date?: string|null, end_date?: string|null, search?: string|null}  $filters
      * @return array{balance_row: CompanyCashBalance, opening_balance: float, closing_balance: float, period_opening: float, period_closing: float, rows: Collection}
      */
     public function ledger(array $filters = []): array
     {
-        $all = CompanyCashTransaction::with(['creator', 'project'])
+        $all = CompanyCashTransaction::with(['creator', 'project', 'employee.user'])
             ->orderBy('transaction_date')
             ->orderBy('id')
             ->get();
@@ -53,6 +53,12 @@ class CompanyCashBookService
         if (! empty($filters['type'])) {
             $rows = $rows->where('type', $filters['type']);
         }
+        if (! empty($filters['category'])) {
+            $rows = $rows->where('category', $filters['category']);
+        }
+        if (! empty($filters['employee_id'])) {
+            $rows = $rows->where('employee_id', (int) $filters['employee_id']);
+        }
         if (! empty($filters['source'])) {
             $rows = $rows->filter(fn ($t) => $t->isSynced() === ($filters['source'] === 'project'));
         }
@@ -64,7 +70,7 @@ class CompanyCashBookService
         }
         if (! empty($filters['search'])) {
             $needle = mb_strtolower($filters['search']);
-            $rows = $rows->filter(fn ($t) => str_contains(mb_strtolower($t->description.' '.$t->notes.' '.$t->project?->name), $needle));
+            $rows = $rows->filter(fn ($t) => str_contains(mb_strtolower($t->description.' '.$t->notes.' '.$t->project?->name.' '.$t->employee?->user?->name), $needle));
         }
 
         return [

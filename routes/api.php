@@ -190,6 +190,7 @@ Route::prefix('v1')
             // auto-synced from every project's own ledger above, plus
             // manual entries)
             Route::put('company-cash-book/opening-balance', [CompanyCashTransactionController::class, 'updateOpeningBalance']);
+            Route::get('company-cash-book/employee-options', [CompanyCashTransactionController::class, 'employeeOptions']);
             Route::apiResource('company-cash-transactions', CompanyCashTransactionController::class)->except(['show']);
 
             // Project Calculator
