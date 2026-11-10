@@ -110,9 +110,11 @@
     .holo .key-rows.single .k div { font-size: 14pt; letter-spacing: 2pt; line-height: 6.6mm; }
     .holo.bundle .chips { margin-top: 0; }
     .holo.bundle .meta { margin-top: 1mm; padding-top: 1.2mm; }
-    /* Seal on the card's top-right corner, about half of it on the card. */
-    .holo .seal { position: absolute; top: -8mm; right: -10mm; width: 27mm; height: 27mm; }
-    .holo .seal-icon { position: absolute; top: 1.25mm; right: -0.75mm; width: 8.5mm; height: 8.5mm; border-radius: 2mm; }
+    /* Seal (21 mm) on the card's top-right corner, about half of it on the
+       card; centre 3.5 mm in from the right edge, 5.5 mm below the top.
+       The icon (6.6 mm) sits on the seal's white centre disc. */
+    .holo .seal { position: absolute; top: -5mm; right: -7mm; width: 21mm; height: 21mm; }
+    .holo .seal-icon { position: absolute; top: 2.2mm; right: 0.2mm; width: 6.6mm; height: 6.6mm; border-radius: 1.6mm; }
     .holo .meta {
         width: 116mm; margin: 1.2mm auto 0 auto; padding-top: 1.2mm; border-top: 0.3pt solid #9aa0b4;
         font-size: 5.4pt; letter-spacing: 1.2pt; text-transform: uppercase; color: #3d4152;
