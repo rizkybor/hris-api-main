@@ -27,6 +27,18 @@ class LicenseResource extends JsonResource
             ]),
             'plan' => $this->plan,
             'plan_label' => $this->planLabel(),
+            'platform' => $this->platform,
+            'platform_label' => $this->platformLabel(),
+            // Mac + iPad generated together: the other key(s) of the bundle.
+            'bundle_id' => $this->bundle_id,
+            'bundle' => $this->whenLoaded('bundleMembers', fn () => $this->bundleSiblings()->map(fn ($sibling) => [
+                'id' => $sibling->id,
+                'key' => $sibling->key,
+                'platform' => $sibling->platform,
+                'platform_label' => $sibling->platformLabel(),
+                'plan' => $sibling->plan,
+                'is_active' => $sibling->is_active,
+            ])->values()),
             'category' => $this->category(),
             'type' => $this->type,
 

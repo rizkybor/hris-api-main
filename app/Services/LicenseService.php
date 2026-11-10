@@ -22,6 +22,7 @@ class LicenseService
         'device_limit' => LicenseEvent::DENIED_DEVICE_LIMIT,
         'inactive' => LicenseEvent::DENIED_INACTIVE,
         'expired' => LicenseEvent::DENIED_EXPIRED,
+        'wrong_platform' => LicenseEvent::DENIED_WRONG_PLATFORM,
     ];
 
     public function __construct(
@@ -62,6 +63,7 @@ class LicenseService
             // Lock the license row so two devices activating at the same
             // moment cannot both squeeze into the last free slot.
             $license = $this->findUsable($product, $key, lock: true);
+            $this->assertPlatform($license, $device['platform'] ?? null, required: true);
             $now = now();
 
             $activation = $license->activations()->where('device_id', $deviceId)->first();
@@ -105,20 +107,21 @@ class LicenseService
     /**
      * Re-issue a token for an already activated device.
      */
-    public function refresh(string $productCode, string $key, string $deviceId): array
+    public function refresh(string $productCode, string $key, string $deviceId, ?string $platform = null): array
     {
         $product = $this->usableProduct($productCode);
 
         try {
             $license = $this->findUsable($product, $key);
+            $activation = $license->activations()->where('device_id', $deviceId)->first();
+            if (! $activation) {
+                throw LicenseException::notActivated();
+            }
+            // The platform sent now, else the one the device activated with.
+            $this->assertPlatform($license, $platform ?: $activation->platform, required: false);
         } catch (LicenseException $e) {
-            $this->logDenial($e, $product, $key, ['device_id' => $deviceId]);
+            $this->logDenial($e, $product, $key, ['device_id' => $deviceId, 'platform' => $platform]);
             throw $e;
-        }
-
-        $activation = $license->activations()->where('device_id', $deviceId)->first();
-        if (! $activation) {
-            throw LicenseException::notActivated();
         }
 
         // last_seen_at moves on every refresh; the event is throttled.
@@ -240,6 +243,28 @@ class LicenseService
     }
 
     /**
+     * A Mac key only works on a Mac and an iPad key only on an iPad.
+     * Activation must say which platform the device is; on refresh an
+     * unknown platform (older activation without one) is let through.
+     */
+    private function assertPlatform(License $license, ?string $reported, bool $required): void
+    {
+        $platform = License::platformFromDevice($reported);
+
+        if ($platform === null) {
+            if ($required) {
+                throw LicenseException::unknownPlatform();
+            }
+
+            return;
+        }
+
+        if ($platform !== $license->platform) {
+            throw LicenseException::wrongPlatform($license->platform);
+        }
+    }
+
+    /**
      * Only overwrite optional device details the app actually sent.
      */
     private function deviceDetails(array $device): array
@@ -259,6 +284,7 @@ class LicenseService
                 'product' => $license->product?->code,
                 'key' => $license->key,
                 'plan' => $license->plan,
+                'platform' => $license->platform,
                 'type' => $license->type,
                 'licensee' => $license->licensee_name,
                 'expires_at' => LicenseTokenService::isoUtc($license),

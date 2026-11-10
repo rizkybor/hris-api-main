@@ -48,6 +48,9 @@ class LicenseEvent extends Model
 
     public const DENIED_EXPIRED = 'denied_expired';
 
+    /** A Mac key tried on an iPad, or the other way round. */
+    public const DENIED_WRONG_PLATFORM = 'denied_wrong_platform';
+
     public const EVENTS = [
         self::CREATED,
         self::UPDATED,
@@ -65,6 +68,7 @@ class LicenseEvent extends Model
         self::DENIED_DEVICE_LIMIT,
         self::DENIED_INACTIVE,
         self::DENIED_EXPIRED,
+        self::DENIED_WRONG_PLATFORM,
     ];
 
     public const LABELS = [
@@ -84,6 +88,7 @@ class LicenseEvent extends Model
         self::DENIED_DEVICE_LIMIT => 'Denied: device limit reached',
         self::DENIED_INACTIVE => 'Denied: license switched off',
         self::DENIED_EXPIRED => 'Denied: license expired',
+        self::DENIED_WRONG_PLATFORM => 'Denied: wrong platform',
     ];
 
     /**

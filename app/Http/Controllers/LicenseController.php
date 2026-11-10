@@ -61,7 +61,8 @@ class LicenseController extends Controller implements HasMiddleware
                 $request->limit,
                 true,
                 $request->sort_by,
-                $request->sort_dir
+                $request->sort_dir,
+                $request->platform
             );
 
             return ResponseHelper::jsonResponse(true, 'Licenses Retrieved Successfully', LicenseResource::collection($licenses), 200);
@@ -88,7 +89,8 @@ class LicenseController extends Controller implements HasMiddleware
                 $request['plan'] ?? null,
                 (int) ($request['per_page'] ?? $request['row_per_page'] ?? 10),
                 $request['sort_by'] ?? null,
-                $request['sort_dir'] ?? null
+                $request['sort_dir'] ?? null,
+                $request['platform'] ?? null
             );
 
             return ResponseHelper::jsonResponse(true, 'Licenses Retrieved Successfully', PaginateResource::make($licenses, LicenseResource::class), 200);
@@ -292,6 +294,7 @@ class LicenseController extends Controller implements HasMiddleware
             'status' => ['nullable', Rule::in(License::STATUSES)],
             'type' => ['nullable', Rule::in(License::TYPES)],
             'plan' => ['nullable', Rule::in(License::PLANS)],
+            'platform' => ['nullable', Rule::in(License::PLATFORMS)],
         ];
     }
 }

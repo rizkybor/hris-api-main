@@ -19,7 +19,8 @@ interface LicenseRepositoryInterface
         ?int $limit,
         bool $execute,
         ?string $sortBy = null,
-        ?string $sortDir = null
+        ?string $sortDir = null,
+        ?string $platform = null
     );
 
     public function getAllPaginated(
@@ -30,7 +31,8 @@ interface LicenseRepositoryInterface
         ?string $plan,
         int $rowPerPage,
         ?string $sortBy = null,
-        ?string $sortDir = null
+        ?string $sortDir = null,
+        ?string $platform = null
     );
 
     public function getById(

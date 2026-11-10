@@ -17,7 +17,7 @@ class LicenseFactory extends Factory
             // OCCA unless a product is chosen with ->product('demo-app').
             'product_id' => fn () => LicenseProduct::query()->where('code', LicenseProduct::OCCA)->value('id'),
             'sequence' => $sequence = fake()->unique()->numberBetween(9000, 99999),
-            'key' => License::generateKey('OC', License::PLAN_PROFESSIONAL, $sequence),
+            'key' => License::generateKey('OC', License::PLATFORM_MAC, License::PLAN_PROFESSIONAL, $sequence),
             'licensee_name' => fake()->name(),
             'licensee_email' => fake()->unique()->safeEmail(),
             'phone' => '+62 812-3456-7890',
@@ -33,6 +33,7 @@ class LicenseFactory extends Factory
             'village_code' => '31.71.01.1001',
             'occupation' => 'Mapper',
             'plan' => License::PLAN_PROFESSIONAL,
+            'platform' => License::PLATFORM_MAC,
             'type' => License::TYPE_TERM,
             'starts_at' => now(),
             'expires_at' => now()->addYear(),
@@ -91,7 +92,7 @@ class LicenseFactory extends Factory
 
             $sequence = fake()->unique()->numberBetween(9000, 99999);
 
-            return ['product_id' => $product->id, 'sequence' => $sequence, 'key' => License::generateKey($product->key_prefix, License::PLAN_PROFESSIONAL, $sequence)];
+            return ['product_id' => $product->id, 'sequence' => $sequence, 'key' => License::generateKey($product->key_prefix, License::PLATFORM_MAC, License::PLAN_PROFESSIONAL, $sequence)];
         });
     }
 
@@ -107,5 +108,16 @@ class LicenseFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn () => ['is_active' => false]);
+    }
+
+    /**
+     * An iPad license (iPad keys use platform code 5, e.g. OC52-...).
+     */
+    public function ipad(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'platform' => License::PLATFORM_IPAD,
+            'key' => License::generateKey('OC', License::PLATFORM_IPAD, $attributes['plan'] ?? License::PLAN_PROFESSIONAL, $attributes['sequence']),
+        ]);
     }
 }
