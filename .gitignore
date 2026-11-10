@@ -28,3 +28,6 @@ __pycache__/
 # Local REST client scratch files (may contain tokens/passwords)
 *.rest
 *.http
+
+# Local sample PDFs (generated for review, not committed)
+/samples/
