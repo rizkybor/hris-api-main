@@ -29,7 +29,8 @@ use Illuminate\Console\Command;
 class LicenseCertificateAssetsCommand extends Command
 {
     protected $signature = 'license:certificate-assets
-        {--variant= : a (soft), b (medium), c (vivid) or all; default: the configured licensing.certificate_hologram}';
+        {--variant= : a (soft), b (medium), c (vivid) or all; default: the configured licensing.certificate_hologram}
+        {--only= : ribbon = render only the corner ribbons}';
 
     protected $description = 'Render the holographic PNG assets of the license certificate (one-off; commit the result)';
 
@@ -105,11 +106,22 @@ class LicenseCertificateAssetsCommand extends Command
         foreach ($variants as $v) {
             [$this->saturation, $this->opacity] = self::VARIANTS[$v];
             $this->line("Variant {$v}:");
+            if ($this->option('only') === 'ribbon') {
+                foreach (['tl', 'tr', 'bl', 'br'] as $corner) {
+                    $this->save($this->ribbon($corner), "{$out}/cert-ribbon-{$v}-{$corner}.png");
+                }
+
+                continue;
+            }
             $this->save($this->foil('AUTHENTIC LICENSE  ·  JENDELA CAKRA DIGITAL  ·  '), "{$out}/cert-foil-{$v}.png");
             $this->save($this->foil('OCCA  ·  AUTHENTIC LICENSE  ·  '), "{$out}/cert-foil-occa-{$v}.png");
             $this->save($this->seal('GENUINE · LICENSE · JENDELA CAKRA DIGITAL · '), "{$out}/cert-seal-{$v}.png");
             $this->save($this->seal('GENUINE · OCCA · LICENSE · JENDELA CAKRA DIGITAL · '), "{$out}/cert-seal-occa-{$v}.png");
             $this->save($this->chip(), "{$out}/cert-chip-{$v}.png");
+            // Holographic ribbon across each page corner.
+            foreach (['tl', 'tr', 'bl', 'br'] as $corner) {
+                $this->save($this->ribbon($corner), "{$out}/cert-ribbon-{$v}-{$corner}.png");
+            }
 
             // Key box and chip in each plan's colours (the seal stays silver).
             foreach (self::PLAN_PALETTES as $plan => $palette) {
@@ -198,6 +210,89 @@ class LicenseCertificateAssetsCommand extends Command
         imagettftext($im, 10, 0, $radius + 24, $h - 18, $ink, $this->font, str_repeat($microText, 40));
 
         $this->clipToRoundedRect($im, $w, $h, $radius, $border);
+
+        return $im;
+    }
+
+    /**
+     * Holographic ribbon across one page corner, 16 x 16 mm at 24 px/mm on
+     * a transparent canvas: a diagonal sash ~3.4 mm wide whose diffraction
+     * colour flows along it, a fine grating parallel to it, one specular
+     * highlight, silver edges and micro-text running along the middle.
+     * $corner: tl, tr, bl, br (the corner of the page it sits in).
+     */
+    private function ribbon(string $corner)
+    {
+        $size = 384;               // 16 mm
+        $centre = 216;             // sash centre where x' + y' = 9 mm
+        $half = 58;                // half width along x' + y' (~3.4 mm across)
+        $im = $this->canvas($size, $size);
+        $flipX = in_array($corner, ['tr', 'br'], true);
+        $flipY = in_array($corner, ['bl', 'br'], true);
+
+        for ($y = 0; $y < $size; $y++) {
+            for ($x = 0; $x < $size; $x++) {
+                // Coordinates measured from the page corner.
+                $cx = $flipX ? $size - 1 - $x : $x;
+                $cy = $flipY ? $size - 1 - $y : $y;
+                $s = $cx + $cy;
+                $d = abs($s - $centre);
+                $coverage = min(1, $half - $d + 0.5);
+                if ($coverage <= 0) {
+                    continue;
+                }
+
+                // Pearl base, colour flowing along the sash.
+                $along = ($cx - $cy) / $size;
+                $rgb = $this->mix(self::PEARL_LIGHT, self::PEARL_DARK, $d / $half * 0.6);
+                $grating = 0.5 + 0.5 * cos(2 * M_PI * $s / 3);
+                $hue = $this->diffraction(0.5 + 0.9 * $along + 0.25 * ($s - $centre) / $half);
+                $rgb = $this->mix($rgb, $hue, min(1, 1.6 * $this->opacity) * (0.6 + 0.4 * $grating));
+
+                // Specular highlight a little off the middle.
+                $spec = exp(-((($s - $centre) + 0.35 * $half) / 7) ** 2);
+                $rgb = $this->mix($rgb, [255, 255, 255], 0.75 * $spec);
+
+                // Thin silver edges.
+                if ($d > $half - 4) {
+                    $rgb = $this->mix($rgb, self::BORDER, 0.85);
+                }
+
+                imagesetpixel($im, $x, $y, $this->color($im, $rgb[0], $rgb[1], $rgb[2], $coverage));
+            }
+        }
+
+        // Micro-text along the middle, reading left to right.
+        $text = str_repeat('GENUINE  ·  AUTHENTIC LICENSE  ·  ', 4);
+        $ink = imagecolorallocatealpha($im, 70, 76, 98, 30);
+        $up = ($corner === 'tl' || $corner === 'br'); // sash rises to the right
+        $angle = $up ? 45 : -45;
+        // Start where the centre line meets the canvas edge on the left,
+        // nudged across the line so the text sits in the middle of the sash.
+        $nudge = 4;
+        [$sx, $sy] = match ($corner) {
+            'tl' => [0, $centre],
+            'br' => [$size - $centre, $size],
+            'tr' => [$size - $centre, 0],
+            'bl' => [0, $size - $centre],
+        };
+        $sx += $up ? $nudge : -$nudge;
+        $sy += $nudge;
+        imagettftext($im, 9, $angle, (int) $sx, (int) $sy, $ink, $this->fontBold, $text);
+
+        // Keep the text inside the sash.
+        imagealphablending($im, false);
+        $clear = imagecolorallocatealpha($im, 255, 255, 255, 127);
+        for ($y = 0; $y < $size; $y++) {
+            for ($x = 0; $x < $size; $x++) {
+                $cx = $flipX ? $size - 1 - $x : $x;
+                $cy = $flipY ? $size - 1 - $y : $y;
+                if (abs($cx + $cy - $centre) > $half + 0.5) {
+                    imagesetpixel($im, $x, $y, $clear);
+                }
+            }
+        }
+        imagealphablending($im, true);
 
         return $im;
     }

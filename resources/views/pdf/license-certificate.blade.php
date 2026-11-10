@@ -9,7 +9,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>{{ $product?->name }} License Certificate · {{ $license->key }}</title>
+<title>{{ $product?->name }} License Certificate · {{ $keys->pluck('key')->implode(' · ') }}</title>
 <style>
     @page { margin: 29mm 17mm 24mm 17mm; }
 
@@ -44,6 +44,13 @@
     .corner.tr { top: -21mm; right: -9mm; border-width: 1.6pt 1.6pt 0 0; }
     .corner.bl { bottom: -16mm; left: -9mm; border-width: 0 0 1.6pt 1.6pt; }
     .corner.br { bottom: -16mm; right: -9mm; border-width: 0 1.6pt 1.6pt 0; }
+    /* Holographic ribbon across every page corner (cert-ribbon-*.png,
+       16 mm square, transparent outside the sash), over the frame. */
+    .ribbon { position: fixed; width: 16mm; height: 16mm; }
+    .ribbon.tl { top: -21mm; left: -9mm; }
+    .ribbon.tr { top: -21mm; right: -9mm; }
+    .ribbon.bl { bottom: -16mm; left: -9mm; }
+    .ribbon.br { bottom: -16mm; right: -9mm; }
 
     .header { position: fixed; top: -18mm; left: 0; right: 0; height: 14mm; }
     .header .icon { width: 11mm; height: 11mm; border-radius: 2.5mm; }
@@ -79,6 +86,24 @@
         font-size: 20pt; font-weight: bold; letter-spacing: 2.6pt; color: #14161F;
     }
     .holo .key.emboss { top: 0.3mm; left: 0.3mm; color: #ffffff; }
+    /* Mac + iPad bundle: two smaller keys, each tagged with its platform. */
+    .holo.bundle .content { top: 4.2mm; }
+    /* Platform tag column (right-aligned) + key column (left-aligned), so
+       both keys start at the same x whatever the tag's width. */
+    .holo .key-rows { width: auto; margin: 0.8mm auto 0.6mm auto; border-collapse: collapse; }
+    .holo .key-rows td { padding: 0.1mm 0; vertical-align: middle; }
+    .holo .key-rows .plat {
+        width: 13mm; padding-right: 3mm; padding-top: 1mm; text-align: right;
+        font-family: "DejaVu Sans", sans-serif; font-size: 6.6pt; letter-spacing: 1.6pt; font-weight: bold; color: #4b4f63;
+    }
+    .holo .key-rows .k { position: relative; height: 7.4mm; }
+    .holo .key-rows .k div {
+        font-size: 15.5pt; font-weight: bold; letter-spacing: 2pt; color: #14161F; white-space: nowrap; line-height: 7.4mm;
+    }
+    .holo .key-rows .k .emboss { position: absolute; top: 0.3mm; left: 0.3mm; color: #ffffff; }
+    .holo .key-rows .k .ink { position: relative; }
+    .holo.bundle .chips { margin-top: 0.4mm; }
+    .holo.bundle .meta { margin-top: 1.4mm; }
     .holo .seal { position: absolute; top: -8.5mm; right: -5.5mm; width: 27mm; height: 27mm; }
     .holo .seal-icon { position: absolute; top: 0.75mm; right: 3.75mm; width: 8.5mm; height: 8.5mm; border-radius: 2mm; }
     .holo .meta {
@@ -150,6 +175,9 @@
 {{-- Frame, header and footer repeat on every page --}}
 <div class="frame"></div><div class="frame2"></div>
 <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+@foreach ($ribbons as $corner => $ribbon)
+    <img class="ribbon {{ $corner }}" src="{{ $ribbon }}" alt="">
+@endforeach
 
 <div class="header">
     <table>
@@ -189,20 +217,36 @@
 <div class="eyebrow">Certificate of License</div>
 <h1 class="title serif">{{ $product?->name }} {{ $license->planLabel() }} License</h1>
 <p class="lede">
-    This certifies that the licensee named below holds a valid license for {{ $product?->name }},
+    This certifies that the licensee named below holds a valid license for {{ $product?->name }}{{ $isBundle ? ' on Mac and iPad' : '' }},
     issued by Jendela Cakra Digital under the terms set out on this certificate.
 </p>
 
-<div class="holo">
+<div class="holo{{ $isBundle ? ' bundle' : '' }}">
     @if ($foil)
         <img class="foil" src="{{ $foil }}" alt="">
     @endif
     <div class="content">
-        <div class="label">License Key</div>
-        <div class="key-wrap">
-            <div class="key mono emboss">{{ $license->key }}</div>
-            <div class="key mono">{{ $license->key }}</div>
-        </div>
+        <div class="label">{{ $isBundle ? 'License Keys' : 'License Key' }}</div>
+        @if ($isBundle)
+            <table class="key-rows">
+                @foreach ($keys as $key)
+                    <tr>
+                        <td class="plat">{{ strtoupper($key->platformLabel()) }}</td>
+                        <td class="k">
+                            <div class="mono emboss">{{ $key->key }}</div>
+                            <div class="mono ink">{{ $key->key }}</div>
+                        </td>
+                        {{-- mirror of the tag column keeps the keys centred --}}
+                        <td style="width: 16mm;"></td>
+                    </tr>
+                @endforeach
+            </table>
+        @else
+            <div class="key-wrap">
+                <div class="key mono emboss">{{ $license->key }}</div>
+                <div class="key mono">{{ $license->key }}</div>
+            </div>
+        @endif
         <table class="chips">
             <tr>
                 <td>
@@ -258,12 +302,12 @@
                 <div class="section-title">License Terms</div>
                 <table class="kv">
                     <tr><td class="k">Plan</td><td class="v">{{ $license->planLabel() }}@if ($showCategory) <span class="muted" style="font-weight: normal;">&middot; {{ $categoryLabel }}</span>@endif</td></tr>
-                    <tr><td class="k">Platform</td><td class="v normal">{{ $license->platformLabel() }}</td></tr>
+                    <tr><td class="k">Platform</td><td class="v normal">{{ $platformsLabel }}@if ($isBundle) <span class="muted">&middot; one key each</span>@endif</td></tr>
                     <tr><td class="k">Type</td><td class="v normal">{{ $license->isLifetime() ? 'Lifetime' : 'Term' }}</td></tr>
                     <tr><td class="k">Start</td><td class="v normal">{{ $startsOn }}</td></tr>
                     <tr><td class="k">End</td><td class="v normal">{{ $endsOn ?? 'Lifetime · never expires' }}</td></tr>
                     <tr><td class="k">Duration</td><td class="v normal">{{ $durationLabel }}</td></tr>
-                    <tr><td class="k">Devices</td><td class="v normal">Up to {{ $license->max_devices }} {{ \Illuminate\Support\Str::plural('device', $license->max_devices) }} at a time</td></tr>
+                    <tr><td class="k">Devices</td><td class="v normal">Up to {{ $license->max_devices }} {{ \Illuminate\Support\Str::plural('device', $license->max_devices) }} at a time{{ $isBundle ? ' per key' : '' }}</td></tr>
                     <tr><td class="k">Status</td><td class="v">{{ $statusLabel }}</td></tr>
                 </table>
             </div>
@@ -301,8 +345,13 @@
         @else
             <li>This license is personal to the licensee named above and is not transferable.</li>
         @endif
-        <li>The key may be active on up to {{ $license->max_devices }} {{ \Illuminate\Support\Str::plural('device', $license->max_devices) }} at the same time.</li>
-        <li>Keep the key private; do not publish or share it.</li>
+        @if ($isBundle)
+            <li>Each key may be active on up to {{ $license->max_devices }} {{ \Illuminate\Support\Str::plural('device', $license->max_devices) }} of its own platform at the same time: the Mac key on Macs, the iPad key on iPads.</li>
+            <li>Keep the keys private; do not publish or share them.</li>
+        @else
+            <li>The key may be active on up to {{ $license->max_devices }} {{ \Illuminate\Support\Str::plural('device', $license->max_devices) }} at the same time.</li>
+            <li>Keep the key private; do not publish or share it.</li>
+        @endif
         <li>Jendela Cakra Digital may deactivate a key that is misused, shared or obtained improperly.</li>
     </ul>
 </div>
@@ -332,7 +381,8 @@
                 <div class="section-title" style="margin-bottom: 2mm;">Acknowledgement</div>
                 <div class="line">
                     Licensee: <strong>{{ $license->licensee_name }}</strong>
-                    &nbsp;&middot;&nbsp; License key: <strong class="mono">{{ $license->key }}</strong>
+                    &nbsp;&middot;&nbsp; {{ $isBundle ? 'License keys' : 'License key' }}:
+                    @foreach ($keys as $key)<strong class="mono">{{ $key->key }}</strong>@if ($isBundle) ({{ $key->platformLabel() }})@endif{{ $loop->last ? '' : ', ' }}@endforeach
                     &nbsp;&middot;&nbsp; Terms version: <strong>{{ $termsVersion }}</strong>
                     &nbsp;&middot;&nbsp; Issued: <strong>{{ $issuedOn }}</strong>
                 </div>

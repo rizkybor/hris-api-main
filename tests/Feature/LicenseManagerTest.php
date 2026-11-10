@@ -2206,3 +2206,31 @@ test('license:create --platform=both prints both keys', function () {
     expect($keys['ipad'])->toStartWith('OC53-')->and($keys['mac'])->toStartWith('OC33-')
         ->and(License::where('licensee_name', 'Both User')->distinct()->count('bundle_id'))->toBe(1);
 });
+
+test('a Mac + iPad bundle has one certificate with both keys, the same from either license', function () {
+    Sanctum::actingAs($this->admin);
+
+    $mac = License::find($this->postJson(lmLicenses(), occaIndividual(['platform' => 'both']))->json('data.id'));
+    $ipad = License::where('bundle_id', $mac->bundle_id)->where('platform', 'ipad')->first();
+    $service = app(LicenseCertificateService::class);
+
+    foreach ([$mac, $ipad] as $license) {
+        $data = $service->data($license);
+        expect($data['isBundle'])->toBeTrue()
+            ->and($data['keys']->pluck('key')->all())->toBe([$mac->key, $ipad->key])
+            ->and($data['reference'])->toBe('LIC-OCCA-MAC-0001+IPAD-0001')
+            ->and($data['platformsLabel'])->toBe('Mac + iPad')
+            ->and($data['steps']['steps'][2][1])->toContain('Mac key on a Mac and the iPad key on an iPad')
+            ->and($data['ribbons'])->toHaveKeys(['tl', 'tr', 'bl', 'br'])
+            ->and($service->filename($license))->toBe("occa-License-{$mac->key}_{$ipad->key}.pdf");
+    }
+
+    $html = view('pdf.license-certificate', $service->data($ipad))->render();
+    expect($html)->toContain($mac->key)->toContain($ipad->key)->toContain('License Keys')->toContain('ribbon tl');
+
+    // A single license keeps its own one-key certificate.
+    $single = License::find($this->postJson(lmLicenses(), occaIndividual())->json('data.id'));
+    expect($service->data($single)['isBundle'])->toBeFalse()
+        ->and($service->data($single)['keys'])->toHaveCount(1)
+        ->and($service->data($single)['reference'])->toBe('LIC-OCCA-MAC-0002');
+});

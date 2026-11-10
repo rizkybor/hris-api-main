@@ -6,6 +6,7 @@ use App\Models\License;
 use App\Models\LicenseProduct;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -59,9 +60,46 @@ class LicenseCertificateService
 
     public function filename(License $license): string
     {
-        $product = $license->product;
+        $keys = $this->bundleKeys($license);
+        $product = $keys->first()->product ?? $license->product;
 
-        return Str::slug($product?->name ?: 'License', '-').'-License-'.$license->key.'.pdf';
+        return Str::slug($product?->name ?: 'License', '-').'-License-'.$keys->pluck('key')->implode('_').'.pdf';
+    }
+
+    /**
+     * The licenses one certificate covers: the license itself, or for a
+     * Mac + iPad bundle both of them, Mac first. A bundle has one
+     * certificate, the same whichever of its licenses it is opened from.
+     *
+     * @return Collection<int, License>
+     */
+    public function bundleKeys(License $license): Collection
+    {
+        if (! $license->bundle_id) {
+            return collect([$license]);
+        }
+
+        $order = array_flip(License::PLATFORMS);
+
+        return License::query()
+            ->with('product')
+            ->where('bundle_id', $license->bundle_id)
+            ->get()
+            ->sortBy(fn (License $member) => $order[$member->platform] ?? 99)
+            ->values();
+    }
+
+    /**
+     * LIC-OCCA-MAC-0001, or LIC-OCCA-MAC-0001+IPAD-0001 for a bundle.
+     */
+    public static function certificateReference(Collection $keys): string
+    {
+        $first = self::reference($keys->first());
+
+        return $keys->skip(1)->reduce(
+            fn (string $reference, License $other) => $reference.'+'.strtoupper($other->platform).'-'.str_pad((string) ($other->sequence ?? $other->id), 4, '0', STR_PAD_LEFT),
+            $first
+        );
     }
 
     /**
@@ -81,6 +119,12 @@ class LicenseCertificateService
     public function data(License $license): array
     {
         $license->loadMissing('product');
+        $keys = $this->bundleKeys($license);
+        $isBundle = $keys->count() > 1;
+        // Everything shared (licensee, plan, period) comes from the Mac key
+        // of a bundle, so both of its licenses give the same certificate.
+        $license = $keys->first();
+        $license->loadMissing('product');
         $product = $license->product;
         $issuedAt = $license->created_at ?? now();
         $termsVersion = $license->terms_version ?: $product?->terms_version;
@@ -88,9 +132,12 @@ class LicenseCertificateService
 
         return [
             'license' => $license,
+            'keys' => $keys,
+            'isBundle' => $isBundle,
+            'platformsLabel' => $keys->map->platformLabel()->implode(' + '),
             'product' => $product,
             'accent' => self::ACCENT,
-            'reference' => self::reference($license),
+            'reference' => self::certificateReference($keys),
             'verifyDomain' => self::VERIFY_DOMAIN,
             'issuedOn' => self::date($issuedAt),
             'startsOn' => self::date($license->starts_at ?? $issuedAt),
@@ -101,7 +148,7 @@ class LicenseCertificateService
             // Organization plan = organization category: show it once.
             'showCategory' => strcasecmp($license->planLabel(), ucfirst($license->category())) !== 0,
             'organizationTypeLabel' => $license->organizationTypeLabel(),
-            'steps' => $this->activationSteps($product, $license),
+            'steps' => $this->activationSteps($product, $license, $isBundle),
             'productIcon' => $this->productIcon($product),
             'companyLogo' => self::embed(resource_path('license-products/jcd-logo.png')),
             // Holographic artwork (php artisan license:certificate-assets),
@@ -112,6 +159,11 @@ class LicenseCertificateService
             'chip' => self::embed(self::asset('cert-chip', null, $license->plan)),
             'planInk' => self::PLAN_INK[$license->plan] ?? '#14161F',
             'band' => self::embed(resource_path('license-products/certificate-band.png')),
+            // Holographic ribbon across each page corner, on every page.
+            'ribbons' => collect(['tl', 'tr', 'bl', 'br'])
+                ->mapWithKeys(fn (string $corner) => [$corner => self::embed(self::asset('cert-ribbon', null, $corner))])
+                ->filter()
+                ->all(),
             'hasTerms' => $hasTerms,
             'termsVersion' => $termsVersion,
             'termsEffectiveOn' => $product?->terms_effective_at ? self::date($product->terms_effective_at) : null,
@@ -151,7 +203,7 @@ class LicenseCertificateService
     /**
      * Three short steps for this product, plus the shared notes.
      */
-    private function activationSteps(?LicenseProduct $product, License $license): array
+    private function activationSteps(?LicenseProduct $product, License $license, bool $isBundle = false): array
     {
         $name = $product?->name ?: 'the app';
         // A key only activates on its own platform: Mac (click, Starter
@@ -160,7 +212,13 @@ class LicenseCertificateService
         $device = $ipad ? 'iPad' : 'Mac';
         $press = $ipad ? 'Tap' : 'Click';
 
-        $steps = $product?->code === LicenseProduct::OCCA
+        $bundleSteps = [
+            ['Open OCCA', 'Launch OCCA on your Mac or iPad and go to the project list.'],
+            ['Open License', 'Click (Mac) or tap (iPad) the plan chip next to the OCCA name at the top of the project list.'],
+            ['Paste the key and activate', 'Use the Mac key on a Mac and the iPad key on an iPad; paste it exactly as shown above and activate.'],
+        ];
+
+        $steps = $product?->code === LicenseProduct::OCCA && $isBundle ? $bundleSteps : ($product?->code === LicenseProduct::OCCA
             ? [
                 ['Open OCCA', "Launch OCCA on your {$device} and go to the project list. This key works on {$device} only."],
                 ['Open License', $ipad
@@ -172,7 +230,7 @@ class LicenseCertificateService
                 ["Open {$name}", "Launch {$name} on the device you want to license."],
                 ['Open the license screen', 'Go to the license or account settings of the app.'],
                 ['Paste the key and activate', 'Paste the license key exactly as shown above and confirm.'],
-            ];
+            ]);
 
         return [
             'steps' => $steps,
