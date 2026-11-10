@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\LicenseException;
+use App\Models\License;
+use App\Models\LicenseRelease;
+use App\Services\LicenseReleaseService;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 /**
  * Public, unauthenticated endpoints an app calls to activate, refresh and
@@ -19,7 +24,66 @@ use Illuminate\Support\Facades\Validator;
  */
 class LicensePublicController extends Controller
 {
-    public function __construct(private LicenseService $licenseService) {}
+    public function __construct(
+        private LicenseService $licenseService,
+        private LicenseReleaseService $releaseService
+    ) {}
+
+    /**
+     * Published version list (newest first), for "What's new" in the app.
+     */
+    public function releases(Request $request, string $product): JsonResponse
+    {
+        return $this->handle($request, [
+            'platform' => ['nullable', Rule::in(['mac', 'ipad', 'macOS', 'iPadOS'])],
+        ], fn (array $data) => $this->releaseService->history($product, $this->platform($data['platform'] ?? null)));
+    }
+
+    /**
+     * Update check for a running app: version (required), platform and,
+     * when the device is activated, the license key (Lifetime covers one
+     * major version).
+     */
+    public function latestRelease(Request $request, string $product): JsonResponse
+    {
+        return $this->handle($request, [
+            'version' => ['required', 'string', 'max:20'],
+            'platform' => ['nullable', Rule::in(['mac', 'ipad', 'macOS', 'iPadOS'])],
+            'key' => ['nullable', 'string', 'max:64'],
+        ], fn (array $data) => $this->releaseService->check(
+            $product,
+            $this->platform($data['platform'] ?? null),
+            $data['version'],
+            $data['key'] ?? null
+        ));
+    }
+
+    /**
+     * Download a version's installer with a license key (?key=...).
+     */
+    public function download(Request $request, string $product, string $version)
+    {
+        $validator = Validator::make($request->all(), ['key' => ['required', 'string', 'max:64']]);
+        if ($validator->fails()) {
+            return $this->error('invalid_request', $validator->errors()->first(), 422);
+        }
+
+        try {
+            [$release, $path] = $this->releaseService->installer($product, $version, $request->input('key'));
+        } catch (LicenseException $e) {
+            return $this->error($e->errorCode, $e->getMessage(), $e->status);
+        }
+
+        return Storage::disk(LicenseRelease::FILE_DISK)->download($path, $release->file_name);
+    }
+
+    /**
+     * "macOS" / "iPadOS" (what the apps send) or "mac" / "ipad".
+     */
+    private function platform(?string $value): ?string
+    {
+        return $value === null ? null : License::platformFromDevice($value);
+    }
 
     public function activate(Request $request, string $product): JsonResponse
     {
@@ -37,7 +101,7 @@ class LicensePublicController extends Controller
     public function refresh(Request $request, string $product): JsonResponse
     {
         return $this->handle($request, $this->keyAndDeviceRules(),
-            fn (array $data) => $this->licenseService->refresh($product, $data['key'], $data['device_id'], $data['platform'] ?? null));
+            fn (array $data) => $this->licenseService->refresh($product, $data['key'], $data['device_id'], $data['platform'] ?? null, $data['app_version'] ?? null));
     }
 
     public function deactivate(Request $request, string $product): JsonResponse
@@ -56,6 +120,8 @@ class LicensePublicController extends Controller
             'device_id' => ['required', 'string', 'max:255'],
             // Optional on refresh / deactivate; checked when sent.
             'platform' => ['nullable', 'string', 'max:50'],
+            // Optional: the running app version (a change is logged as "app_updated").
+            'app_version' => ['nullable', 'string', 'max:50'],
         ];
     }
 

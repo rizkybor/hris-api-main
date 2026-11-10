@@ -235,10 +235,43 @@ Response `200`:
 
 ### refresh
 
-`{ "key": "...", "device_id": "...", "platform": "macOS" }`. Same checks as
-activate, plus the device must already be activated. `platform` is optional
-here; when it is not sent, the platform the device activated with is
-checked. Always updates `last_seen_at`. Same response shape.
+`{ "key": "...", "device_id": "...", "platform": "macOS", "app_version": "1.1.0" }`.
+Same checks as activate, plus the device must already be activated.
+`platform` is optional here; when it is not sent, the platform the device
+activated with is checked. Always updates `last_seen_at`. `app_version` is
+optional; a version different from the one stored for the device is saved
+and logged as `app_updated` (`meta`: from, to). Same response shape.
+
+### releases (version list)
+
+```
+GET /api/licenses/{product}/releases?platform=macOS
+GET /api/licenses/{product}/releases/latest?version=1.0.0&platform=macOS&key=OC33-...
+```
+
+`releases`: the published versions for the platform (`macOS` / `iPadOS` or
+`mac` / `ipad`; shared releases included), newest first:
+`{"product":"occa","releases":[{version, build, kind, platforms, title,
+released_at, is_critical, download_url, changes:[{type, area, text}]}]}`.
+`kind` is `major` (x.0.0), `minor` (x.y.0, features) or `patch` (x.y.z,
+fixes); a change `type` is `feature`, `improvement` or `fix`.
+
+`releases/latest` (update check; `version` required, `key` optional):
+
+| Field               | Meaning                                                          |
+|---------------------|------------------------------------------------------------------|
+| `latest`            | Newest published release for the platform                        |
+| `update`            | Newest release this license may install (Lifetime: within its major version), when newer than `version`; else null |
+| `update_available`  | `update` is not null                                             |
+| `upgrade_available` | Version of a newer major the license does not cover (a paid upgrade), else null |
+| `required`          | A critical release is newer than `version`: the app should update |
+| `updates_major`     | The key's covered major version (null = every version)          |
+
+`GET /api/licenses/{product}/releases/{version}/download?key=OC32-...`
+downloads the installer of a published version for a Mac key of the product
+that is on, not expired and covers the version (`upgrade_required` 403 for a
+Lifetime key of an older major, `wrong_platform` for an iPad key). The
+`download_url` of a release with a stored installer points here.
 
 ### deactivate
 
@@ -291,11 +324,12 @@ Payload (snake_case keys, in this order):
 | `iat`           | int            | Issued at (unix seconds)                                       |
 | `refresh_after` | int            | `iat + 7 days`: the app should call `refresh` after this       |
 | `offline_until` | int            | `min(iat + 30 days, expires_at)`; `iat + 30 days` for lifetime |
+| `updates_major` | int \| null    | Lifetime: the major version the license covers (OCCA 1.x = 1); the app refuses a higher major. Null for other plans |
 
 Example payload:
 
 ```json
-{"v":1,"product":"occa","lid":12,"key":"OC32-7KQM-2XRT-9HZP-0001","plan":"professional","platform":"mac","type":"term","licensee":"Jane Orienteer","expires_at":"2027-05-09T00:00:00Z","device_id":"5B0E7C1A-3F55-4C8B-9E1D-2A6F0D9B7C44","iat":1794239819,"refresh_after":1794844619,"offline_until":1796831819}
+{"v":1,"product":"occa","lid":12,"key":"OC32-7KQM-2XRT-9HZP-0001","plan":"professional","platform":"mac","type":"term","updates_major":null,"licensee":"Jane Orienteer","expires_at":"2027-05-09T00:00:00Z","device_id":"5B0E7C1A-3F55-4C8B-9E1D-2A6F0D9B7C44","iat":1794239819,"refresh_after":1794844619,"offline_until":1796831819}
 ```
 
 App-side verification: split on `.`, base64url-decode the signature, verify it
@@ -527,6 +561,7 @@ A logging failure is reported and swallowed, never breaking the request.
 | `device_activated`          | New device seat                                                   |
 | `device_reactivated`        | Same device activated again                                       |
 | `refreshed`                 | Refresh; at most once per device per 24 h (`last_seen_at` always updates) |
+| `app_updated`               | A device reported another app version on activate / refresh (`meta`: from, to) |
 | `device_released`           | Deactivate from the app                                           |
 | `denied_device_limit` / `denied_inactive` / `denied_expired` / `denied_wrong_platform` | Denied activate / refresh on an existing key of the product |
 
@@ -537,6 +572,56 @@ newest first, optional `event` filter; each item has `label` and
 
 Field changes and device activity are also still written to the
 activity log under `License Manager`.
+
+## Versions (release history)
+
+Every product has a version list in `license_releases`: `version`
+(`major.minor.patch`, unique per product; `major` / `minor` / `patch` are
+kept in sync), `build`, `platforms` (`both` / `mac` / `ipad`), `title`,
+`status` (`draft` / `published`; only published versions reach the apps),
+`released_at` (required to publish), `is_critical` (older versions must
+update), `download_url`, `changes` (`[{type: feature|improvement|fix, area,
+text}]`) and internal `notes`. OCCA's first list (1.0.0, every feature of
+the first release) comes from `resources/license-products/releases/occa.json`
+as a draft.
+
+Licenses and versions: `licenses.updates_major` is the major version a
+license gets updates for. A new Lifetime license gets the product's current
+major (newest published release, 1 before the first); a paid upgrade raises
+it (edit the license). Every other plan has null = every version while it
+runs. The value is in the signed token, so the app enforces it offline.
+
+Each version also keeps its installer (OCCA: the Mac `.dmg`) on the private
+`local` disk under `license-releases/{product}/{version}/`, with its size and
+SHA-256; a Mac or shared version can only be published with it. Files stay
+when a version is deleted (soft delete). The server must accept large uploads
+(PHP `upload_max_filesize` / `post_max_size`, nginx `client_max_body_size`;
+up to 2 GB).
+
+Permissions: own module `license-release-*` (Roles & Permissions › License
+Versions): `menu` / `list` / `view` read, `create` adds, `edit` edits,
+publishes and uploads the installer, `delete` deletes, `download` downloads
+installers. Migration `…000014` gives every role with a `license-manager-*`
+permission the matching one (`download` follows `view`).
+
+Admin:
+
+| Method | Path | |
+|--------|------|-|
+| GET    | `/api/v1/license-manager/products/{product}/releases?status=&platform=&search=` | `{current_major, latest_version, versions_in_use: [{version, platform, devices}], releases: [...]}` |
+| POST   | `/api/v1/license-manager/products/{product}/releases` | Add a version |
+| GET    | `/api/v1/license-manager/products/{product}/releases/{id}` | One version |
+| PUT    | `/api/v1/license-manager/products/{product}/releases/{id}` | Edit / publish |
+| DELETE | `/api/v1/license-manager/products/{product}/releases/{id}` | Delete (soft) |
+| POST   | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Upload / replace the installer (multipart `file`: .dmg, .zip, .pkg) |
+| GET    | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Download the installer |
+| DELETE | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Remove it (drafts only) |
+
+Each release also has `kind`, `kind_label`, `change_counts`,
+`licenses_covered` (running licenses that get it), `licenses_needing_upgrade`
+(Lifetime licenses of an older major) and `devices_on_version` (devices whose
+app last reported this version). `versions_in_use` is the log of app versions
+the activated devices report.
 
 ## Migrations
 
@@ -558,3 +643,8 @@ activity log under `License Manager`.
 | `2026_11_10_000007_add_license_sequence_and_new_key_format` | Per-product `license_sequence`, `licenses.sequence` (existing licenses numbered in creation order), OCCA prefix `OCCA` → `OC` |
 | `2026_11_10_000009_add_bundle_id_to_licenses` | `licenses.bundle_id`: Mac + iPad keys generated together |
 | `2026_11_10_000008_add_platform_to_licenses` | `licenses.platform`, separate Mac / iPad counters (`mac_license_sequence`, `ipad_license_sequence`), sequence unique per product + platform; resets existing keys to Mac keys in the new format |
+| `2026_11_10_000010_create_license_releases_table` | Version list per product |
+| `2026_11_10_000011_add_updates_major_to_licenses` | `licenses.updates_major` (existing Lifetime licenses: 1) |
+| `2026_11_10_000012_import_occa_release_history` | OCCA 1.0.0 (draft) from `resources/license-products/releases/occa.json` |
+| `2026_11_10_000013_add_installer_file_to_license_releases` | Installer file per version (path, name, size, SHA-256) |
+| `2026_11_10_000014_add_license_release_permissions` | `license-release-*` permissions, copied from `license-manager-*` on existing roles |

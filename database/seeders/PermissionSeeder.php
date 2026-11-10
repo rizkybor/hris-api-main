@@ -149,6 +149,20 @@ class PermissionSeeder extends Seeder
             'delete',
         ],
 
+        // License Manager › Versions: the version list of each product
+        // (features and bug fixes per version) and its installers (.dmg).
+        // download = the stored installer files. Same roles as
+        // license-manager (a migration copies them on existing databases).
+        'license-release' => [
+            'menu',
+            'list',
+            'view',
+            'create',
+            'edit',
+            'delete',
+            'download',
+        ],
+
         'company-finance' => [
             'menu',
             'list',

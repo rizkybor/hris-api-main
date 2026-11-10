@@ -55,9 +55,16 @@ const LICENSE_TEST_MIGRATIONS = [
     'database/migrations/2026_11_10_000007_add_license_sequence_and_new_key_format.php',
     'database/migrations/2026_11_10_000008_add_platform_to_licenses.php',
     'database/migrations/2026_11_10_000009_add_bundle_id_to_licenses.php',
+    'database/migrations/2026_11_10_000010_create_license_releases_table.php',
+    'database/migrations/2026_11_10_000011_add_updates_major_to_licenses.php',
+    'database/migrations/2026_11_10_000012_import_occa_release_history.php',
+    'database/migrations/2026_11_10_000013_add_installer_file_to_license_releases.php',
+    'database/migrations/2026_11_10_000014_add_license_release_permissions.php',
 ];
 
 const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
+
+const LICENSE_RELEASE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete', 'download'];
 
 /**
  * OC + platform/plan code (Mac 31-34, iPad 52-54), three random groups,
@@ -96,8 +103,14 @@ beforeEach(function () {
     foreach (LICENSE_ACTIONS as $action) {
         Permission::firstOrCreate(['name' => 'license-manager-'.$action, 'guard_name' => 'sanctum']);
     }
+    foreach (LICENSE_RELEASE_ACTIONS as $action) {
+        Permission::firstOrCreate(['name' => 'license-release-'.$action, 'guard_name' => 'sanctum']);
+    }
     Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'sanctum'])
-        ->givePermissionTo(array_map(fn ($action) => 'license-manager-'.$action, LICENSE_ACTIONS));
+        ->givePermissionTo(array_merge(
+            array_map(fn ($action) => 'license-manager-'.$action, LICENSE_ACTIONS),
+            array_map(fn ($action) => 'license-release-'.$action, LICENSE_RELEASE_ACTIONS),
+        ));
     Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'sanctum']);
 
     $this->admin = User::factory()->create();
@@ -196,7 +209,7 @@ test('activation returns a token signed with the public key and the right payloa
     expect(sodium_crypto_sign_verify_detached(occaDecodeSegment($encodedSignature), $encodedPayload, $this->publicKey))->toBeTrue();
 
     $payload = json_decode(occaDecodeSegment($encodedPayload), true);
-    expect(array_keys($payload))->toBe(['v', 'product', 'lid', 'key', 'plan', 'platform', 'type', 'licensee', 'expires_at', 'device_id', 'iat', 'refresh_after', 'offline_until']);
+    expect(array_keys($payload))->toBe(['v', 'product', 'lid', 'key', 'plan', 'platform', 'type', 'updates_major', 'licensee', 'expires_at', 'device_id', 'iat', 'refresh_after', 'offline_until']);
     expect($payload['v'])->toBe(1)
         ->and($payload['product'])->toBe('occa')
         ->and($payload['lid'])->toBe($license->id)
@@ -2245,4 +2258,234 @@ test('a Trial certificate has no seal, every other plan does', function () {
     expect($service->data($trial)['seal'])->toBeNull()
         ->and($service->data($pro)['seal'])->toStartWith('data:image/png;base64,')
         ->and(view('pdf.license-certificate', $service->data($trial))->render())->not->toContain('class="seal"');
+});
+
+// ---------------------------------------------------------------------
+// Version list (releases) and updates per license
+// ---------------------------------------------------------------------
+
+/**
+ * A complete release payload.
+ */
+function occaRelease(array $overrides = []): array
+{
+    return array_merge([
+        'version' => '1.1.0',
+        'platforms' => 'both',
+        'title' => 'Map tools',
+        'status' => 'published',
+        'released_at' => '2026-12-01',
+        'changes' => [
+            ['type' => 'feature', 'area' => 'Map making', 'text' => 'Hatched areas.'],
+            ['type' => 'fix', 'area' => '', 'text' => 'Export no longer stops on big maps.'],
+        ],
+    ], $overrides);
+}
+
+test('the first version list of OCCA is imported as a 1.0.0 draft', function () {
+    $release = LicenseProduct::findByCode('occa')->releases()->sole();
+
+    expect($release->version)->toBe('1.0.0')
+        ->and($release->status)->toBe('draft')
+        ->and($release->kind())->toBe('major')
+        ->and(count($release->changes))->toBeGreaterThan(10)
+        ->and($release->changeCounts()['feature'])->toBe(count($release->changes));
+});
+
+test('admin can add, publish, edit and delete versions', function () {
+    Sanctum::actingAs($this->admin);
+    $base = '/api/v1/license-manager/products/occa/releases';
+
+    // A Mac version needs its installer before it can be published.
+    $this->postJson($base, occaRelease())->assertStatus(422)->assertJsonValidationErrors('status');
+    $this->postJson($base, occaRelease(['version' => '1.0.5', 'platforms' => 'ipad']))->assertCreated();
+
+    $created = $this->postJson($base, occaRelease(['status' => 'draft']))->assertCreated()
+        ->assertJsonPath('data.version', '1.1.0')
+        ->assertJsonPath('data.kind', 'minor')
+        ->assertJsonPath('data.change_counts.feature', 1)
+        ->assertJsonPath('data.change_counts.fix', 1)
+        ->assertJsonPath('data.changes.1.area', null);
+
+    $this->postJson($base, occaRelease())->assertStatus(422)->assertJsonValidationErrors('version');
+    $this->postJson($base, occaRelease(['version' => '1.2']))->assertStatus(422)->assertJsonValidationErrors('version');
+    $this->postJson($base, occaRelease(['version' => '1.2.0', 'released_at' => null]))->assertStatus(422)->assertJsonValidationErrors('released_at');
+    $this->postJson($base, occaRelease(['version' => '1.2.0', 'changes' => [['type' => 'oops', 'text' => 'x']]]))->assertStatus(422);
+
+    $id = $created->json('data.id');
+    $this->putJson("$base/$id", ['version' => '1.1.1', 'is_critical' => true])->assertOk()
+        ->assertJsonPath('data.kind', 'patch')
+        ->assertJsonPath('data.patch', 1)
+        ->assertJsonPath('data.is_critical', true)
+        ->assertJsonPath('data.title', 'Map tools');
+
+    $list = $this->getJson($base)->assertOk();
+    expect(collect($list->json('data.releases'))->pluck('version')->all())->toBe(['1.1.1', '1.0.5', '1.0.0'])
+        ->and($list->json('data.latest_version'))->toBe('1.0.5');
+
+    $this->deleteJson("$base/$id")->assertOk();
+    expect(LicenseProduct::findByCode('occa')->releases()->count())->toBe(2);
+});
+
+test('release endpoints need license manager permissions', function () {
+    Sanctum::actingAs($this->staff);
+    $this->getJson('/api/v1/license-manager/products/occa/releases')->assertStatus(403);
+    $this->postJson('/api/v1/license-manager/products/occa/releases', occaRelease())->assertStatus(403);
+});
+
+test('a new lifetime license covers the current major version and its updates', function () {
+    Sanctum::actingAs($this->admin);
+    $product = LicenseProduct::findByCode('occa');
+    $product->releases()->create(occaRelease(['version' => '2.0.0']));
+
+    $lifetime = $this->postJson('/api/v1/license-manager/products/occa/licenses', occaIndividual(['plan' => 'lifetime', 'duration' => null]))
+        ->assertCreated()
+        ->assertJsonPath('data.updates_major', 2)
+        ->assertJsonPath('data.updates_label', 'OCCA 2.x and its updates');
+    $pro = $this->postJson('/api/v1/license-manager/products/occa/licenses', occaIndividual())
+        ->assertCreated()
+        ->assertJsonPath('data.updates_major', null)
+        ->assertJsonPath('data.updates_label', 'Every version while active');
+
+    // A paid upgrade raises the major version; moving to a term plan clears it.
+    $id = $lifetime->json('data.id');
+    $this->putJson("/api/v1/license-manager/products/occa/licenses/$id", ['updates_major' => 3])->assertOk()->assertJsonPath('data.updates_major', 3);
+    $this->putJson("/api/v1/license-manager/products/occa/licenses/$id", ['plan' => 'professional', 'duration' => '1_year'])->assertOk()->assertJsonPath('data.updates_major', null);
+
+    $license = License::find($pro->json('data.id'));
+    expect($license->coversVersion('9.0.0'))->toBeTrue();
+});
+
+test('the token carries the major version a lifetime license covers', function () {
+    $license = License::factory()->create(['plan' => 'lifetime', 'type' => 'lifetime', 'expires_at' => null, 'updates_major' => 1]);
+    $payload = json_decode(occaDecodeSegment(explode('.', occaActivate($this, $license)->json('token'))[0]), true);
+
+    expect($payload['updates_major'])->toBe(1)
+        ->and($license->coversVersion('1.9.3'))->toBeTrue()
+        ->and($license->coversVersion('2.0.0'))->toBeFalse();
+});
+
+test('the update check offers the newest version the license covers', function () {
+    $product = LicenseProduct::findByCode('occa');
+    $product->releases()->where('version', '1.0.0')->update(['status' => 'published', 'released_at' => '2026-11-20']);
+    $product->releases()->create(occaRelease(['version' => '1.0.1', 'is_critical' => true]));
+    $product->releases()->create(occaRelease(['version' => '1.2.0']));
+    $product->releases()->create(occaRelease(['version' => '2.0.0']));
+    $product->releases()->create(occaRelease(['version' => '2.1.0', 'status' => 'draft']));
+    $product->releases()->create(occaRelease(['version' => '1.3.0', 'platforms' => 'ipad']));
+    $lifetime = License::factory()->create(['plan' => 'lifetime', 'type' => 'lifetime', 'expires_at' => null, 'updates_major' => 1]);
+    $pro = License::factory()->create();
+
+    $this->getJson('/api/licenses/occa/releases/latest?version=1.0.0&platform=macOS&key='.$lifetime->key)->assertOk()
+        ->assertJsonPath('latest.version', '2.0.0')
+        ->assertJsonPath('update.version', '1.2.0')
+        ->assertJsonPath('update_available', true)
+        ->assertJsonPath('upgrade_available', '2.0.0')
+        ->assertJsonPath('required', true)
+        ->assertJsonPath('updates_major', 1);
+
+    $this->getJson('/api/licenses/occa/releases/latest?version=1.2.0&platform=macOS&key='.$pro->key)->assertOk()
+        ->assertJsonPath('update.version', '2.0.0')
+        ->assertJsonPath('upgrade_available', null)
+        ->assertJsonPath('required', false);
+
+    $this->getJson('/api/licenses/occa/releases/latest?version=2.0.0&platform=macOS')->assertOk()
+        ->assertJsonPath('update', null)
+        ->assertJsonPath('update_available', false);
+
+    $this->getJson('/api/licenses/occa/releases/latest')->assertStatus(422)->assertJsonPath('error', 'invalid_request');
+    $this->getJson('/api/licenses/nope/releases/latest?version=1.0.0')->assertStatus(404)->assertJsonPath('error', 'invalid_product');
+
+    $history = $this->getJson('/api/licenses/occa/releases?platform=macOS')->assertOk();
+    expect(collect($history->json('releases'))->pluck('version')->all())->toBe(['2.0.0', '1.2.0', '1.0.1', '1.0.0']);
+});
+
+test('a device reporting a new app version is logged as app_updated', function () {
+    $license = License::factory()->create();
+    occaActivate($this, $license, 'device-1', ['app_version' => '1.0.0'])->assertOk();
+
+    $this->postJson('/api/occa/license/refresh', ['key' => $license->key, 'device_id' => 'device-1', 'app_version' => '1.1.0'])->assertOk();
+    $this->postJson('/api/occa/license/refresh', ['key' => $license->key, 'device_id' => 'device-1', 'app_version' => '1.1.0'])->assertOk();
+
+    $updates = LicenseEvent::query()->where('event', LicenseEvent::APP_UPDATED)->get();
+    expect($updates)->toHaveCount(1)
+        ->and($updates[0]->meta)->toBe(['from' => '1.0.0', 'to' => '1.1.0'])
+        ->and($license->activations()->first()->app_version)->toBe('1.1.0');
+
+    Sanctum::actingAs($this->admin);
+    LicenseProduct::findByCode('occa')->releases()->create(occaRelease());
+    $list = $this->getJson('/api/v1/license-manager/products/occa/releases')->assertOk();
+    expect($list->json('data.versions_in_use'))->toBe([['version' => '1.1.0', 'platform' => 'macOS', 'devices' => 1]])
+        ->and(collect($list->json('data.releases'))->firstWhere('version', '1.1.0')['devices_on_version'])->toBe(1);
+});
+
+test('every version keeps its installer, downloadable in the back office and with a covering key', function () {
+    Storage::fake('local');
+    Sanctum::actingAs($this->admin);
+    $base = '/api/v1/license-manager/products/occa/releases';
+    $id = $this->postJson($base, occaRelease(['status' => 'draft']))->assertCreated()->json('data.id');
+
+    $this->post("$base/$id/file", ['file' => UploadedFile::fake()->create('notes.txt', 10)], ['Accept' => 'application/json'])
+        ->assertStatus(422)->assertJsonValidationErrors('file');
+    $upload = $this->post("$base/$id/file", ['file' => UploadedFile::fake()->create('OCCA.dmg', 2048)], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('data.file.name', 'occa-1.1.0.dmg')
+        ->assertJsonPath('data.file.size', 2048 * 1024);
+    expect($upload->json('data.file.sha256'))->toHaveLength(64);
+    Storage::disk('local')->assertExists('license-releases/occa/1.1.0/occa-1.1.0.dmg');
+
+    $this->get("$base/$id/file")->assertOk()->assertDownload('occa-1.1.0.dmg');
+    $this->putJson("$base/$id", ['status' => 'published', 'released_at' => '2026-12-01'])->assertOk()->assertJsonPath('data.status', 'published');
+    // Published: the installer stays (replace only).
+    $this->deleteJson("$base/$id/file")->assertStatus(422)->assertJsonValidationErrors('file');
+
+    $mac = License::factory()->create();
+    $ipad = License::factory()->create(['platform' => 'ipad', 'key' => 'OC52-AAAA-BBBB-CCCC-0001']);
+    $oldLifetime = License::factory()->create(['plan' => 'lifetime', 'type' => 'lifetime', 'expires_at' => null, 'updates_major' => 0 + 1]);
+    LicenseProduct::findByCode('occa')->releases()->create(occaRelease(['version' => '2.0.0', 'file_path' => 'license-releases/occa/1.1.0/occa-1.1.0.dmg', 'file_name' => 'occa-2.0.0.dmg']));
+
+    $history = $this->getJson('/api/licenses/occa/releases?platform=macOS')->assertOk();
+    expect(collect($history->json('releases'))->firstWhere('version', '1.1.0')['download_url'])->toEndWith('/api/licenses/occa/releases/1.1.0/download');
+
+    $this->get('/api/licenses/occa/releases/1.1.0/download?key='.$mac->key)->assertOk()->assertDownload('occa-1.1.0.dmg');
+    $this->getJson('/api/licenses/occa/releases/1.1.0/download')->assertStatus(422);
+    $this->getJson('/api/licenses/occa/releases/1.1.0/download?key=OC32-NOPE-NOPE-NOPE-9999')->assertStatus(404)->assertJsonPath('error', 'invalid_key');
+    $this->getJson('/api/licenses/occa/releases/9.9.9/download?key='.$mac->key)->assertStatus(404);
+    $this->getJson('/api/licenses/occa/releases/1.1.0/download?key='.$ipad->key)->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+    $this->getJson('/api/licenses/occa/releases/2.0.0/download?key='.$oldLifetime->key)->assertStatus(403)->assertJsonPath('error', 'upgrade_required');
+    $this->get('/api/licenses/occa/releases/1.1.0/download?key='.$oldLifetime->key)->assertOk();
+});
+
+test('versions have their own permission module, copied from license manager on existing roles', function () {
+    // A role that only has license-manager-* gets the matching license-release-* from the migration.
+    $role = Role::firstOrCreate(['name' => 'license-viewer', 'guard_name' => 'sanctum']);
+    $role->givePermissionTo(['license-manager-menu', 'license-manager-view']);
+    Permission::query()->where('name', 'like', 'license-release-%')->delete();
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    (require base_path('database/migrations/2026_11_10_000014_add_license_release_permissions.php'))->up();
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    expect($role->fresh()->permissions->pluck('name')->sort()->values()->all())->toBe([
+        'license-manager-menu', 'license-manager-view',
+        'license-release-download', 'license-release-menu', 'license-release-view',
+    ]);
+
+    $viewer = User::factory()->create();
+    $viewer->assignRole('license-viewer');
+    Sanctum::actingAs($viewer);
+    $this->getJson('/api/v1/license-manager/products/occa/releases')->assertOk();
+    $this->postJson('/api/v1/license-manager/products/occa/releases', occaRelease(['status' => 'draft']))->assertStatus(403);
+
+    // A versions-only user still gets the product list (the Versions page needs it).
+    $versionsOnly = User::factory()->create();
+    $versionsOnly->givePermissionTo('license-release-menu');
+    Sanctum::actingAs($versionsOnly);
+    $this->getJson('/api/v1/license-manager/products')->assertOk();
+
+    // license-manager-* alone is not enough for versions.
+    $licenseOnly = User::factory()->create();
+    $licenseOnly->givePermissionTo('license-manager-create');
+    Sanctum::actingAs($licenseOnly);
+    $this->postJson('/api/v1/license-manager/products/occa/releases', occaRelease(['status' => 'draft']))->assertStatus(403);
 });
