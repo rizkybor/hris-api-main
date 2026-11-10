@@ -54,6 +54,7 @@ const LICENSE_TEST_MIGRATIONS = [
     'database/migrations/2026_11_10_000006_remove_license_product_permissions.php',
     'database/migrations/2026_11_10_000007_add_license_sequence_and_new_key_format.php',
     'database/migrations/2026_11_10_000008_add_platform_to_licenses.php',
+    'database/migrations/2026_11_10_000009_add_bundle_id_to_licenses.php',
 ];
 
 const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
@@ -2142,4 +2143,66 @@ test('certificates of a Mac and an iPad license with the same number have differ
         ->and($service->data($mac)['steps']['steps'][0][1])->toContain('on your Mac')
         ->and($service->data($ipad)['steps']['steps'][0][1])->toContain('on your iPad')
         ->and($service->data($ipad)['steps']['steps'][1][1])->not->toContain('Starter');
+});
+
+// ---------------------------------------------------------------------
+// Mac + iPad: two keys generated together (one bundle)
+// ---------------------------------------------------------------------
+
+test('platform "both" creates a Mac and an iPad license together, linked as a bundle', function () {
+    Sanctum::actingAs($this->admin);
+
+    $this->postJson(lmLicenses(), occaIndividual(['platform' => 'ipad']))->assertStatus(201); // iPad 0001
+    $response = $this->postJson(lmLicenses(), occaIndividual(['platform' => 'both', 'max_devices' => 3]))->assertStatus(201);
+
+    $mac = License::find($response->json('data.id'));
+    $ipad = License::where('bundle_id', $mac->bundle_id)->where('platform', 'ipad')->first();
+
+    expect($mac->platform)->toBe('mac')
+        ->and($mac->key)->toStartWith('OC32-')->toEndWith('-0001')
+        ->and($ipad->key)->toMatch(OCCA_KEY_REGEX)->toStartWith('OC52-')->toEndWith('-0002')
+        ->and($mac->bundle_id)->not->toBeNull()
+        ->and($ipad->only(['licensee_name', 'plan', 'type', 'max_devices', 'expires_at']))
+        ->toEqual($mac->only(['licensee_name', 'plan', 'type', 'max_devices', 'expires_at']));
+
+    $response->assertJsonPath('data.bundle.0.key', $ipad->key)->assertJsonPath('data.bundle.0.platform', 'ipad');
+    $this->getJson(lmLicenses().'/'.$ipad->id)->assertJsonPath('data.bundle.0.key', $mac->key)->assertJsonCount(1, 'data.bundle');
+
+    // Each key is created and tracked on its own; a single license has no bundle.
+    expect(occaEvents($mac, LicenseEvent::CREATED)->first()->meta['bundle'])->toBeTrue()
+        ->and(occaEvents($ipad, LicenseEvent::CREATED)->count())->toBe(1);
+    $single = $this->postJson(lmLicenses(), occaIndividual())->assertStatus(201);
+    expect($single->json('data.bundle_id'))->toBeNull()->and($single->json('data.bundle'))->toBe([]);
+
+    // And each key only works on its own platform.
+    occaActivate($this, $mac, 'mac-1', ['platform' => 'macOS'])->assertOk();
+    occaActivate($this, $ipad, 'ipad-1', ['platform' => 'iPadOS'])->assertOk();
+    occaActivate($this, $ipad, 'mac-2', ['platform' => 'macOS'])->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+});
+
+test('"both" is refused for Trial and creates nothing when one platform is full', function () {
+    Sanctum::actingAs($this->admin);
+
+    $this->postJson(lmLicenses(), occaIndividual(['platform' => 'both', 'plan' => 'trial', 'duration' => '14_days']))
+        ->assertStatus(422)->assertJsonValidationErrors('plan');
+
+    // iPad numbers are used up: the Mac half is rolled back too.
+    LicenseProduct::findByCodeOrFail('occa')->forceFill(['ipad_license_sequence' => License::MAX_SEQUENCE])->save();
+    $this->postJson(lmLicenses(), occaIndividual(['platform' => 'both']))->assertStatus(422)->assertJsonValidationErrors('platform');
+    expect(License::count())->toBe(0)
+        ->and(LicenseProduct::findByCodeOrFail('occa')->mac_license_sequence)->toBe(0);
+
+    // "both" is only a create choice: an existing license keeps its platform.
+    LicenseProduct::findByCodeOrFail('occa')->forceFill(['ipad_license_sequence' => 0])->save();
+    $id = $this->postJson(lmLicenses(), occaIndividual())->json('data.id');
+    $this->putJson(lmLicenses().'/'.$id, ['platform' => 'both'])->assertStatus(422)->assertJsonValidationErrors('platform');
+});
+
+test('license:create --platform=both prints both keys', function () {
+    $this->artisan('license:create', [...OCCA_CLI_PERSON, '--name' => 'Both User', '--platform' => 'both', '--plan' => 'lifetime'])
+        ->assertSuccessful();
+
+    $keys = License::where('licensee_name', 'Both User')->orderBy('platform')->pluck('key', 'platform');
+    expect($keys['ipad'])->toStartWith('OC53-')->and($keys['mac'])->toStartWith('OC33-')
+        ->and(License::where('licensee_name', 'Both User')->distinct()->count('bundle_id'))->toBe(1);
 });

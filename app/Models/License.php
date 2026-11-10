@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -67,6 +68,14 @@ class License extends Model
     public const PLATFORM_IPAD = 'ipad';
 
     public const PLATFORMS = [self::PLATFORM_MAC, self::PLATFORM_IPAD];
+
+    /**
+     * Create-only choice: one Mac and one iPad license generated together
+     * (same licensee, plan and period), linked by bundle_id.
+     */
+    public const PLATFORM_BOTH = 'both';
+
+    public const CREATE_PLATFORMS = [self::PLATFORM_MAC, self::PLATFORM_IPAD, self::PLATFORM_BOTH];
 
     public const PLATFORM_LABELS = [
         self::PLATFORM_MAC => 'Mac',
@@ -231,6 +240,7 @@ class License extends Model
         'member_count',
         'plan',
         'platform',
+        'bundle_id',
         'type',
         'starts_at',
         'expires_at',
@@ -269,6 +279,37 @@ class License extends Model
     public function events(): HasMany
     {
         return $this->hasMany(LicenseEvent::class);
+    }
+
+    /**
+     * Every license generated together with this one (Mac + iPad),
+     * including itself; see bundleSiblings() for the others.
+     */
+    public function bundleMembers(): HasMany
+    {
+        return $this->hasMany(self::class, 'bundle_id', 'bundle_id')->orderBy('platform');
+    }
+
+    /**
+     * The other license(s) of the bundle (empty when not bundled).
+     */
+    public function bundleSiblings(): Collection
+    {
+        if (! $this->bundle_id) {
+            return collect();
+        }
+
+        return $this->bundleMembers->reject(fn (self $member) => $member->is($this))->values();
+    }
+
+    /**
+     * The platforms a create request stands for ("both" = Mac and iPad).
+     *
+     * @return list<string>
+     */
+    public static function platformsFor(?string $choice): array
+    {
+        return $choice === self::PLATFORM_BOTH ? self::PLATFORMS : [$choice ?: self::PLATFORM_MAC];
     }
 
     /**

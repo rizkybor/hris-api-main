@@ -139,6 +139,12 @@ Every license is for one **platform**, fixed at creation: `mac` or `ipad`.
 A Mac key only activates on a Mac, an iPad key only on an iPad (see
 `wrong_platform` below). iPad has no Trial.
 
+Creating with `platform: "both"` generates a Mac and an iPad license in one
+go (same licensee, plan, period and device limit; each with its own key and
+number). They share a `bundle_id`; each license's resource lists the other
+key(s) under `bundle`. Not available for Trial. All or nothing: if one
+platform has no numbers left, neither is created.
+
 - Format: `{prefix}{platform}{plan}-XXXX-XXXX-XXXX-{sequence}`, e.g.
   `OC32-7KQM-2XRT-9HZP-0001`. Generated server-side, unique across all
   products.
@@ -346,7 +352,7 @@ php artisan license:create --product={product} --plan=organization --months=12 -
 
 `occa:license-create` is an alias of `license:create` (its `--product`
 defaults to `occa`, as does `license:create`'s). `--platform` is `mac`
-(default) or `ipad`.
+(default), `ipad` or `both` (prints both keys).
 
 Options:
 - `--product` (product code, default `occa`), `--plan` (`trial` |
@@ -369,9 +375,12 @@ Options:
 `{success, message, data}` envelope. License endpoints are nested under the
 product code; a license of another product answers `404`.
 
-Licenses carry `platform` (`mac` | `ipad`) and `platform_label`. On create
-`platform` is required and the plan must be sold on it (no Trial on iPad);
-on update it may only be resent unchanged. The license lists accept a
+Licenses carry `platform` (`mac` | `ipad`), `platform_label`, `bundle_id`
+and (on show / create) `bundle`: `[{id, key, platform, platform_label, plan,
+is_active}]` of the licenses generated together with it. On create
+`platform` is required (`mac`, `ipad` or `both`) and the plan must be sold
+on it (no Trial on iPad); `both` answers with the Mac license. On update the
+platform may only be resent unchanged. The license lists accept a
 `platform` filter.
 
 | Method | Path                                                                  | Permission |
@@ -547,4 +556,5 @@ activity log under `License Manager`.
 | `2026_11_10_000005_split_license_manager_permissions` | Adds `license-manager-view` (granted with `-list`), removes `license-product-manage` |
 | `2026_11_10_000006_remove_license_product_permissions` | Removes any `license-product-*` rows |
 | `2026_11_10_000007_add_license_sequence_and_new_key_format` | Per-product `license_sequence`, `licenses.sequence` (existing licenses numbered in creation order), OCCA prefix `OCCA` → `OC` |
+| `2026_11_10_000009_add_bundle_id_to_licenses` | `licenses.bundle_id`: Mac + iPad keys generated together |
 | `2026_11_10_000008_add_platform_to_licenses` | `licenses.platform`, separate Mac / iPad counters (`mac_license_sequence`, `ipad_license_sequence`), sequence unique per product + platform; resets existing keys to Mac keys in the new format |

@@ -44,7 +44,8 @@ class LicenseStoreRequest extends FormRequest
         $category = License::categoryForPlan($this->input('plan'));
 
         return array_merge(LicenseFieldRules::profile($category, country: $this->input('country')), [
-            'platform' => ['required', Rule::in(License::PLATFORMS)],
+            // mac, ipad, or both (a Mac and an iPad key generated together).
+            'platform' => ['required', Rule::in(License::CREATE_PLATFORMS)],
             'plan' => ['required', Rule::in(License::PLANS)],
             // Set from the plan in prepareForValidation().
             'type' => ['nullable', Rule::in(License::TYPES)],

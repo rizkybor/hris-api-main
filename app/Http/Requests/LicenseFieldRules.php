@@ -130,12 +130,17 @@ class LicenseFieldRules
      */
     public static function addPlatformPlanError(Validator $validator, ?string $platform, ?string $plan): void
     {
-        if (! in_array($platform, License::PLATFORMS, true) || ! in_array($plan, License::PLANS, true) || $validator->errors()->has('plan')) {
+        if (! in_array($platform, License::CREATE_PLATFORMS, true) || ! in_array($plan, License::PLANS, true) || $validator->errors()->has('plan')) {
             return;
         }
 
-        if (! License::planAllowedOn($platform, $plan)) {
-            $validator->errors()->add('plan', 'The '.License::PLAN_LABELS[$plan].' plan is not available for '.License::PLATFORM_LABELS[$platform].' licenses.');
+        // "both" needs the plan on Mac and on iPad.
+        foreach (License::platformsFor($platform) as $one) {
+            if (! License::planAllowedOn($one, $plan)) {
+                $validator->errors()->add('plan', 'The '.License::PLAN_LABELS[$plan].' plan is not available for '.License::PLATFORM_LABELS[$one].' licenses.');
+
+                return;
+            }
         }
     }
 

@@ -34,7 +34,7 @@ class LicenseCreateCommand extends Command
         {--website= : Organization: website URL (optional)}
         {--tax-id= : Organization: tax ID / NPWP (optional)}
         {--member-count= : Organization: number of members (optional)}
-        {--platform=mac : Platform the key is for: mac or ipad (iPad has no trial)}
+        {--platform=mac : Platform the key is for: mac, ipad, or both (a Mac and an iPad key together; iPad has no trial)}
         {--plan=professional : Plan: trial, professional, lifetime or organization}
         {--lifetime : Optional with --plan=lifetime (implied); rejected for every other plan}
         {--months= : Term length in months (for a term license)}
@@ -109,7 +109,7 @@ class LicenseCreateCommand extends Command
         // Same licensee rules as the HTTP API (LicenseFieldRules).
         $category = License::categoryForPlan($input['plan']);
         $validator = Validator::make($input, array_merge(LicenseFieldRules::profile($category, country: $input['country']), [
-            'platform' => ['required', Rule::in(License::PLATFORMS)],
+            'platform' => ['required', Rule::in(License::CREATE_PLATFORMS)],
             'plan' => ['required', Rule::in(License::PLANS)],
             'months' => ['nullable', 'integer', 'min:1', 'max:1200'],
             'days' => ['nullable', 'integer', 'min:1', 'max:36500'],
@@ -171,9 +171,10 @@ class LicenseCreateCommand extends Command
         ));
 
         $this->info($product->name.' license created.');
+        $keys = collect([$license])->merge($license->bundleSiblings());
         $rows = [
             ['Product', $product->name],
-            ['Key', $license->key],
+            ...$keys->map(fn ($one) => [$one->platformLabel().' key', $one->key])->all(),
             ['Licensee', $license->licensee_name],
             ['Email', $license->licensee_email ?? '-'],
             ['Phone', $license->phone ?? '-'],
@@ -184,13 +185,15 @@ class LicenseCreateCommand extends Command
             $rows[] = ['Contact', $license->contact_name];
         }
         $this->table(['Field', 'Value'], array_merge($rows, [
-            ['Platform', $license->platformLabel()],
+            ['Platform', $keys->map->platformLabel()->implode(' + ')],
             ['Plan', $license->planLabel()],
             ['Type', $license->type],
             ['Expires', $license->expires_at?->toDateTimeString() ?? 'never'],
             ['Max devices', $license->max_devices],
         ]));
-        $this->line($license->key);
+        foreach ($keys as $one) {
+            $this->line($one->key);
+        }
 
         return self::SUCCESS;
     }
