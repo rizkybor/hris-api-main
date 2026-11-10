@@ -316,6 +316,8 @@ Route::prefix('v1')
                     Route::get('expiring', [LicenseController::class, 'expiring']);
                     Route::get('events/recent', [LicenseController::class, 'recentEvents']);
                     Route::get('products/{product}/licenses/{license}/certificate', [LicenseCertificateController::class, 'download']);
+                    Route::post('products/{product}/licenses/{license}/certificate/email', [LicenseCertificateController::class, 'shareByEmail'])->middleware('throttle:10,1');
+                    Route::post('products/{product}/licenses/{license}/certificate/share-link', [LicenseCertificateController::class, 'shareLink']);
                     Route::apiResource('products', LicenseProductController::class)->parameters(['products' => 'product'])->names('license-manager.products');
                     // Version list (release history) of a product.
                     Route::get('products/{product}/releases', [LicenseReleaseController::class, 'index']);
