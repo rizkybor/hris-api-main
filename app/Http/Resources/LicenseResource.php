@@ -27,6 +27,8 @@ class LicenseResource extends JsonResource
             ]),
             'plan' => $this->plan,
             'plan_label' => $this->planLabel(),
+            'platform' => $this->platform,
+            'platform_label' => $this->platformLabel(),
             'category' => $this->category(),
             'type' => $this->type,
 

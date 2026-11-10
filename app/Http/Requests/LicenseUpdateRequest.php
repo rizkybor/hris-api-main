@@ -134,6 +134,9 @@ class LicenseUpdateRequest extends FormRequest
             country: $this->targetCountry(),
             partialLocation: ! $this->changesCategory() && ! $this->sendsLocation(),
         ), [
+            // The platform is fixed at creation (it is part of the key);
+            // resending the same value is fine.
+            'platform' => ['sometimes', Rule::in(array_filter([$this->stored()?->platform]))],
             'plan' => ['sometimes', 'required', Rule::in(License::PLANS)],
             // Set from the plan in prepareForValidation().
             'type' => ['sometimes', Rule::in(License::TYPES)],
@@ -164,6 +167,11 @@ class LicenseUpdateRequest extends FormRequest
                 }
 
                 LicenseFieldRules::addTermExpiryError($validator, License::TYPE_TERM, $this->input('duration'), $this->input('expires_at'));
+            },
+            function (Validator $validator) {
+                if ($this->filled('plan') && $this->stored()) {
+                    LicenseFieldRules::addPlatformPlanError($validator, $this->stored()->platform, $this->input('plan'));
+                }
             },
         ];
     }

@@ -30,7 +30,8 @@ class LicenseRepository implements LicenseRepositoryInterface
         ?int $limit,
         bool $execute,
         ?string $sortBy = null,
-        ?string $sortDir = null
+        ?string $sortDir = null,
+        ?string $platform = null
     ): Builder|Collection {
         $query = License::query()
             ->forProduct($product)
@@ -44,7 +45,8 @@ class LicenseRepository implements LicenseRepositoryInterface
             })
             ->when($status, fn ($query) => $query->status($status))
             ->when($type, fn ($query) => $query->where('type', $type))
-            ->when($plan, fn ($query) => $query->where('plan', $plan));
+            ->when($plan, fn ($query) => $query->where('plan', $plan))
+            ->when($platform, fn ($query) => $query->where('platform', $platform));
 
         $direction = $sortDir === 'asc' ? 'asc' : 'desc';
         if ($sortBy === 'expires_at') {
@@ -74,7 +76,8 @@ class LicenseRepository implements LicenseRepositoryInterface
         ?string $plan,
         int $rowPerPage,
         ?string $sortBy = null,
-        ?string $sortDir = null
+        ?string $sortDir = null,
+        ?string $platform = null
     ): LengthAwarePaginator {
         $query = $this->getAll(
             $product,
@@ -85,7 +88,8 @@ class LicenseRepository implements LicenseRepositoryInterface
             null,
             false,
             $sortBy,
-            $sortDir
+            $sortDir,
+            $platform
         );
 
         return $query->paginate($rowPerPage);
@@ -112,25 +116,29 @@ class LicenseRepository implements LicenseRepositoryInterface
     ): License {
         $licenseDto = LicenseDto::fromArray($data);
 
-        // The product row is locked while its counter moves, so concurrent
-        // creates never get the same number; numbers are never reused.
+        // The product row is locked while the platform's counter moves, so
+        // concurrent creates never get the same number; numbers are never
+        // reused. Mac and iPad count separately.
         $license = DB::transaction(function () use ($product, $licenseDto) {
             $locked = LicenseProduct::query()->lockForUpdate()->findOrFail($product->id);
-            $sequence = $locked->license_sequence + 1;
+            $platform = $licenseDto->platform ?? License::PLATFORM_MAC;
+            $column = LicenseProduct::sequenceColumn($platform);
+            $sequence = $locked->{$column} + 1;
             // The key's last group is 4 digits (the app accepts 20-character keys).
             if ($sequence > License::MAX_SEQUENCE) {
+                $label = License::PLATFORM_LABELS[$platform];
                 throw ValidationException::withMessages([
-                    'plan' => "{$locked->name} has reached ".License::MAX_SEQUENCE.' licenses, the most a 4-digit key number allows.',
+                    'platform' => "{$locked->name} has reached ".License::MAX_SEQUENCE." {$label} licenses, the most a 4-digit key number allows.",
                 ]);
             }
-            $locked->forceFill(['license_sequence' => $sequence])->save();
+            $locked->forceFill([$column => $sequence])->save();
 
             return License::create(array_merge(
                 $licenseDto->toArray(),
                 [
                     'product_id' => $locked->id,
                     'sequence' => $sequence,
-                    'key' => License::generateKey($locked->key_prefix, $licenseDto->plan, $sequence),
+                    'key' => License::generateKey($locked->key_prefix, $platform, $licenseDto->plan, $sequence),
                     // The terms the license is issued under.
                     'terms_version' => $locked->terms ? $locked->terms_version : null,
                 ]
@@ -139,6 +147,7 @@ class LicenseRepository implements LicenseRepositoryInterface
 
         $this->eventLogger->log($license, LicenseEvent::CREATED, ['meta' => array_filter([
             'plan' => $license->plan,
+            'platform' => $license->platform,
             'type' => $license->type,
             'expires_at' => $license->expires_at?->utc()->toIso8601ZuluString(),
             'max_devices' => $license->max_devices,

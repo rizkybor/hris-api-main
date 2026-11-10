@@ -58,6 +58,29 @@ class License extends Model
         self::PLAN_ORGANIZATION => 'Organization',
     ];
 
+    /**
+     * The device platform a license is for, fixed at creation: a Mac key
+     * only activates on a Mac, an iPad key only on an iPad.
+     */
+    public const PLATFORM_MAC = 'mac';
+
+    public const PLATFORM_IPAD = 'ipad';
+
+    public const PLATFORMS = [self::PLATFORM_MAC, self::PLATFORM_IPAD];
+
+    public const PLATFORM_LABELS = [
+        self::PLATFORM_MAC => 'Mac',
+        self::PLATFORM_IPAD => 'iPad',
+    ];
+
+    /**
+     * Plans sold per platform: iPad has no Trial (no free plan there).
+     */
+    public const PLATFORM_PLANS = [
+        self::PLATFORM_MAC => [self::PLAN_TRIAL, self::PLAN_PROFESSIONAL, self::PLAN_LIFETIME, self::PLAN_ORGANIZATION],
+        self::PLATFORM_IPAD => [self::PLAN_PROFESSIONAL, self::PLAN_LIFETIME, self::PLAN_ORGANIZATION],
+    ];
+
     public const CATEGORY_INDIVIDUAL = 'individual';
 
     public const CATEGORY_ORGANIZATION = 'organization';
@@ -149,21 +172,28 @@ class License extends Model
     public const KEY_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
     /**
-     * Two-digit plan code in the key ({prefix}{planCode}-...). A key never
-     * changes, so the code is the plan at creation.
+     * The key's two-digit code ({prefix}{code}-...) is platform digit + plan
+     * digit: Mac 31 Trial, 32 Professional, 33 Lifetime, 34 Organization;
+     * iPad 52 Professional, 53 Lifetime, 54 Organization. A key never
+     * changes, so the code is the platform and plan at creation.
      */
-    public const PLAN_CODES = [
-        self::PLAN_TRIAL => '01',
-        self::PLAN_PROFESSIONAL => '02',
-        self::PLAN_LIFETIME => '03',
-        self::PLAN_ORGANIZATION => '04',
+    public const PLATFORM_CODES = [
+        self::PLATFORM_MAC => '3',
+        self::PLATFORM_IPAD => '5',
+    ];
+
+    public const PLAN_DIGITS = [
+        self::PLAN_TRIAL => '1',
+        self::PLAN_PROFESSIONAL => '2',
+        self::PLAN_LIFETIME => '3',
+        self::PLAN_ORGANIZATION => '4',
     ];
 
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
             ->logOnly(array_merge(
-                ['key', 'plan', 'type', 'starts_at', 'expires_at', 'max_devices', 'is_active', 'notes'],
+                ['key', 'plan', 'platform', 'type', 'starts_at', 'expires_at', 'max_devices', 'is_active', 'notes'],
                 self::SHARED_FIELDS,
                 self::INDIVIDUAL_FIELDS,
                 self::ORGANIZATION_FIELDS,
@@ -200,6 +230,7 @@ class License extends Model
         'tax_id',
         'member_count',
         'plan',
+        'platform',
         'type',
         'starts_at',
         'expires_at',
@@ -241,22 +272,23 @@ class License extends Model
     }
 
     /**
-     * Highest sequence per product: the last key group is always 4 digits,
-     * so an OCCA key is always 20 characters (OC01-XXXX-XXXX-XXXX-0001),
+     * Highest sequence per product and platform: the last key group is always
+     * 4 digits, so an OCCA key is always 20 characters (OC32-XXXX-XXXX-XXXX-0001),
      * the length the app accepts.
      */
     public const MAX_SEQUENCE = 9999;
 
     /**
-     * A new, unused key: {prefix}{planCode}-XXXX-XXXX-XXXX-{sequence}, e.g.
-     * OC01-7KQM-2XRT-9HZP-0001. The sequence is the license's number within
-     * its product (4 digits, 0001-9999); the three random groups make the key
-     * hard to guess. Keys are unique across all products.
+     * A new, unused key: {prefix}{platform}{plan}-XXXX-XXXX-XXXX-{sequence},
+     * e.g. OC32-7KQM-2XRT-9HZP-0001. The sequence is the license's number
+     * within its product and platform (4 digits, 0001-9999); the three
+     * random groups make the key hard to guess. Keys are unique across all
+     * products.
      */
-    public static function generateKey(string $prefix, string $plan, int $sequence): string
+    public static function generateKey(string $prefix, string $platform, string $plan, int $sequence): string
     {
         $alphabetLength = strlen(self::KEY_ALPHABET);
-        $head = strtoupper($prefix).(self::PLAN_CODES[$plan] ?? '00');
+        $head = strtoupper($prefix).self::PLATFORM_CODES[$platform].self::PLAN_DIGITS[$plan];
         $tail = str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
 
         do {
@@ -303,6 +335,32 @@ class License extends Model
     /**
      * lifetime for the Lifetime plan, term for every other plan.
      */
+    public static function planAllowedOn(?string $platform, ?string $plan): bool
+    {
+        return in_array($plan, self::PLATFORM_PLANS[$platform] ?? [], true);
+    }
+
+    /**
+     * The platform an app reports on activation ("macOS", "iPadOS", ...)
+     * as a license platform, or null when it is not a Mac or an iPad.
+     * Older iPads report "iOS"; OCCA does not run on iPhone.
+     */
+    public static function platformFromDevice(?string $reported): ?string
+    {
+        $value = strtolower(preg_replace('/[^a-z]/i', '', (string) $reported));
+
+        return match (true) {
+            in_array($value, ['macos', 'mac', 'osx', 'macosx'], true) => self::PLATFORM_MAC,
+            in_array($value, ['ipados', 'ipad', 'ios'], true) => self::PLATFORM_IPAD,
+            default => null,
+        };
+    }
+
+    public function platformLabel(): string
+    {
+        return self::PLATFORM_LABELS[$this->platform] ?? ucfirst((string) $this->platform);
+    }
+
     public static function typeForPlan(?string $plan): string
     {
         return $plan === self::PLAN_LIFETIME ? self::TYPE_LIFETIME : self::TYPE_TERM;

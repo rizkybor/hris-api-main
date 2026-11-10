@@ -258,6 +258,7 @@
                 <div class="section-title">License Terms</div>
                 <table class="kv">
                     <tr><td class="k">Plan</td><td class="v">{{ $license->planLabel() }}@if ($showCategory) <span class="muted" style="font-weight: normal;">&middot; {{ $categoryLabel }}</span>@endif</td></tr>
+                    <tr><td class="k">Platform</td><td class="v normal">{{ $license->platformLabel() }}</td></tr>
                     <tr><td class="k">Type</td><td class="v normal">{{ $license->isLifetime() ? 'Lifetime' : 'Term' }}</td></tr>
                     <tr><td class="k">Start</td><td class="v normal">{{ $startsOn }}</td></tr>
                     <tr><td class="k">End</td><td class="v normal">{{ $endsOn ?? 'Lifetime · never expires' }}</td></tr>

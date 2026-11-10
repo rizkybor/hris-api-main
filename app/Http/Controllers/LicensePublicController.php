@@ -27,7 +27,9 @@ class LicensePublicController extends Controller
             'key' => ['required', 'string', 'max:64'],
             'device_id' => ['required', 'string', 'max:255'],
             'device_name' => ['nullable', 'string', 'max:255'],
-            'platform' => ['nullable', 'string', 'max:50'],
+            // "macOS" or "iPadOS": a Mac key only activates on a Mac, an
+            // iPad key only on an iPad.
+            'platform' => ['required', 'string', 'max:50'],
             'app_version' => ['nullable', 'string', 'max:50'],
         ], fn (array $data) => $this->licenseService->activate($product, $data['key'], $data));
     }
@@ -35,7 +37,7 @@ class LicensePublicController extends Controller
     public function refresh(Request $request, string $product): JsonResponse
     {
         return $this->handle($request, $this->keyAndDeviceRules(),
-            fn (array $data) => $this->licenseService->refresh($product, $data['key'], $data['device_id']));
+            fn (array $data) => $this->licenseService->refresh($product, $data['key'], $data['device_id'], $data['platform'] ?? null));
     }
 
     public function deactivate(Request $request, string $product): JsonResponse
@@ -52,6 +54,8 @@ class LicensePublicController extends Controller
         return [
             'key' => ['required', 'string', 'max:64'],
             'device_id' => ['required', 'string', 'max:255'],
+            // Optional on refresh / deactivate; checked when sent.
+            'platform' => ['nullable', 'string', 'max:50'],
         ];
     }
 

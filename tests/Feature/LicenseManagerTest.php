@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -52,14 +53,16 @@ const LICENSE_TEST_MIGRATIONS = [
     'database/migrations/2026_11_10_000005_split_license_manager_permissions.php',
     'database/migrations/2026_11_10_000006_remove_license_product_permissions.php',
     'database/migrations/2026_11_10_000007_add_license_sequence_and_new_key_format.php',
+    'database/migrations/2026_11_10_000008_add_platform_to_licenses.php',
 ];
 
 const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
 
 /**
- * OC + plan code, three random groups, the 4-digit sequence.
+ * OC + platform/plan code (Mac 31-34, iPad 52-54), three random groups,
+ * the 4-digit sequence.
  */
-const OCCA_KEY_REGEX = '/^OC0[1-4]-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-\d{4}$/';
+const OCCA_KEY_REGEX = '/^OC(3[1-4]|5[2-4])-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-\d{4}$/';
 
 /**
  * Indonesian address (fixture regions): Gambir, Jakarta Pusat.
@@ -129,6 +132,7 @@ function occaIndividual(array $overrides = []): array
         'district_code' => '32.73.01',
         'village_code' => '32.73.01.1001',
         'postal_code' => '40151',
+        'platform' => 'mac',
         'plan' => 'professional',
         'type' => 'term',
         'duration' => '1_year',
@@ -148,6 +152,7 @@ function occaOrganization(array $overrides = []): array
         'phone' => '021 555 1234',
         'address' => 'Jl. Sudirman 1',
         ...JAKARTA,
+        'platform' => 'mac',
         'plan' => 'organization',
         'type' => 'term',
         'duration' => '1_year',
@@ -190,7 +195,7 @@ test('activation returns a token signed with the public key and the right payloa
     expect(sodium_crypto_sign_verify_detached(occaDecodeSegment($encodedSignature), $encodedPayload, $this->publicKey))->toBeTrue();
 
     $payload = json_decode(occaDecodeSegment($encodedPayload), true);
-    expect(array_keys($payload))->toBe(['v', 'product', 'lid', 'key', 'plan', 'type', 'licensee', 'expires_at', 'device_id', 'iat', 'refresh_after', 'offline_until']);
+    expect(array_keys($payload))->toBe(['v', 'product', 'lid', 'key', 'plan', 'platform', 'type', 'licensee', 'expires_at', 'device_id', 'iat', 'refresh_after', 'offline_until']);
     expect($payload['v'])->toBe(1)
         ->and($payload['product'])->toBe('occa')
         ->and($payload['lid'])->toBe($license->id)
@@ -231,7 +236,7 @@ test('offline_until is capped by expires_at and lifetime has null expiry', funct
 });
 
 test('unknown key returns 404 invalid_key', function () {
-    $this->postJson('/api/occa/license/activate', ['key' => 'OCCA-AAAA-BBBB-CCCC-DDDD', 'device_id' => 'x'])
+    $this->postJson('/api/occa/license/activate', ['key' => 'OCCA-AAAA-BBBB-CCCC-DDDD', 'device_id' => 'x', 'platform' => 'macOS'])
         ->assertStatus(404)
         ->assertExactJson(['error' => 'invalid_key', 'message' => 'This license key does not exist.']);
 });
@@ -371,7 +376,7 @@ test('admin can create a term license with a generated key', function () {
 
     $key = $response->json('data.key');
     // Organization plan code 04, first license of the product.
-    expect($key)->toMatch(OCCA_KEY_REGEX)->toStartWith('OC04-')->toEndWith('-0001');
+    expect($key)->toMatch(OCCA_KEY_REGEX)->toStartWith('OC34-')->toEndWith('-0001');
     expect($response->json('data.sequence'))->toBe(1);
 
     $license = License::where('key', $key)->firstOrFail();
@@ -1043,7 +1048,7 @@ test('device activation, re-activation and app release are tracked', function ()
 
 test('admin device release is tracked with the admin', function () {
     $license = License::factory()->create();
-    occaActivate($this, $license, 'device-9', ['device_name' => 'iPad Pro', 'platform' => 'iPadOS'])->assertOk();
+    occaActivate($this, $license, 'device-9', ['device_name' => 'MacBook Air', 'platform' => 'macOS'])->assertOk();
     $activation = $license->activations()->first();
 
     Sanctum::actingAs($this->admin);
@@ -1051,7 +1056,7 @@ test('admin device release is tracked with the admin', function () {
 
     $event = occaEvents($license, 'device_released_by_admin')->sole();
     expect($event->device_id)->toBe('device-9')
-        ->and($event->device_name)->toBe('iPad Pro')
+        ->and($event->device_name)->toBe('MacBook Air')
         ->and($event->user_id)->toBe($this->admin->id);
 });
 
@@ -1101,7 +1106,7 @@ test('denied activate and refresh attempts are tracked with device and ip', func
     expect(occaEvents($expired, 'denied_expired'))->toHaveCount(2);
 
     // Unknown keys have no license to attach to.
-    $this->postJson('/api/occa/license/activate', ['key' => 'OCCA-AAAA-BBBB-CCCC-DDDD', 'device_id' => 'x'])->assertStatus(404);
+    $this->postJson('/api/occa/license/activate', ['key' => 'OCCA-AAAA-BBBB-CCCC-DDDD', 'device_id' => 'x', 'platform' => 'macOS'])->assertStatus(404);
     expect(LicenseEvent::whereNotIn('license_id', [$full->id, $inactive->id, $expired->id])->count())->toBe(0);
 });
 
@@ -1348,7 +1353,7 @@ test('admin can list, create, update and delete products, gated by the license-m
         ->assertStatus(201)
         ->assertJsonPath('data.code', 'map-tools-2')
         ->assertJsonPath('data.key_prefix', 'MT')
-        ->assertJsonPath('data.next_sequence', 1)
+        ->assertJsonPath('data.next_sequences', ['mac' => 1, 'ipad' => 1])
         ->assertJsonPath('data.is_active', true);
 
     // The code never changes; the rest can.
@@ -1372,7 +1377,7 @@ test('admin endpoints are scoped to the product in the path', function () {
     $occa = License::factory()->create(['licensee_name' => 'Occa User']);
     $land = License::factory()->product('demo-app')->create(['licensee_name' => 'Demo User']);
 
-    expect($occa->key)->toStartWith('OC02-')->and($land->key)->toStartWith('DEMO02-');
+    expect($occa->key)->toStartWith('OC32-')->and($land->key)->toStartWith('DEMO32-');
 
     $this->getJson(lmLicenses('occa').'/all/paginated')->assertOk()
         ->assertJsonPath('data.meta.total', 1)
@@ -1395,7 +1400,7 @@ test('admin endpoints are scoped to the product in the path', function () {
     // Creating under Demo App uses its key prefix.
     $this->postJson(lmLicenses('demo-app'), occaIndividual())->assertStatus(201)
         ->assertJsonPath('data.product.code', 'demo-app')
-        ->assertJsonPath('data.key', fn ($key) => str_starts_with($key, 'DEMO02-') && str_ends_with($key, '-0001'));
+        ->assertJsonPath('data.key', fn ($key) => str_starts_with($key, 'DEMO32-') && str_ends_with($key, '-0001'));
 
     // Per-product summary.
     $this->getJson(lmLicenses('demo-app').'/summary')->assertOk()->assertJsonPath('data.total', 2);
@@ -1434,7 +1439,7 @@ test('another product\'s keys activate on their own route with the product in th
     LicenseProduct::factory()->demo()->create();
     $land = License::factory()->product('demo-app')->create();
 
-    $response = $this->postJson('/api/licenses/demo-app/activate', ['key' => strtolower($land->key), 'device_id' => 'ipad-1'])
+    $response = $this->postJson('/api/licenses/demo-app/activate', ['key' => strtolower($land->key), 'device_id' => 'ipad-1', 'platform' => 'macOS'])
         ->assertOk()
         ->assertJsonPath('license.product', 'demo-app')
         ->assertJsonPath('license.key', $land->key);
@@ -1452,22 +1457,22 @@ test('a key only works on its own product route; the OCCA alias still works', fu
     $occa = License::factory()->create();
     $land = License::factory()->product('demo-app')->create();
 
-    $this->postJson('/api/licenses/demo-app/activate', ['key' => $occa->key, 'device_id' => 'd'])
+    $this->postJson('/api/licenses/demo-app/activate', ['key' => $occa->key, 'device_id' => 'd', 'platform' => 'macOS'])
         ->assertStatus(404)->assertJsonPath('error', 'invalid_key');
-    $this->postJson('/api/occa/license/activate', ['key' => $land->key, 'device_id' => 'd'])
+    $this->postJson('/api/occa/license/activate', ['key' => $land->key, 'device_id' => 'd', 'platform' => 'macOS'])
         ->assertStatus(404)->assertJsonPath('error', 'invalid_key');
     $this->postJson('/api/licenses/occa/refresh', ['key' => $land->key, 'device_id' => 'd'])
         ->assertStatus(404)->assertJsonPath('error', 'invalid_key');
 
     // Generic route and alias are the same product.
-    $this->postJson('/api/licenses/occa/activate', ['key' => $occa->key, 'device_id' => 'mac-1'])->assertOk();
+    $this->postJson('/api/licenses/occa/activate', ['key' => $occa->key, 'device_id' => 'mac-1', 'platform' => 'macOS'])->assertOk();
     $response = $this->postJson('/api/occa/license/refresh', ['key' => $occa->key, 'device_id' => 'mac-1'])->assertOk();
     expect(app(LicenseTokenService::class)->verify($response->json('token'))['product'])->toBe('occa');
     $this->postJson('/api/occa/license/deactivate', ['key' => $occa->key, 'device_id' => 'mac-1'])->assertOk();
     expect($occa->activations()->count())->toBe(0);
 
     // A deactivate with another product's key frees nothing.
-    $this->postJson('/api/licenses/demo-app/activate', ['key' => $land->key, 'device_id' => 'ipad-1'])->assertOk();
+    $this->postJson('/api/licenses/demo-app/activate', ['key' => $land->key, 'device_id' => 'ipad-1', 'platform' => 'macOS'])->assertOk();
     $this->postJson('/api/occa/license/deactivate', ['key' => $land->key, 'device_id' => 'ipad-1'])->assertOk();
     expect($land->activations()->count())->toBe(1);
 });
@@ -1476,11 +1481,11 @@ test('unknown and inactive products are rejected', function () {
     LicenseProduct::factory()->demo()->create();
     $land = License::factory()->product('demo-app')->create();
 
-    $this->postJson('/api/licenses/no-such-app/activate', ['key' => $land->key, 'device_id' => 'd'])
+    $this->postJson('/api/licenses/no-such-app/activate', ['key' => $land->key, 'device_id' => 'd', 'platform' => 'macOS'])
         ->assertStatus(404)->assertJsonPath('error', 'invalid_product');
 
     LicenseProduct::where('code', 'demo-app')->update(['is_active' => false]);
-    $this->postJson('/api/licenses/demo-app/activate', ['key' => $land->key, 'device_id' => 'd'])
+    $this->postJson('/api/licenses/demo-app/activate', ['key' => $land->key, 'device_id' => 'd', 'platform' => 'macOS'])
         ->assertStatus(403)
         ->assertExactJson(['error' => 'product_inactive', 'message' => 'This product is not available for activation.']);
     $this->postJson('/api/licenses/demo-app/refresh', ['key' => $land->key, 'device_id' => 'd'])
@@ -1495,11 +1500,11 @@ test('license:create takes --product and occa:license-create stays an OCCA alias
         ->expectsOutputToContain('Demo App')
         ->assertSuccessful();
     $land = License::where('licensee_name', 'Demo Person')->firstOrFail();
-    expect($land->product->code)->toBe('demo-app')->and($land->key)->toStartWith('DEMO03-');
+    expect($land->product->code)->toBe('demo-app')->and($land->key)->toStartWith('DEMO33-');
 
     $this->artisan('occa:license-create', ['--name' => 'Occa Person', '--days' => 30] + OCCA_CLI_PERSON)->assertSuccessful();
     $occa = License::where('licensee_name', 'Occa Person')->firstOrFail();
-    expect($occa->product->code)->toBe('occa')->and($occa->key)->toMatch(OCCA_KEY_REGEX)->toStartWith('OC02-');
+    expect($occa->product->code)->toBe('occa')->and($occa->key)->toMatch(OCCA_KEY_REGEX)->toStartWith('OC32-');
 
     $this->artisan('license:create', ['--product' => 'nope', '--name' => 'Bad', '--days' => 30] + OCCA_CLI_PERSON)
         ->expectsOutputToContain('Unknown --product')
@@ -1725,7 +1730,7 @@ test('the certificate endpoint streams a PDF, is gated and logs an event', funct
 
     $event = occaEvents($license, 'certificate_downloaded')->sole();
     expect($event->user_id)->toBe($this->admin->id)
-        ->and($event->meta['reference'])->toBe('LIC-OCCA-'.str_pad((string) $license->sequence, 4, '0', STR_PAD_LEFT));
+        ->and($event->meta['reference'])->toBe('LIC-OCCA-MAC-'.str_pad((string) $license->sequence, 4, '0', STR_PAD_LEFT));
 
     // Another product's path is a 404.
     LicenseProduct::factory()->demo()->create();
@@ -1799,7 +1804,7 @@ test('the recent events endpoint lists the newest events of every product', func
     Sanctum::actingAs($this->admin);
     $this->putJson(lmLicenses()."/{$occa->id}", ['is_active' => false])->assertOk();
     $this->travel(1)->minutes();
-    $this->postJson('/api/licenses/demo-app/activate', ['key' => $demo->key, 'device_id' => 'ipad-1', 'device_name' => 'iPad Pro', 'platform' => 'iPadOS'])->assertOk();
+    $this->postJson('/api/licenses/demo-app/activate', ['key' => $demo->key, 'device_id' => 'mac-2', 'device_name' => 'MacBook Air', 'platform' => 'macOS'])->assertOk();
 
     $lister = User::factory()->create();
     $lister->givePermissionTo('license-manager-list');
@@ -1810,8 +1815,8 @@ test('the recent events endpoint lists the newest events of every product', func
     $this->getJson('/api/v1/license-manager/events/recent?limit=15')->assertOk()
         ->assertJsonCount(2, 'data')
         ->assertJsonPath('data.0.event', 'device_activated')
-        ->assertJsonPath('data.0.device_name', 'iPad Pro')
-        ->assertJsonPath('data.0.platform', 'iPadOS')
+        ->assertJsonPath('data.0.device_name', 'MacBook Air')
+        ->assertJsonPath('data.0.platform', 'macOS')
         ->assertJsonPath('data.0.admin', null)
         ->assertJsonPath('data.0.license', ['id' => $demo->id, 'key' => $demo->key, 'licensee_name' => 'Demo User'])
         ->assertJsonPath('data.0.product', ['code' => 'demo-app', 'name' => 'Demo App', 'icon_url' => null])
@@ -1894,7 +1899,7 @@ test('keys carry the plan code and a per-product sequence across plans', functio
     Sanctum::actingAs($this->admin);
 
     $keys = [];
-    foreach (['trial' => '01', 'professional' => '02', 'lifetime' => '03', 'organization' => '04'] as $plan => $code) {
+    foreach (['trial' => '31', 'professional' => '32', 'lifetime' => '33', 'organization' => '34'] as $plan => $code) {
         $payload = $plan === 'organization' ? occaOrganization() : occaIndividual(['plan' => $plan, 'duration' => $plan === 'lifetime' ? null : '30_days']);
         $response = $this->postJson(lmLicenses(), $payload)->assertStatus(201);
         $keys[] = $key = $response->json('data.key');
@@ -1904,11 +1909,11 @@ test('keys carry the plan code and a per-product sequence across plans', functio
     // One counter per product, across plans: 0001 … 0004.
     expect(array_map(fn ($key) => substr($key, -4), $keys))->toBe(['0001', '0002', '0003', '0004']);
     expect(License::orderBy('id')->pluck('sequence')->all())->toBe([1, 2, 3, 4]);
-    $this->getJson('/api/v1/license-manager/products/occa')->assertJsonPath('data.next_sequence', 5);
+    $this->getJson('/api/v1/license-manager/products/occa')->assertJsonPath('data.next_sequences', ['mac' => 5, 'ipad' => 1]);
 
     // Another product has its own counter.
     LicenseProduct::factory()->demo()->create();
-    expect($this->postJson(lmLicenses('demo-app'), occaIndividual())->json('data.key'))->toStartWith('DEMO02-')->toEndWith('-0001');
+    expect($this->postJson(lmLicenses('demo-app'), occaIndividual())->json('data.key'))->toStartWith('DEMO32-')->toEndWith('-0001');
 });
 
 test('keys are always 20 characters and stop at sequence 9999', function () {
@@ -1918,10 +1923,14 @@ test('keys are always 20 characters and stop at sequence 9999', function () {
     expect(strlen($key))->toBe(24)                       // 20 characters + 4 dashes
         ->and(strlen(str_replace('-', '', $key)))->toBe(20);
 
-    LicenseProduct::findByCodeOrFail('occa')->forceFill(['license_sequence' => License::MAX_SEQUENCE - 1])->save();
+    LicenseProduct::findByCodeOrFail('occa')->forceFill(['mac_license_sequence' => License::MAX_SEQUENCE - 1])->save();
     expect($this->postJson(lmLicenses(), occaIndividual())->assertStatus(201)->json('data.key'))->toEndWith('-9999');
-    $this->postJson(lmLicenses(), occaIndividual())->assertStatus(422)->assertJsonValidationErrors('plan');
-    expect(LicenseProduct::findByCodeOrFail('occa')->license_sequence)->toBe(License::MAX_SEQUENCE);
+    $this->postJson(lmLicenses(), occaIndividual())->assertStatus(422)->assertJsonValidationErrors('platform');
+    expect(LicenseProduct::findByCodeOrFail('occa')->mac_license_sequence)->toBe(License::MAX_SEQUENCE);
+
+    // iPad counts on its own, so it is not affected by the full Mac range.
+    expect($this->postJson(lmLicenses(), occaIndividual(['platform' => 'ipad']))->assertStatus(201)->json('data.key'))
+        ->toStartWith('OC52-')->toEndWith('-0001');
 });
 
 test('sequence numbers are never reused, also after deletes', function () {
@@ -1948,14 +1957,14 @@ test('two creates in a row get consecutive numbers from the locked counter', fun
     $b = $repository->create($occa, occaIndividual(['plan' => 'trial', 'duration' => '14_days']));
 
     expect([$a->sequence, $b->sequence])->toBe([1, 2])
-        ->and($a->key)->toEndWith('-0001')->toStartWith('OC02-')
-        ->and($b->key)->toEndWith('-0002')->toStartWith('OC01-')
-        ->and($occa->fresh()->license_sequence)->toBe(2);
+        ->and($a->key)->toEndWith('-0001')->toStartWith('OC32-')
+        ->and($b->key)->toEndWith('-0002')->toStartWith('OC31-')
+        ->and($occa->fresh()->mac_license_sequence)->toBe(2);
 
     // The key number stays 4 digits: after 9999 creating is refused, the counter unchanged.
-    $occa->forceFill(['license_sequence' => 9999])->save();
-    expect(fn () => $repository->create($occa, occaIndividual()))->toThrow(\Illuminate\Validation\ValidationException::class);
-    expect($occa->fresh()->license_sequence)->toBe(9999);
+    $occa->forceFill(['mac_license_sequence' => 9999])->save();
+    expect(fn () => $repository->create($occa, occaIndividual()))->toThrow(ValidationException::class);
+    expect($occa->fresh()->mac_license_sequence)->toBe(9999);
 });
 
 test('the key never changes when the plan changes, and the reference uses the sequence', function () {
@@ -1966,7 +1975,7 @@ test('the key never changes when the plan changes, and the reference uses the se
         ->assertJsonPath('data.key', $created['key'])
         ->assertJsonPath('data.plan', 'lifetime');
 
-    expect(LicenseCertificateService::reference(License::find($created['id'])))->toBe('LIC-OCCA-0001');
+    expect(LicenseCertificateService::reference(License::find($created['id'])))->toBe('LIC-OCCA-MAC-0001');
 });
 
 test('key prefixes are 1-6 uppercase letters and OCCA uses OC', function () {
@@ -1983,25 +1992,154 @@ test('key prefixes are 1-6 uppercase letters and OCCA uses OC', function () {
         ->assertStatus(422)->assertJsonValidationErrors(['key_prefix']);
 });
 
-test('the key format migration numbers existing licenses and keeps their keys', function () {
-    // Back to the state before the migration, with two old-style keys.
+test('the platform migration resets existing keys to Mac keys in the new format', function () {
+    // Back to the state before both key migrations, with two old-style keys.
+    (require base_path('database/migrations/2026_11_10_000008_add_platform_to_licenses.php'))->down();
     (require base_path('database/migrations/2026_11_10_000007_add_license_sequence_and_new_key_format.php'))->down();
     $occaId = DB::table('license_products')->where('code', 'occa')->value('id');
     foreach (['OCCA-AAAA-BBBB-CCCC-DDDD', 'OCCA-EEEE-FFFF-GGGG-HHHH'] as $i => $key) {
         DB::table('licenses')->insert([
-            'product_id' => $occaId, 'key' => $key, 'licensee_name' => 'Old '.$i, 'plan' => 'professional',
-            'type' => 'term', 'max_devices' => 2, 'is_active' => true,
+            'product_id' => $occaId, 'key' => $key, 'licensee_name' => 'Old '.$i, 'plan' => $i ? 'lifetime' : 'professional',
+            'type' => $i ? 'lifetime' : 'term', 'max_devices' => 2, 'is_active' => true,
             'created_at' => now()->addMinutes($i), 'updated_at' => now(),
         ]);
     }
 
     (require base_path('database/migrations/2026_11_10_000007_add_license_sequence_and_new_key_format.php'))->up();
+    (require base_path('database/migrations/2026_11_10_000008_add_platform_to_licenses.php'))->up();
 
+    $keys = DB::table('licenses')->orderBy('id')->pluck('key')->all();
     expect(DB::table('licenses')->orderBy('id')->pluck('sequence')->all())->toBe([1, 2])
-        ->and(DB::table('licenses')->orderBy('id')->pluck('key')->all())->toBe(['OCCA-AAAA-BBBB-CCCC-DDDD', 'OCCA-EEEE-FFFF-GGGG-HHHH'])
-        ->and(LicenseProduct::findByCodeOrFail('occa')->license_sequence)->toBe(2)
-        ->and(LicenseProduct::findByCodeOrFail('occa')->key_prefix)->toBe('OC');
+        ->and(DB::table('licenses')->pluck('platform')->unique()->values()->all())->toBe(['mac'])
+        ->and($keys[0])->toMatch(OCCA_KEY_REGEX)->toStartWith('OC32-')->toEndWith('-0001')
+        ->and($keys[1])->toMatch(OCCA_KEY_REGEX)->toStartWith('OC33-')->toEndWith('-0002')
+        ->and(LicenseProduct::findByCodeOrFail('occa')->mac_license_sequence)->toBe(2)
+        ->and(LicenseProduct::findByCodeOrFail('occa')->ipad_license_sequence)->toBe(0);
 
-    // Old keys still activate.
-    $this->postJson('/api/occa/license/activate', ['key' => ' occa-aaaa-bbbb-cccc-dddd ', 'device_id' => 'mac-1'])->assertOk();
+    // The old key is gone; the new one activates on a Mac.
+    $this->postJson('/api/occa/license/activate', ['key' => 'OCCA-AAAA-BBBB-CCCC-DDDD', 'device_id' => 'mac-1', 'platform' => 'macOS'])->assertStatus(404);
+    $this->postJson('/api/occa/license/activate', ['key' => strtolower($keys[0]), 'device_id' => 'mac-1', 'platform' => 'macOS'])->assertOk();
+});
+
+// ---------------------------------------------------------------------
+// Platforms: Mac keys (OC31-34) and iPad keys (OC52-54, no Trial)
+// ---------------------------------------------------------------------
+
+test('iPad keys use platform code 5 and their own sequence, Mac keys code 3', function () {
+    Sanctum::actingAs($this->admin);
+
+    $mac1 = $this->postJson(lmLicenses(), occaIndividual())->assertStatus(201);
+    $mac2 = $this->postJson(lmLicenses(), occaIndividual(['plan' => 'lifetime', 'duration' => null]))->assertStatus(201);
+    $ipad1 = $this->postJson(lmLicenses(), occaIndividual(['platform' => 'ipad']))->assertStatus(201);
+    $ipad2 = $this->postJson(lmLicenses(), occaIndividual(['platform' => 'ipad', 'plan' => 'lifetime', 'duration' => null]))->assertStatus(201);
+    $ipad3 = $this->postJson(lmLicenses(), occaOrganization(['platform' => 'ipad']))->assertStatus(201);
+
+    expect($mac1->json('data.key'))->toMatch(OCCA_KEY_REGEX)->toStartWith('OC32-')->toEndWith('-0001')
+        ->and($mac2->json('data.key'))->toStartWith('OC33-')->toEndWith('-0002')
+        ->and($ipad1->json('data.key'))->toMatch(OCCA_KEY_REGEX)->toStartWith('OC52-')->toEndWith('-0001')
+        ->and($ipad2->json('data.key'))->toStartWith('OC53-')->toEndWith('-0002')
+        ->and($ipad3->json('data.key'))->toStartWith('OC54-')->toEndWith('-0003')
+        ->and($ipad1->json('data.platform'))->toBe('ipad')
+        ->and($ipad1->json('data.platform_label'))->toBe('iPad')
+        ->and($mac1->json('data.platform_label'))->toBe('Mac');
+
+    $this->getJson('/api/v1/license-manager/products/occa')->assertJsonPath('data.next_sequences', ['mac' => 3, 'ipad' => 4]);
+});
+
+test('platform is required on store, iPad has no Trial, and the platform cannot change', function () {
+    Sanctum::actingAs($this->admin);
+
+    $this->postJson(lmLicenses(), occaIndividual(['platform' => null]))->assertStatus(422)->assertJsonValidationErrors('platform');
+    $this->postJson(lmLicenses(), occaIndividual(['platform' => 'android']))->assertStatus(422)->assertJsonValidationErrors('platform');
+    $this->postJson(lmLicenses(), occaIndividual(['platform' => 'ipad', 'plan' => 'trial', 'duration' => '14_days']))
+        ->assertStatus(422)->assertJsonValidationErrors('plan');
+    $this->postJson(lmLicenses(), occaIndividual(['plan' => 'trial', 'duration' => '14_days']))->assertStatus(201);
+
+    $ipad = License::find($this->postJson(lmLicenses(), occaIndividual(['platform' => 'ipad']))->json('data.id'));
+    $this->putJson(lmLicenses().'/'.$ipad->id, ['platform' => 'mac'])->assertStatus(422)->assertJsonValidationErrors('platform');
+    $this->putJson(lmLicenses().'/'.$ipad->id, ['plan' => 'trial', 'duration' => '14_days'])->assertStatus(422)->assertJsonValidationErrors('plan');
+    $this->putJson(lmLicenses().'/'.$ipad->id, ['platform' => 'ipad', 'notes' => 'same platform is fine'])->assertOk();
+
+    expect($ipad->fresh()->platform)->toBe('ipad')->and($ipad->fresh()->key)->toBe($ipad->key);
+});
+
+test('the list can be filtered by platform', function () {
+    Sanctum::actingAs($this->admin);
+
+    $this->postJson(lmLicenses(), occaIndividual())->assertStatus(201);
+    $this->postJson(lmLicenses(), occaIndividual(['platform' => 'ipad']))->assertStatus(201);
+
+    expect($this->getJson(lmLicenses().'?platform=ipad')->json('data'))->toHaveCount(1)
+        ->and($this->getJson(lmLicenses().'?platform=ipad')->json('data.0.platform'))->toBe('ipad')
+        ->and($this->getJson(lmLicenses().'?platform=mac')->json('data.0.platform'))->toBe('mac');
+    $this->getJson(lmLicenses().'?platform=android')->assertStatus(422);
+});
+
+test('a key only activates on its own platform and the token carries the platform', function () {
+    $mac = License::factory()->create();
+    $ipad = License::factory()->ipad()->create();
+
+    // Mac key on an iPad, iPad key on a Mac: refused and tracked.
+    occaActivate($this, $mac, 'ipad-1', ['device_name' => 'iPad Pro', 'platform' => 'iPadOS'])
+        ->assertStatus(403)->assertExactJson(['error' => 'wrong_platform', 'message' => 'This license key is for Mac and cannot be used on this device.']);
+    occaActivate($this, $ipad, 'mac-1', ['platform' => 'macOS'])
+        ->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+    expect($mac->activations()->count())->toBe(0)
+        ->and(occaEvents($mac, LicenseEvent::DENIED_WRONG_PLATFORM)->count())->toBe(1)
+        ->and(occaEvents($ipad, LicenseEvent::DENIED_WRONG_PLATFORM)->count())->toBe(1);
+
+    // The platform must be sent and known.
+    occaActivate($this, $mac, 'mac-1', ['platform' => null])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
+    occaActivate($this, $mac, 'mac-1', ['platform' => 'Windows'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
+
+    // Matching platforms work; older iPads report "iOS".
+    $token = occaActivate($this, $ipad, 'ipad-1', ['device_name' => 'iPad Air', 'platform' => 'iPadOS'])->assertOk()
+        ->assertJsonPath('license.platform', 'ipad')->json('token');
+    occaActivate($this, $ipad, 'ipad-2', ['platform' => 'iOS'])->assertOk();
+    occaActivate($this, $mac, 'mac-1', ['platform' => 'macOS'])->assertOk()->assertJsonPath('license.platform', 'mac');
+
+    expect(app(LicenseTokenService::class)->verify($token)['platform'])->toBe('ipad');
+});
+
+test('refresh checks the platform sent or the one the device activated with', function () {
+    $ipad = License::factory()->ipad()->create();
+    occaActivate($this, $ipad, 'ipad-1', ['platform' => 'iPadOS'])->assertOk();
+
+    $this->postJson('/api/occa/license/refresh', ['key' => $ipad->key, 'device_id' => 'ipad-1'])->assertOk();
+    $this->postJson('/api/occa/license/refresh', ['key' => $ipad->key, 'device_id' => 'ipad-1', 'platform' => 'macOS'])
+        ->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+
+    // An activation stored with another platform (e.g. before the split) is refused too.
+    $ipad->activations()->where('device_id', 'ipad-1')->update(['platform' => 'macOS']);
+    $this->postJson('/api/occa/license/refresh', ['key' => $ipad->key, 'device_id' => 'ipad-1'])
+        ->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+
+    // Deactivating never checks the platform.
+    $this->postJson('/api/occa/license/deactivate', ['key' => $ipad->key, 'device_id' => 'ipad-1', 'platform' => 'macOS'])->assertExactJson(['ok' => true]);
+});
+
+test('license:create takes --platform and refuses an iPad trial', function () {
+    $this->artisan('license:create', [...OCCA_CLI_PERSON, '--name' => 'Ipad User', '--platform' => 'ipad', '--months' => 12])->assertSuccessful();
+    expect(License::where('licensee_name', 'Ipad User')->first())
+        ->platform->toBe('ipad')
+        ->key->toStartWith('OC52-')->toEndWith('-0001');
+
+    $this->artisan('license:create', [...OCCA_CLI_PERSON, '--name' => 'Ipad Trial', '--platform' => 'ipad', '--plan' => 'trial', '--days' => 14])->assertFailed();
+    $this->artisan('license:create', [...OCCA_CLI_PERSON, '--name' => 'Mac Trial', '--plan' => 'trial', '--days' => 14])->assertSuccessful();
+    expect(License::where('licensee_name', 'Mac Trial')->value('key'))->toStartWith('OC31-');
+});
+
+test('certificates of a Mac and an iPad license with the same number have different references and platform steps', function () {
+    Sanctum::actingAs($this->admin);
+
+    $mac = License::find($this->postJson(lmLicenses(), occaIndividual())->json('data.id'));
+    $ipad = License::find($this->postJson(lmLicenses(), occaIndividual(['platform' => 'ipad']))->json('data.id'));
+
+    $service = app(LicenseCertificateService::class);
+    expect($mac->sequence)->toBe(1)->and($ipad->sequence)->toBe(1)
+        ->and(LicenseCertificateService::reference($mac))->toBe('LIC-OCCA-MAC-0001')
+        ->and(LicenseCertificateService::reference($ipad))->toBe('LIC-OCCA-IPAD-0001')
+        ->and($service->data($mac)['steps']['steps'][0][1])->toContain('on your Mac')
+        ->and($service->data($ipad)['steps']['steps'][0][1])->toContain('on your iPad')
+        ->and($service->data($ipad)['steps']['steps'][1][1])->not->toContain('Starter');
 });

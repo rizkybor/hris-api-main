@@ -34,6 +34,7 @@ class LicenseCreateCommand extends Command
         {--website= : Organization: website URL (optional)}
         {--tax-id= : Organization: tax ID / NPWP (optional)}
         {--member-count= : Organization: number of members (optional)}
+        {--platform=mac : Platform the key is for: mac or ipad (iPad has no trial)}
         {--plan=professional : Plan: trial, professional, lifetime or organization}
         {--lifetime : Optional with --plan=lifetime (implied); rejected for every other plan}
         {--months= : Term length in months (for a term license)}
@@ -73,6 +74,7 @@ class LicenseCreateCommand extends Command
         'website' => 'website',
         'tax_id' => 'tax-id',
         'member_count' => 'member-count',
+        'platform' => 'platform',
         'plan' => 'plan',
         'months' => 'months',
         'days' => 'days',
@@ -107,6 +109,7 @@ class LicenseCreateCommand extends Command
         // Same licensee rules as the HTTP API (LicenseFieldRules).
         $category = License::categoryForPlan($input['plan']);
         $validator = Validator::make($input, array_merge(LicenseFieldRules::profile($category, country: $input['country']), [
+            'platform' => ['required', Rule::in(License::PLATFORMS)],
             'plan' => ['required', Rule::in(License::PLANS)],
             'months' => ['nullable', 'integer', 'min:1', 'max:1200'],
             'days' => ['nullable', 'integer', 'min:1', 'max:36500'],
@@ -114,6 +117,7 @@ class LicenseCreateCommand extends Command
         ]), LicenseFieldRules::messages(), array_map(fn ($option) => '--'.$option, self::OPTIONS));
 
         $validator->after(fn ($validator) => LicenseFieldRules::addRegionErrors($validator, $input));
+        $validator->after(fn ($validator) => LicenseFieldRules::addPlatformPlanError($validator, $input['platform'], $input['plan']));
 
         if ($validator->fails()) {
             foreach (array_unique($validator->errors()->all()) as $error) {
@@ -180,6 +184,7 @@ class LicenseCreateCommand extends Command
             $rows[] = ['Contact', $license->contact_name];
         }
         $this->table(['Field', 'Value'], array_merge($rows, [
+            ['Platform', $license->platformLabel()],
             ['Plan', $license->planLabel()],
             ['Type', $license->type],
             ['Expires', $license->expires_at?->toDateTimeString() ?? 'never'],

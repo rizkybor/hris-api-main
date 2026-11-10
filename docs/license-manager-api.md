@@ -13,7 +13,7 @@ product; the token's `product` field says which product it is for.
 |---------------|-------------------------------------------------------------------------|
 | `code`        | Lowercase slug, `^[a-z0-9]+(-[a-z0-9]+)*$`, unique. Used in every path as `{product}`. Never changes after creation. |
 | `name`        | Display name, e.g. `OCCA`                                                |
-| `key_prefix`  | 1–6 uppercase letters; new keys start with it plus the plan code (`OC02-…`) |
+| `key_prefix`  | 1–6 uppercase letters; new keys start with it plus the platform/plan code (`OC32-…`) |
 | `description` | Optional                                                                 |
 | `is_active`   | Off: activate / refresh answer `403 product_inactive`; deactivate still works |
 
@@ -135,28 +135,35 @@ Every license resource carries:
 
 ## Keys
 
-- Format: `{prefix}{planCode}-XXXX-XXXX-XXXX-{sequence}`, e.g.
-  `OC01-7KQM-2XRT-9HZP-0001`. Generated server-side, unique across all
+Every license is for one **platform**, fixed at creation: `mac` or `ipad`.
+A Mac key only activates on a Mac, an iPad key only on an iPad (see
+`wrong_platform` below). iPad has no Trial.
+
+- Format: `{prefix}{platform}{plan}-XXXX-XXXX-XXXX-{sequence}`, e.g.
+  `OC32-7KQM-2XRT-9HZP-0001`. Generated server-side, unique across all
   products.
   - `prefix`: the product's `key_prefix`, 1–6 uppercase letters (OCCA: `OC`).
-  - `planCode`: `01` Trial, `02` Professional, `03` Lifetime,
-    `04` Organization (`License::PLAN_CODES`).
+  - platform digit (`License::PLATFORM_CODES`): `3` Mac, `5` iPad.
+  - plan digit (`License::PLAN_DIGITS`): `1` Trial, `2` Professional,
+    `3` Lifetime, `4` Organization. So Mac keys are `31`–`34` and iPad keys
+    `52`–`54`.
   - three random groups from `A–Z` and `2–9` without the ambiguous `0`/`O`,
     `1`/`I`/`L`, so keys are hard to guess.
-  - `sequence`: the license's number within its product, across all plans,
-    always 4 digits (`0001`–`9999`), so an OCCA key is always 20 characters
-    (the length the app accepts); creating a license beyond `9999` is refused
-    with a 422.
-    A per-product counter (`license_products.license_sequence`) is
-    incremented under a row lock in the create transaction, so concurrent
-    creates never collide; numbers are never reused (also after deletes).
-    Stored on the license as `sequence` and returned in the resource; the
-    product resource has `next_sequence` (a preview only).
-- **Keys never change.** The plan code is the plan at creation: changing the
-  plan later keeps the key (an `OC02-…` key may belong to a Lifetime license).
-- Keys issued in the earlier `OCCA-XXXX-XXXX-XXXX-XXXX` format stay valid;
-  `2026_11_10_000007` numbered those licenses in creation order without
-  touching their keys and started each product's counter there.
+  - `sequence`: the license's number within its product **and platform**,
+    across all plans, always 4 digits (`0001`–`9999`), so an OCCA key is
+    always 20 characters (the length the app accepts); creating a license
+    beyond `9999` for a platform is refused with a 422 (on `platform`).
+    Mac and iPad count separately (`license_products.mac_license_sequence`,
+    `ipad_license_sequence`), each incremented under a row lock in the
+    create transaction, so concurrent creates never collide; numbers are
+    never reused (also after deletes). Stored on the license as `sequence`;
+    the product resource has `next_sequences: {mac, ipad}` (a preview only).
+- **Keys never change.** The code is the platform and plan at creation:
+  changing the plan later keeps the key (an `OC32-…` key may belong to a
+  Lifetime license). The platform itself can never change.
+- `2026_11_10_000008` reset every key issued before the platform split
+  (the apps were not released yet): all existing licenses became Mac
+  licenses, renumbered in creation order, with a new key.
 - Matching is case-insensitive and ignores surrounding spaces, and only
   looks within the product of the route: a key of another product answers
   `invalid_key`.
@@ -186,7 +193,7 @@ Errors are always:
 
 ```json
 {
-  "key": "OC02-7KQM-2XRT-9HZP-0001",
+  "key": "OC32-7KQM-2XRT-9HZP-0001",
   "device_id": "5B0E7C1A-3F55-4C8B-9E1D-2A6F0D9B7C44",
   "device_name": "Rizky's MacBook Pro",
   "platform": "macOS",
@@ -194,7 +201,10 @@ Errors are always:
 }
 ```
 
-`device_name`, `platform` and `app_version` are optional. Re-activating a
+`platform` is **required**: `macOS` on a Mac, `iPadOS` on an iPad (`iOS` is
+accepted for older iPads; case and spaces do not matter). A missing or
+unknown value is `invalid_request`; a key of the other platform is
+`wrong_platform`. `device_name` and `app_version` are optional. Re-activating a
 `device_id` that is already registered never consumes another slot; it only
 updates `last_seen_at`, `device_name`, `platform` and `app_version`.
 
@@ -205,8 +215,9 @@ Response `200`:
   "token": "eyJ2IjoxLCJwcm9kdWN0Ijoib2NjYSIs…In0.q3n1d5…",
   "license": {
     "product": "occa",
-    "key": "OC02-7KQM-2XRT-9HZP-0001",
+    "key": "OC32-7KQM-2XRT-9HZP-0001",
     "plan": "professional",
+    "platform": "mac",
     "type": "term",
     "licensee": "Jane Orienteer",
     "expires_at": "2027-05-09T00:00:00Z",
@@ -218,9 +229,10 @@ Response `200`:
 
 ### refresh
 
-`{ "key": "...", "device_id": "..." }`. Same checks as activate, plus the
-device must already be activated. Always updates `last_seen_at`. Same
-response shape.
+`{ "key": "...", "device_id": "...", "platform": "macOS" }`. Same checks as
+activate, plus the device must already be activated. `platform` is optional
+here; when it is not sent, the platform the device activated with is
+checked. Always updates `last_seen_at`. Same response shape.
 
 ### deactivate
 
@@ -238,12 +250,15 @@ key or device, and also when the product is switched off.
 | 404  | `invalid_key`      | Unknown (or deleted) key, or a key of another product      |
 | 403  | `inactive`         | The owner switched the license off                         |
 | 403  | `expired`          | `expires_at` is in the past                                |
+| 403  | `wrong_platform`   | A Mac key on an iPad or an iPad key on a Mac               |
 | 409  | `device_limit`     | New device while `devices_used >= max_devices`             |
 | 404  | `not_activated`    | `refresh` for a device that has no activation              |
 | 500  | `server_error`     | Unexpected failure (e.g. signing key missing)              |
 
 Checks run in this order: product (`invalid_product`, `product_inactive`),
-`invalid_key`, `inactive`, `expired`, then `device_limit` / `not_activated`.
+`invalid_key`, `inactive`, `expired`, `wrong_platform` (activate), then
+`device_limit` / `not_activated` (refresh checks `wrong_platform` after
+`not_activated`).
 
 ## Token format
 
@@ -274,7 +289,7 @@ Payload (snake_case keys, in this order):
 Example payload:
 
 ```json
-{"v":1,"product":"occa","lid":12,"key":"OC02-7KQM-2XRT-9HZP-0001","plan":"professional","type":"term","licensee":"Jane Orienteer","expires_at":"2027-05-09T00:00:00Z","device_id":"5B0E7C1A-3F55-4C8B-9E1D-2A6F0D9B7C44","iat":1794239819,"refresh_after":1794844619,"offline_until":1796831819}
+{"v":1,"product":"occa","lid":12,"key":"OC32-7KQM-2XRT-9HZP-0001","plan":"professional","platform":"mac","type":"term","licensee":"Jane Orienteer","expires_at":"2027-05-09T00:00:00Z","device_id":"5B0E7C1A-3F55-4C8B-9E1D-2A6F0D9B7C44","iat":1794239819,"refresh_after":1794844619,"offline_until":1796831819}
 ```
 
 App-side verification: split on `.`, base64url-decode the signature, verify it
@@ -315,6 +330,11 @@ php artisan license:create --product=occa --plan=lifetime --name="Rizky Ajie Kur
     --email=rizky@example.com --phone="+62 812-0000-0000" \
     --village-code=31.71.01.1001 --postal-code=10110 --max-devices=5
 
+# An iPad key (OC5x-...); iPad has no trial:
+php artisan license:create --product=occa --platform=ipad --plan=professional --months=12 \
+    --name="Jane Orienteer" --email=jane@example.com --phone=08123456789 \
+    --village-code=31.71.01.1001 --postal-code=10110
+
 php artisan license:create --product=occa --plan=trial --days=14 --max-devices=1 \
     --name="Jane Orienteer" --email=jane@example.com --phone=08123456789 \
     --country=Malaysia --province=Selangor --city="Shah Alam" --postal-code=40000
@@ -325,7 +345,8 @@ php artisan license:create --product={product} --plan=organization --months=12 -
 ```
 
 `occa:license-create` is an alias of `license:create` (its `--product`
-defaults to `occa`, as does `license:create`'s).
+defaults to `occa`, as does `license:create`'s). `--platform` is `mac`
+(default) or `ipad`.
 
 Options:
 - `--product` (product code, default `occa`), `--plan` (`trial` |
@@ -347,6 +368,11 @@ Options:
 `auth:sanctum`, under `/api/v1/license-manager`, standard
 `{success, message, data}` envelope. License endpoints are nested under the
 product code; a license of another product answers `404`.
+
+Licenses carry `platform` (`mac` | `ipad`) and `platform_label`. On create
+`platform` is required and the plan must be sold on it (no Trial on iPad);
+on update it may only be resent unchanged. The license lists accept a
+`platform` filter.
 
 | Method | Path                                                                  | Permission |
 |--------|-----------------------------------------------------------------------|------------|
@@ -444,7 +470,7 @@ fixed positioning, images embedded as base64):
   micro-text and a thin grey border), embossed, with a silver plan chip, a
   27 mm seal whose guilloche rings shift hue around the circle (the product
   icon on its centre) and, under a hairline, the issue date and
-  reference `LIC-<PRODUCT CODE>-<sequence, 4 digits>` (e.g. `LIC-OCCA-0001`); licensee block with the full
+  reference `LIC-<PRODUCT CODE>-<PLATFORM>-<sequence, 4 digits>` (e.g. `LIC-OCCA-MAC-0001`, `LIC-OCCA-IPAD-0001`); licensee block with the full
   address; license terms table; three activation steps (OCCA-specific, else
   generic) plus release / 30-day offline notes; short terms of use; and,
   when the product has terms, "Subject to the <Product> License Terms
@@ -493,7 +519,7 @@ A logging failure is reported and swallowed, never breaking the request.
 | `device_reactivated`        | Same device activated again                                       |
 | `refreshed`                 | Refresh; at most once per device per 24 h (`last_seen_at` always updates) |
 | `device_released`           | Deactivate from the app                                           |
-| `denied_device_limit` / `denied_inactive` / `denied_expired` | Denied activate / refresh on an existing key of the product |
+| `denied_device_limit` / `denied_inactive` / `denied_expired` / `denied_wrong_platform` | Denied activate / refresh on an existing key of the product |
 
 Admin events carry the admin's `user_id` and IP; app events carry the device
 and IP. `GET …/licenses/{id}/events`: paginated (`per_page`, default 15),
@@ -521,3 +547,4 @@ activity log under `License Manager`.
 | `2026_11_10_000005_split_license_manager_permissions` | Adds `license-manager-view` (granted with `-list`), removes `license-product-manage` |
 | `2026_11_10_000006_remove_license_product_permissions` | Removes any `license-product-*` rows |
 | `2026_11_10_000007_add_license_sequence_and_new_key_format` | Per-product `license_sequence`, `licenses.sequence` (existing licenses numbered in creation order), OCCA prefix `OCCA` → `OC` |
+| `2026_11_10_000008_add_platform_to_licenses` | `licenses.platform`, separate Mac / iPad counters (`mac_license_sequence`, `ipad_license_sequence`), sequence unique per product + platform; resets existing keys to Mac keys in the new format |

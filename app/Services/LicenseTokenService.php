@@ -43,6 +43,7 @@ class LicenseTokenService
             'lid' => (int) $license->id,
             'key' => $license->key,
             'plan' => $license->plan,
+            'platform' => $license->platform,
             'type' => $license->type,
             'licensee' => $license->licensee_name,
             'expires_at' => self::isoUtc($license),

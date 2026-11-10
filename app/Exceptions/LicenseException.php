@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use App\Models\License;
 use RuntimeException;
 
 /**
@@ -46,6 +47,25 @@ class LicenseException extends RuntimeException
     public static function deviceLimit(int $maxDevices): self
     {
         return new self('device_limit', "This license key is already in use on {$maxDevices} device(s). Deactivate another device first.", 409);
+    }
+
+    /**
+     * A Mac key on an iPad or the other way round.
+     */
+    public static function wrongPlatform(string $licensePlatform): self
+    {
+        $label = License::PLATFORM_LABELS[$licensePlatform] ?? $licensePlatform;
+
+        return new self('wrong_platform', "This license key is for {$label} and cannot be used on this device.", 403);
+    }
+
+    /**
+     * The app did not say (or said something unknown) which platform it
+     * runs on; activation needs "macOS" or "iPadOS".
+     */
+    public static function unknownPlatform(): self
+    {
+        return new self('invalid_request', 'The platform must be macOS or iPadOS.', 422);
     }
 
     public static function notActivated(): self

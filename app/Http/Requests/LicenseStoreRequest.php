@@ -44,6 +44,7 @@ class LicenseStoreRequest extends FormRequest
         $category = License::categoryForPlan($this->input('plan'));
 
         return array_merge(LicenseFieldRules::profile($category, country: $this->input('country')), [
+            'platform' => ['required', Rule::in(License::PLATFORMS)],
             'plan' => ['required', Rule::in(License::PLANS)],
             // Set from the plan in prepareForValidation().
             'type' => ['nullable', Rule::in(License::TYPES)],
@@ -63,6 +64,7 @@ class LicenseStoreRequest extends FormRequest
         return [
             fn (Validator $validator) => LicenseFieldRules::addTermExpiryError($validator, $this->input('type'), $this->input('duration'), $this->input('expires_at')),
             fn (Validator $validator) => LicenseFieldRules::addRegionErrors($validator, $this->all()),
+            fn (Validator $validator) => LicenseFieldRules::addPlatformPlanError($validator, $this->input('platform'), $this->input('plan')),
         ];
     }
 

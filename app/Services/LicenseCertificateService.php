@@ -67,9 +67,15 @@ class LicenseCertificateService
     /**
      * LIC-OCCA-0001: product code and the license's number in the product.
      */
+    /**
+     * LIC-OCCA-MAC-0001 / LIC-OCCA-IPAD-0001: Mac and iPad number their
+     * licenses separately, so the platform keeps references unique.
+     */
     public static function reference(License $license): string
     {
-        return 'LIC-'.strtoupper($license->product?->code ?: 'KEY').'-'.str_pad((string) ($license->sequence ?? $license->id), 4, '0', STR_PAD_LEFT);
+        return 'LIC-'.strtoupper($license->product?->code ?: 'KEY')
+            .'-'.strtoupper($license->platform ?: License::PLATFORM_MAC)
+            .'-'.str_pad((string) ($license->sequence ?? $license->id), 4, '0', STR_PAD_LEFT);
     }
 
     public function data(License $license): array
@@ -95,7 +101,7 @@ class LicenseCertificateService
             // Organization plan = organization category: show it once.
             'showCategory' => strcasecmp($license->planLabel(), ucfirst($license->category())) !== 0,
             'organizationTypeLabel' => $license->organizationTypeLabel(),
-            'steps' => $this->activationSteps($product),
+            'steps' => $this->activationSteps($product, $license),
             'productIcon' => $this->productIcon($product),
             'companyLogo' => self::embed(resource_path('license-products/jcd-logo.png')),
             // Holographic artwork (php artisan license:certificate-assets),
@@ -145,15 +151,22 @@ class LicenseCertificateService
     /**
      * Three short steps for this product, plus the shared notes.
      */
-    private function activationSteps(?LicenseProduct $product): array
+    private function activationSteps(?LicenseProduct $product, License $license): array
     {
         $name = $product?->name ?: 'the app';
+        // A key only activates on its own platform: Mac (click, Starter
+        // chip) or iPad (tap; there is no free plan on iPad).
+        $ipad = $license->platform === License::PLATFORM_IPAD;
+        $device = $ipad ? 'iPad' : 'Mac';
+        $press = $ipad ? 'Tap' : 'Click';
 
         $steps = $product?->code === LicenseProduct::OCCA
             ? [
-                ['Open OCCA', 'Launch OCCA on your iPad or Mac and go to the project list.'],
-                ['Open License', 'Tap the plan chip (Starter) next to the OCCA name at the top of the project list.'],
-                ['Paste the key and activate', 'Paste the license key exactly as shown above and tap Activate.'],
+                ['Open OCCA', "Launch OCCA on your {$device} and go to the project list. This key works on {$device} only."],
+                ['Open License', $ipad
+                    ? 'Tap the plan chip next to the OCCA name at the top of the project list.'
+                    : 'Click the plan chip (Starter) next to the OCCA name at the top of the project list.'],
+                ['Paste the key and activate', 'Paste the license key exactly as shown above and '.strtolower($press).' Activate.'],
             ]
             : [
                 ["Open {$name}", "Launch {$name} on the device you want to license."],

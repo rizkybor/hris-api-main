@@ -20,7 +20,7 @@ class LicenseProduct extends Model
     public const CODE_REGEX = '/^[a-z0-9]+(-[a-z0-9]+)*$/';
 
     /**
-     * 1-6 uppercase letters, e.g. "OC" (keys look like OC01-XXXX-...).
+     * 1-6 uppercase letters, e.g. "OC" (keys look like OC32-XXXX-...).
      */
     public const KEY_PREFIX_REGEX = '/^[A-Z]{1,6}$/';
 
@@ -37,7 +37,8 @@ class LicenseProduct extends Model
         'code',
         'name',
         'key_prefix',
-        'license_sequence',
+        'mac_license_sequence',
+        'ipad_license_sequence',
         'description',
         'icon_path',
         'terms',
@@ -48,7 +49,8 @@ class LicenseProduct extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
-        'license_sequence' => 'integer',
+        'mac_license_sequence' => 'integer',
+        'ipad_license_sequence' => 'integer',
         'terms_effective_at' => 'date',
     ];
 
@@ -75,5 +77,14 @@ class LicenseProduct extends Model
     public static function findByCodeOrFail(string $code): self
     {
         return self::query()->where('code', strtolower(trim($code)))->firstOrFail();
+    }
+
+    /**
+     * Counter column of a platform's license numbers (each platform has its
+     * own 0001-9999 sequence).
+     */
+    public static function sequenceColumn(string $platform): string
+    {
+        return $platform.'_license_sequence';
     }
 }
