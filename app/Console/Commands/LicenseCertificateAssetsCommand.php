@@ -30,7 +30,7 @@ class LicenseCertificateAssetsCommand extends Command
 {
     protected $signature = 'license:certificate-assets
         {--variant= : a (soft), b (medium), c (vivid) or all; default: the configured licensing.certificate_hologram}
-        {--only= : ribbon = render only the corner ribbons}';
+        {--only= : ribbon = only the corner ribbons, seal = only the category seals}';
 
     protected $description = 'Render the holographic PNG assets of the license certificate (one-off; commit the result)';
 
@@ -113,11 +113,17 @@ class LicenseCertificateAssetsCommand extends Command
 
                 continue;
             }
+            if ($this->option('only') === 'seal') {
+                $this->categorySeals($out, $v);
+
+                continue;
+            }
             $this->save($this->foil('AUTHENTIC LICENSE  ·  JENDELA CAKRA DIGITAL  ·  '), "{$out}/cert-foil-{$v}.png");
             $this->save($this->foil('OCCA  ·  AUTHENTIC LICENSE  ·  '), "{$out}/cert-foil-occa-{$v}.png");
             $this->save($this->seal('GENUINE · LICENSE · JENDELA CAKRA DIGITAL · '), "{$out}/cert-seal-{$v}.png");
             $this->save($this->seal('GENUINE · OCCA · LICENSE · JENDELA CAKRA DIGITAL · '), "{$out}/cert-seal-occa-{$v}.png");
             $this->save($this->chip(), "{$out}/cert-chip-{$v}.png");
+            $this->categorySeals($out, $v);
             // Holographic ribbon across each page corner.
             foreach (['tl', 'tr', 'bl', 'br'] as $corner) {
                 $this->save($this->ribbon($corner), "{$out}/cert-ribbon-{$v}-{$corner}.png");
@@ -212,6 +218,18 @@ class LicenseCertificateAssetsCommand extends Command
         $this->clipToRoundedRect($im, $w, $h, $radius, $border);
 
         return $im;
+    }
+
+    /**
+     * Seals naming the license category in the ring (INDIVIDUAL /
+     * ORGANIZATION), used instead of a category chip in the key box.
+     */
+    private function categorySeals(string $out, string $v): void
+    {
+        foreach (['individual' => 'INDIVIDUAL', 'organization' => 'ORGANIZATION'] as $category => $word) {
+            $this->save($this->seal("{$word} · LICENSE · JENDELA CAKRA DIGITAL · "), "{$out}/cert-seal-{$v}-{$category}.png");
+            $this->save($this->seal("{$word} · OCCA · LICENSE · JENDELA CAKRA DIGITAL · "), "{$out}/cert-seal-occa-{$v}-{$category}.png");
+        }
     }
 
     /**

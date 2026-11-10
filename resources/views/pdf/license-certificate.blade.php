@@ -86,24 +86,30 @@
         font-size: 20pt; font-weight: bold; letter-spacing: 2.6pt; color: #14161F;
     }
     .holo .key.emboss { top: 0.3mm; left: 0.3mm; color: #ffffff; }
-    /* Mac + iPad bundle: two smaller keys, each tagged with its platform. */
-    .holo.bundle .content { top: 4.2mm; }
+    /* Mac + iPad bundle: a shorter box (41 mm) with two smaller keys, each
+       tagged with its platform, and even spacing between the rows:
+       label, Mac key, iPad key, plan chip, rule, issued / reference. */
+    .holo.bundle { height: 42mm; }
+    .holo.bundle .foil { height: 42mm; }
+    .holo.bundle .content { top: 4.4mm; }
     /* Platform tag column (right-aligned) + key column (left-aligned), so
        both keys start at the same x whatever the tag's width. */
-    .holo .key-rows { width: auto; margin: 0.8mm auto 0.6mm auto; border-collapse: collapse; }
-    .holo .key-rows td { padding: 0.1mm 0; vertical-align: middle; }
+    .holo .key-rows { width: auto; margin: 1.2mm auto 0 auto; border-collapse: collapse; }
+    .holo .key-rows.next { margin-top: 0.4mm; }
+    .holo .key-rows.last { margin-bottom: 1.2mm; }
+    .holo .key-rows td { padding: 0; vertical-align: middle; }
     .holo .key-rows .plat {
-        width: 13mm; padding-right: 3mm; padding-top: 1mm; text-align: right;
-        font-family: "DejaVu Sans", sans-serif; font-size: 6.6pt; letter-spacing: 1.6pt; font-weight: bold; color: #4b4f63;
+        width: 13mm; padding-right: 3mm; text-align: right;
+        font-family: "DejaVu Sans", sans-serif; font-size: 6.4pt; letter-spacing: 1.6pt; font-weight: bold; color: #4b4f63;
     }
-    .holo .key-rows .k { position: relative; height: 7.4mm; }
+    .holo .key-rows .k { position: relative; height: 5.8mm; }
     .holo .key-rows .k div {
-        font-size: 15.5pt; font-weight: bold; letter-spacing: 2pt; color: #14161F; white-space: nowrap; line-height: 7.4mm;
+        font-size: 14.5pt; font-weight: bold; letter-spacing: 1.9pt; color: #14161F; white-space: nowrap; line-height: 5.8mm;
     }
     .holo .key-rows .k .emboss { position: absolute; top: 0.3mm; left: 0.3mm; color: #ffffff; }
     .holo .key-rows .k .ink { position: relative; }
-    .holo.bundle .chips { margin-top: 0.4mm; }
-    .holo.bundle .meta { margin-top: 1.4mm; }
+    .holo.bundle .chips { margin-top: 0; }
+    .holo.bundle .meta { margin-top: 1.2mm; padding-top: 1.4mm; }
     .holo .seal { position: absolute; top: -8.5mm; right: -5.5mm; width: 27mm; height: 27mm; }
     .holo .seal-icon { position: absolute; top: 0.75mm; right: 3.75mm; width: 8.5mm; height: 8.5mm; border-radius: 2mm; }
     .holo .meta {
@@ -228,8 +234,9 @@
     <div class="content">
         <div class="label">{{ $isBundle ? 'License Keys' : 'License Key' }}</div>
         @if ($isBundle)
-            <table class="key-rows">
-                @foreach ($keys as $key)
+            {{-- One table per key (a spacer row would get a full text line's height in dompdf). --}}
+            @foreach ($keys as $key)
+                <table class="key-rows{{ $loop->first ? '' : ' next' }}{{ $loop->last ? ' last' : '' }}">
                     <tr>
                         <td class="plat">{{ strtoupper($key->platformLabel()) }}</td>
                         <td class="k">
@@ -239,8 +246,8 @@
                         {{-- mirror of the tag column keeps the keys centred --}}
                         <td style="width: 16mm;"></td>
                     </tr>
-                @endforeach
-            </table>
+                </table>
+            @endforeach
         @else
             <div class="key-wrap">
                 <div class="key mono emboss">{{ $license->key }}</div>
@@ -257,9 +264,6 @@
                         <div>{{ strtoupper($license->planLabel()) }}</div>
                     </div>
                 </td>
-                @if ($showCategory)
-                    <td><span class="chip chip-soft">{{ $categoryLabel }}</span></td>
-                @endif
             </tr>
         </table>
         <div class="meta">
