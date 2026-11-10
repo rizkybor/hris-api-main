@@ -32,9 +32,13 @@ class RegionController extends Controller
         return $this->respond(IndonesianRegions::list('village', $code));
     }
 
+    /**
+     * Browsers may keep a list for a day, but never an empty one (the
+     * regions may simply not be imported yet).
+     */
     private function respond(array $items): JsonResponse
     {
         return ResponseHelper::jsonResponse(true, 'Regions Retrieved Successfully', $items, 200)
-            ->header('Cache-Control', 'private, max-age='.IndonesianRegions::CACHE_TTL);
+            ->header('Cache-Control', $items === [] ? 'no-store' : 'private, max-age='.IndonesianRegions::CACHE_TTL);
     }
 }
