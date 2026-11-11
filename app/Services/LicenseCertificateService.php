@@ -280,6 +280,11 @@ class LicenseCertificateService
                 ['Paste the key and activate', 'Paste the license key exactly as shown above and confirm.'],
             ]);
 
+        // All keys of a "one key per device" license: no key box above.
+        if ($license->isPerDevice() && ! $singleKey) {
+            $steps[2][1] = 'Paste one of the keys from the Device Keys page exactly as shown, one key per device, and activate.';
+        }
+
         return [
             'steps' => $steps,
             'notes' => [

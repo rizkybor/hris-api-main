@@ -2745,7 +2745,7 @@ test('the certificate of a per-device license lists every key with its status', 
     expect($data['perDevice'])->toBeTrue()->and($data['keysPerLicense'])->toBe(3);
 
     $html = view('pdf.license-certificate', $data)->render();
-    expect($html)->toContain('key 1 of 3')->toContain('Device Keys')->toContain('One key per device')
+    expect($html)->toContain('3 license keys')->not->toContain('class="holo')->toContain('Device Keys')->toContain('One key per device')
         ->toContain($k1)->toContain($k2)->toContain($k3)
         ->toContain('In use')->toContain('Studio Mac')->toContain('was Old Mac')->toContain('Available');
 });
