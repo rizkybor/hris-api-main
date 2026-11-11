@@ -137,7 +137,13 @@ class LicenseRepository implements LicenseRepositoryInterface
     ): License {
         return License::query()
             ->forProduct($product)
-            ->with(['product', 'bundleMembers.keys', 'keys', 'activations' => fn ($query) => $query->orderByDesc('last_seen_at')])
+            ->with([
+                'product',
+                'bundleMembers.keys',
+                'bundleMembers.activations' => fn ($query) => $query->orderByDesc('last_seen_at'),
+                'keys',
+                'activations' => fn ($query) => $query->orderByDesc('last_seen_at'),
+            ])
             ->withCount('activations')
             ->withCount([
                 'keys as keys_total_count',
