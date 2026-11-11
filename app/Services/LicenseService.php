@@ -6,6 +6,7 @@ use App\Exceptions\LicenseException;
 use App\Models\License;
 use App\Models\LicenseActivation;
 use App\Models\LicenseEvent;
+use App\Models\LicenseKey;
 use App\Models\LicenseProduct;
 use Illuminate\Support\Facades\DB;
 
@@ -24,6 +25,8 @@ class LicenseService
         'inactive' => LicenseEvent::DENIED_INACTIVE,
         'expired' => LicenseEvent::DENIED_EXPIRED,
         'wrong_platform' => LicenseEvent::DENIED_WRONG_PLATFORM,
+        'key_used' => LicenseEvent::DENIED_KEY_USED,
+        'key_in_use' => LicenseEvent::DENIED_KEY_IN_USE,
     ];
 
     public function __construct(
@@ -41,7 +44,7 @@ class LicenseService
         $deviceId = $device['device_id'];
 
         try {
-            [$license, $activation, $isNew, $previousVersion] = $this->activateInTransaction($product, $key, $device, $deviceId);
+            [$license, $activation, $isNew, $previousVersion, $usedKey] = $this->activateInTransaction($product, $key, $device, $deviceId);
         } catch (LicenseException $e) {
             $this->logDenial($e, $product, $key, $device);
             throw $e;
@@ -59,7 +62,7 @@ class LicenseService
             $this->logAppUpdate($license, $activation, $previousVersion);
         }
 
-        return $this->response($license, $activation->device_id);
+        return $this->response($license, $activation->device_id, $usedKey);
     }
 
     /**
@@ -82,14 +85,26 @@ class LicenseService
     private function activateInTransaction(LicenseProduct $product, string $key, array $device, string $deviceId): array
     {
         return DB::transaction(function () use ($product, $key, $device, $deviceId) {
-            // Lock the license row so two devices activating at the same
-            // moment cannot both squeeze into the last free slot.
-            $license = $this->findUsable($product, $key, lock: true);
+            // Lock the license row (and the key) so two devices activating at
+            // the same moment cannot both squeeze into the last free slot or
+            // both take the same per-device key.
+            [$license, $keyRow] = $this->findUsable($product, $key, lock: true);
             $this->assertPlatform($license, $device['platform'] ?? null, required: true);
             $now = now();
 
             $activation = $license->activations()->where('device_id', $deviceId)->first();
             $isNew = $activation === null;
+
+            // "One key per device": a key works on exactly one device, and a
+            // released one never again.
+            if ($keyRow) {
+                if ($keyRow->isUsed()) {
+                    throw LicenseException::keyUsed();
+                }
+                if ($keyRow->isInUse() && $keyRow->device_id !== $deviceId) {
+                    throw LicenseException::keyInUse();
+                }
+            }
 
             $previousVersion = $activation?->app_version;
             if ($activation) {
@@ -105,25 +120,43 @@ class LicenseService
                 $activation = $license->activations()->create(array_merge(
                     $this->deviceDetails($device),
                     [
+                        'license_key_id' => $keyRow?->id,
                         'device_id' => $deviceId,
                         'activated_at' => $now,
                         'last_seen_at' => $now,
                     ]
                 ));
 
-                activity('License Manager')
-                    ->performedOn($license)
-                    ->withProperties([
+                if ($keyRow) {
+                    $keyRow->forceFill([
+                        'status' => LicenseKey::STATUS_IN_USE,
                         'device_id' => $deviceId,
                         'device_name' => $activation->device_name,
                         'platform' => $activation->platform,
-                    ])
+                        'activated_at' => $now,
+                    ])->save();
+                }
+
+                activity('License Manager')
+                    ->performedOn($license)
+                    ->withProperties(array_filter([
+                        'device_id' => $deviceId,
+                        'device_name' => $activation->device_name,
+                        'platform' => $activation->platform,
+                        'key' => $keyRow?->key,
+                    ]))
                     ->log('Device activated');
             }
 
             $license->forceFill(['last_activated_at' => $now])->saveQuietly();
 
-            return [$license, $activation, $isNew, $previousVersion];
+            // The key this device holds: its own per-device key (a device that
+            // is already on the license keeps its key and frees no other).
+            $usedKey = $activation->license_key_id
+                ? (LicenseKey::find($activation->license_key_id)?->key ?? $license->key)
+                : ($keyRow?->key ?? $license->key);
+
+            return [$license, $activation, $isNew, $previousVersion, $usedKey];
         });
     }
 
@@ -135,9 +168,13 @@ class LicenseService
         $product = $this->usableProduct($productCode);
 
         try {
-            $license = $this->findUsable($product, $key);
+            [$license, $keyRow] = $this->findUsable($product, $key);
             $activation = $license->activations()->where('device_id', $deviceId)->first();
             if (! $activation) {
+                throw $keyRow?->isUsed() ? LicenseException::keyUsed() : LicenseException::notActivated();
+            }
+            // A per-device key only refreshes the device it is bound to.
+            if ($keyRow && $activation->license_key_id && $activation->license_key_id !== $keyRow->id) {
                 throw LicenseException::notActivated();
             }
             // The platform sent now, else the one the device activated with.
@@ -157,7 +194,7 @@ class LicenseService
         $this->logAppUpdate($license, $activation, $previousVersion);
         $this->eventLogger->logRefresh($license, $activation);
 
-        return $this->response($license, $deviceId);
+        return $this->response($license, $deviceId, $keyRow?->key ?? $license->key);
     }
 
     /**
@@ -167,7 +204,7 @@ class LicenseService
     {
         // Freeing a slot always works, also for a product that is switched off.
         $product = LicenseProduct::findByCode($productCode);
-        $license = $product ? $this->findByKey($product, $key) : null;
+        [$license, $keyRow] = $product ? $this->resolveKey($product, $key) : [null, null];
         if (! $license) {
             return;
         }
@@ -176,8 +213,14 @@ class LicenseService
         if (! $activation) {
             return;
         }
+        // A per-device key only releases the device it is bound to.
+        if ($keyRow && $activation->license_key_id && $activation->license_key_id !== $keyRow->id) {
+            return;
+        }
 
         $activation->delete();
+        // Released: a per-device key never works again.
+        $activation->licenseKey?->markUsed();
 
         activity('License Manager')
             ->performedOn($license)
@@ -238,24 +281,50 @@ class LicenseService
 
     public function findByKey(LicenseProduct $product, string $key, bool $lock = false): ?License
     {
+        return $this->resolveKey($product, $key, $lock)[0];
+    }
+
+    /**
+     * [license, per-device key or null] for a key within the product: a
+     * "one key per device" license matches any of its keys, a shared one
+     * its own key.
+     *
+     * @return array{0: ?License, 1: ?LicenseKey}
+     */
+    public function resolveKey(LicenseProduct $product, string $key, bool $lock = false): array
+    {
         $normalized = License::normalizeKey($key);
         if ($normalized === '') {
-            return null;
+            return [null, null];
         }
 
-        return License::query()
+        $keyRow = LicenseKey::query()->where('key', $normalized)->first();
+        if ($keyRow) {
+            $license = License::query()->forProduct($product)->whereKey($keyRow->license_id)
+                ->when($lock, fn ($query) => $query->lockForUpdate())->first();
+            if ($license && $license->isPerDevice()) {
+                return [$license, $lock ? LicenseKey::query()->lockForUpdate()->find($keyRow->id) : $keyRow];
+            }
+        }
+
+        $license = License::query()
             ->forProduct($product)
             ->where('key', $normalized)
             ->when($lock, fn ($query) => $query->lockForUpdate())
             ->first();
+
+        return [$license, null];
     }
 
     /**
      * Find the license and run the checks shared by activate and refresh.
      */
-    private function findUsable(LicenseProduct $product, string $key, bool $lock = false): License
+    /**
+     * @return array{0: License, 1: ?LicenseKey}
+     */
+    private function findUsable(LicenseProduct $product, string $key, bool $lock = false): array
     {
-        $license = $this->findByKey($product, $key, $lock);
+        [$license, $keyRow] = $this->resolveKey($product, $key, $lock);
 
         if (! $license) {
             throw LicenseException::invalidKey();
@@ -268,7 +337,7 @@ class LicenseService
             throw LicenseException::expired();
         }
 
-        return $license;
+        return [$license, $keyRow];
     }
 
     /**
@@ -305,13 +374,19 @@ class LicenseService
         ], fn ($value) => $value !== null && $value !== '');
     }
 
-    private function response(License $license, string $deviceId): array
+    /**
+     * $key: the key the device holds (its per-device key, or the license's
+     * shared key); it goes into the signed token as well.
+     */
+    private function response(License $license, string $deviceId, ?string $key = null): array
     {
+        $key ??= $license->key;
+
         return [
-            'token' => $this->tokenService->issue($license, $deviceId),
+            'token' => $this->tokenService->issue($license, $deviceId, null, $key),
             'license' => [
                 'product' => $license->product?->code,
-                'key' => $license->key,
+                'key' => $key,
                 'plan' => $license->plan,
                 'platform' => $license->platform,
                 'type' => $license->type,

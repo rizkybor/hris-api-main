@@ -68,6 +68,21 @@ class LicenseException extends RuntimeException
         return new self('invalid_request', 'The platform must be macOS or iPadOS.', 422);
     }
 
+    /**
+     * "One key per device": this key was used on a device that has since
+     * been released, so it can never be activated again.
+     */
+    public static function keyUsed(): self
+    {
+        return new self('key_used', 'This license key has already been used and cannot be activated again.', 403);
+    }
+
+    /** "One key per device": the key is activated on another device. */
+    public static function keyInUse(): self
+    {
+        return new self('key_in_use', 'This license key is already activated on another device.', 409);
+    }
+
     public static function notActivated(): self
     {
         return new self('not_activated', 'This device is not activated for this license key.', 404);

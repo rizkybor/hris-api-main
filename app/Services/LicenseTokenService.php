@@ -21,12 +21,16 @@ class LicenseTokenService
     /**
      * Build the signed token for one device of a license.
      */
-    public function issue(License $license, string $deviceId, ?int $issuedAt = null): string
+    /**
+     * $key: the key the device holds (a per-device key, or the license's
+     * shared key when null).
+     */
+    public function issue(License $license, string $deviceId, ?int $issuedAt = null, ?string $key = null): string
     {
-        return $this->sign($this->payload($license, $deviceId, $issuedAt ?? time()));
+        return $this->sign($this->payload($license, $deviceId, $issuedAt ?? time(), $key));
     }
 
-    public function payload(License $license, string $deviceId, int $issuedAt): array
+    public function payload(License $license, string $deviceId, int $issuedAt, ?string $key = null): array
     {
         $refreshAfterDays = (int) config('licensing.license_refresh_after_days', 7);
         $offlineDays = (int) config('licensing.license_offline_days', 30);
@@ -41,7 +45,7 @@ class LicenseTokenService
             'v' => self::VERSION,
             'product' => $license->product?->code,
             'lid' => (int) $license->id,
-            'key' => $license->key,
+            'key' => $key ?? $license->key,
             'plan' => $license->plan,
             'platform' => $license->platform,
             'type' => $license->type,

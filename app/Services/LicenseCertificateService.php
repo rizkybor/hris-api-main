@@ -135,6 +135,14 @@ class LicenseCertificateService
             'keys' => $keys,
             'isBundle' => $isBundle,
             'platformsLabel' => $keys->map->platformLabel()->implode(' + '),
+            // "One key per device": every key of each license, for the Device
+            // Keys page (status as of the day the PDF is made).
+            'perDevice' => $license->isPerDevice(),
+            'deviceKeys' => $license->isPerDevice()
+                ? $keys->map(fn (License $member) => ['license' => $member, 'keys' => $member->keys()->get()])->values()
+                : collect(),
+            'keysPerLicense' => $license->isPerDevice() ? $license->keys()->count() : null,
+            'keysAsOf' => self::date(now()),
             'product' => $product,
             'accent' => self::ACCENT,
             'reference' => self::certificateReference($keys),
