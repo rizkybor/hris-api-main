@@ -16,6 +16,8 @@ class LicenseActivationResource extends JsonResource
             'id' => $this->id,
             'device_id' => $this->device_id,
             'device_name' => $this->device_name,
+            // One key per device: the key this device activated with.
+            'license_key_id' => $this->license_key_id,
             'platform' => $this->platform,
             'app_version' => $this->app_version,
             'activated_at' => $this->activated_at,

@@ -12,6 +12,7 @@ class LicenseActivation extends Model
 
     protected $fillable = [
         'license_id',
+        'license_key_id',
         'device_id',
         'device_name',
         'platform',
@@ -28,5 +29,11 @@ class LicenseActivation extends Model
     public function license(): BelongsTo
     {
         return $this->belongsTo(License::class, 'license_id');
+    }
+
+    /** The key this device activated with ("one key per device" licenses). */
+    public function licenseKey(): BelongsTo
+    {
+        return $this->belongsTo(LicenseKey::class, 'license_key_id');
     }
 }

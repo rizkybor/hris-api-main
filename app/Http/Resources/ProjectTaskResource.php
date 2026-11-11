@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Services\Cloudinary\CloudinaryUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Collection;
 
 class ProjectTaskResource extends JsonResource
 {
@@ -12,7 +13,7 @@ class ProjectTaskResource extends JsonResource
      * Participant employee-id sets keyed by project id, computed at most
      * once per project per request instead of re-querying per task row.
      *
-     * @var array<int, \Illuminate\Support\Collection<int, int>>
+     * @var array<int, Collection<int, int>>
      */
     private static array $participantIdsByProject = [];
 
@@ -63,7 +64,7 @@ class ProjectTaskResource extends JsonResource
         ];
     }
 
-    private function getParticipantIds($project): \Illuminate\Support\Collection
+    private function getParticipantIds($project): Collection
     {
         return self::$participantIdsByProject[$project->id] ??= $project->getParticipantEmployeeIds();
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Controllers\MaintenanceWorkController;
 use App\Models\MaintenancePeriod;
 use App\Services\MaintenanceService;
 use Illuminate\Http\Request;
@@ -56,7 +57,7 @@ class MaintenanceContractResource extends JsonResource
             $data['features'] = $this->features->sortByDesc('id')->values()->map(fn ($f) => [
                 ...self::feature($f),
                 'logs' => $f->relationLoaded('logs')
-                    ? $f->logs->sortByDesc('work_date')->values()->map(fn ($log) => \App\Http\Controllers\MaintenanceWorkController::logData($log))
+                    ? $f->logs->sortByDesc('work_date')->values()->map(fn ($log) => MaintenanceWorkController::logData($log))
                     : [],
             ]);
             $data['bank_entries'] = $this->bankEntries->sortByDesc('id')->values()->map(fn ($e) => [
