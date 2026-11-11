@@ -2977,3 +2977,16 @@ test('the license list shows a Mac + iPad bundle as one row, unless filtering on
     $pro = $this->getJson(lmLicenses().'/all/paginated?per_page=10&plan=professional')->assertOk()->json('data.data');
     expect(collect($pro)->pluck('id'))->toContain($ipad->id)->not->toContain($mac->id);
 });
+
+test('the detail of a Mac + iPad license carries the iPad keys with their devices', function () {
+    $mac = perDeviceLicense($this, 2, ['platform' => 'both']);
+    $ipad = License::with('keys')->where('bundle_id', $mac->bundle_id)->where('platform', 'ipad')->first();
+    $this->postJson('/api/occa/license/activate', ['key' => $ipad->keys[1]->key, 'device_id' => 'P', 'device_name' => 'Studio iPad', 'platform' => 'iPadOS'])->assertOk();
+
+    $sibling = $this->getJson(lmLicenses()."/{$mac->id}")->assertOk()->json('data.bundle.0');
+    expect($sibling['platform'])->toBe('ipad')
+        ->and($sibling['keys'])->toHaveCount(2)
+        ->and($sibling['keys'][1])->toMatchArray(['position' => 2, 'status' => 'in_use', 'device_name' => 'Studio iPad', 'license_id' => $ipad->id])
+        ->and($sibling['activations'])->toHaveCount(1)
+        ->and($sibling['activations'][0])->toMatchArray(['device_name' => 'Studio iPad', 'license_id' => $ipad->id]);
+});
