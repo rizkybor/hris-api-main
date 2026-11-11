@@ -2844,3 +2844,23 @@ test('a bundle key certificate covers only the platform of that key', function (
     expect($data['isBundle'])->toBeFalse()->and($data['license']->id)->toBe($ipad->id)
         ->and($data['reference'])->toBe('LIC-OCCA-IPAD-0001-K02');
 });
+
+test('activate and refresh tell the app the key mode and, per device, which key it is', function () {
+    $license = perDeviceLicense($this, 3);
+    $k2 = $license->keys->firstWhere('position', 2);
+
+    $this->postJson('/api/occa/license/activate', ['key' => $k2->key, 'device_id' => 'B', 'platform' => 'macOS'])->assertOk()
+        ->assertJsonPath('license.key', $k2->key)
+        ->assertJsonPath('license.key_mode', 'per_device')
+        ->assertJsonPath('license.key_position', 2)
+        ->assertJsonPath('license.keys_total', 3);
+    $this->postJson('/api/occa/license/refresh', ['key' => $k2->key, 'device_id' => 'B', 'platform' => 'macOS'])->assertOk()
+        ->assertJsonPath('license.key_mode', 'per_device')
+        ->assertJsonPath('license.key_position', 2);
+
+    $shared = License::find($this->postJson(lmLicenses(), occaIndividual(['key_mode' => 'shared']))->json('data.id'));
+    $this->postJson('/api/occa/license/activate', ['key' => $shared->key, 'device_id' => 'S', 'platform' => 'macOS'])->assertOk()
+        ->assertJsonPath('license.key_mode', 'shared')
+        ->assertJsonPath('license.key_position', null)
+        ->assertJsonPath('license.keys_total', null);
+});
