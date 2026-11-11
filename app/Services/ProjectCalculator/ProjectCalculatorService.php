@@ -28,21 +28,16 @@ class ProjectCalculatorService
      *
      * @param  string  $scenario  'feature' or 'build'
      * @param  array  $items  raw item rows from the request
-     * @param  float  $rateSellPerHour
      * @param  float|null  $pmOverheadPercent  build scenario only
      * @param  float|null  $infraSetupCost  build scenario only
      * @param  float  $productiveHoursPerMonth  team_size * productive_hours_per_person, for duration estimate
-     * @param  bool  $includePpn
-     * @param  float  $ppnPercent
      * @param  bool  $includePph  PPh is withheld by the client from the
-     *   payment, not added like PPN -- it reduces what the company actually
-     *   receives in cash, it does not change what the client is invoiced.
-     * @param  float  $pphPercent
+     *                            payment, not added like PPN -- it reduces what the company actually
+     *                            receives in cash, it does not change what the client is invoiced.
      * @param  int|null  $allocatedDevelopers  people actually working on this
-     *   project; null keeps the old whole-team assumption
+     *                                         project; null keeps the old whole-team assumption
      * @param  int  $teamSize  people behind $productiveHoursPerMonth, to get
-     *   the average productive hours per person
-     * @return array
+     *                         the average productive hours per person
      */
     public function calculate(
         string $scenario,
@@ -109,10 +104,10 @@ class ProjectCalculatorService
      * applies here.
      *
      * @param  array  $data  'server_type' (dedicated|shared), 'design_type'
-     *   (dedicated|template), 'estimated_hours', optional 'rate_developer'
-     *   (falls back to DEFAULT_RATE_DEVELOPER), optional 'developer_count'
-     *   (falls back to 1), optional 'margin_percent' (falls back to
-     *   DEFAULT_MARGIN_PERCENT)
+     *                       (dedicated|template), 'estimated_hours', optional 'rate_developer'
+     *                       (falls back to DEFAULT_RATE_DEVELOPER), optional 'developer_count'
+     *                       (falls back to 1), optional 'margin_percent' (falls back to
+     *                       DEFAULT_MARGIN_PERCENT)
      */
     public function calculateLandingPage(
         array $data,

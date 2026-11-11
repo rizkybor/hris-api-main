@@ -57,7 +57,7 @@ class ProjectController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Projects Retrieved Successfully', ProjectResource::collection($projects), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -65,7 +65,7 @@ class ProjectController extends Controller implements HasMiddleware
     {
         $request = $request->validate([
             'search' => 'nullable|string',
-            'status' => 'nullable|string|in:' . implode(',', array_column(ProjectStatus::cases(), 'value')),
+            'status' => 'nullable|string|in:'.implode(',', array_column(ProjectStatus::cases(), 'value')),
             'row_per_page' => 'required|integer',
         ]);
 
@@ -78,7 +78,7 @@ class ProjectController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Projects Retrieved Successfully', PaginateResource::make($projects, ProjectResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -110,7 +110,7 @@ class ProjectController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Project Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -157,7 +157,7 @@ class ProjectController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Project Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -171,7 +171,7 @@ class ProjectController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Project Statistics Retrieved Successfully', $statistics, 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 

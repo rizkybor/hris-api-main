@@ -95,7 +95,6 @@ class ClientRepository implements ClientRepositoryInterface
         ];
     }
 
-
     public function create(
         array $data
     ): Client {

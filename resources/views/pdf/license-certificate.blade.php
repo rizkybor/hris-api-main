@@ -246,7 +246,7 @@
     @endif
     <div class="content">
         <div class="label">
-            {{ $isBundle ? 'License Keys' : 'License Key' }}@if ($perDevice) &nbsp;&middot;&nbsp; {{ $isBundle ? 'key 1 of '.$keysPerLicense.' each' : 'key 1 of '.$keysPerLicense }}@endif
+            {{ $isBundle ? 'License Keys' : 'License Key' }}@if ($singleKey) &nbsp;&middot;&nbsp; key {{ $singleKey->position }} of {{ $keysPerLicense }}@elseif ($perDevice) &nbsp;&middot;&nbsp; {{ $isBundle ? 'key 1 of '.$keysPerLicense.' each' : 'key 1 of '.$keysPerLicense }}@endif
         </div>
         @if ($isBundle)
             {{-- One table per key (a spacer row would get a full text line's height in dompdf). --}}
@@ -268,8 +268,8 @@
             <table class="key-rows single last">
                 <tr>
                     <td class="k">
-                        <div class="mono emboss">{{ $license->key }}</div>
-                        <div class="mono ink">{{ $license->key }}</div>
+                        <div class="mono emboss">{{ $singleKey?->key ?? $license->key }}</div>
+                        <div class="mono ink">{{ $singleKey?->key ?? $license->key }}</div>
                     </td>
                 </tr>
             </table>
@@ -327,14 +327,20 @@
                 <table class="kv">
                     <tr><td class="k">Plan</td><td class="v">{{ $license->planLabel() }}@if ($showCategory) <span class="muted" style="font-weight: normal;">&middot; {{ $categoryLabel }}</span>@endif</td></tr>
                     <tr><td class="k">Platform</td><td class="v normal">{{ $platformsLabel }}@if ($isBundle && ! $perDevice) <span class="muted">&middot; one key each</span>@endif</td></tr>
-                    @if ($perDevice)
+                    @if ($singleKey)
+                        <tr><td class="k">Key</td><td class="v normal">Key {{ $singleKey->position }} of {{ $keysPerLicense }} &middot; for one device</td></tr>
+                    @elseif ($perDevice)
                         <tr><td class="k">Keys</td><td class="v normal">One key per device &middot; {{ $keysPerLicense }}{{ $isBundle ? ' per platform' : '' }} <span class="muted">(Device Keys page)</span></td></tr>
                     @endif
                     <tr><td class="k">Type</td><td class="v normal">{{ $license->isLifetime() ? 'Lifetime' : 'Term' }}</td></tr>
                     <tr><td class="k">Start</td><td class="v normal">{{ $startsOn }}</td></tr>
                     <tr><td class="k">End</td><td class="v normal">{{ $endsOn ?? 'Lifetime · never expires' }}</td></tr>
                     <tr><td class="k">Duration</td><td class="v normal">{{ $durationLabel }}</td></tr>
+                    @if ($singleKey)
+                        <tr><td class="k">Devices</td><td class="v normal">1 device (this key)</td></tr>
+                    @else
                     <tr><td class="k">Devices</td><td class="v normal">Up to {{ $license->max_devices }} {{ \Illuminate\Support\Str::plural('device', $license->max_devices) }} at a time{{ $isBundle ? ' per key' : '' }}</td></tr>
+                    @endif
                     <tr><td class="k">Status</td><td class="v">{{ $statusLabel }}</td></tr>
                 </table>
             </div>
@@ -372,7 +378,10 @@
         @else
             <li>This license is personal to the licensee named above and is not transferable.</li>
         @endif
-        @if ($perDevice)
+        @if ($singleKey)
+            <li>This key works on one device only. Once its device is released, the key cannot be used again.</li>
+            <li>Keep the key private; do not publish or share it.</li>
+        @elseif ($perDevice)
             <li>Each key works on one device only. Once its device is released, the key cannot be used again.</li>
             <li>Keep the keys private; do not publish or share them.</li>
         @elseif ($isBundle)
@@ -393,7 +402,7 @@
 @endif
 
 {{-- ======================= Device Keys (one key per device) ======================= --}}
-@if ($perDevice)
+@if ($perDevice && ! $singleKey)
     <div class="appendix">
         <div class="eyebrow">Device Keys</div>
         <h2 class="title serif">Your license keys</h2>
@@ -449,8 +458,12 @@
                 <div class="line">
                     Licensee: <strong>{{ $license->licensee_name }}</strong>
                     &nbsp;&middot;&nbsp; {{ $isBundle ? 'License keys' : 'License key' }}:
+                    @if ($singleKey)
+                        <strong class="mono">{{ $singleKey->key }}</strong> (key {{ $singleKey->position }} of {{ $keysPerLicense }})
+                    @else
                     @foreach ($keys as $key)<strong class="mono">{{ $key->key }}</strong>@if ($isBundle) ({{ $key->platformLabel() }})@endif{{ $loop->last ? '' : ', ' }}@endforeach
                     @if ($perDevice) and the other keys on the Device Keys page @endif
+                    @endif
                     &nbsp;&middot;&nbsp; Terms version: <strong>{{ $termsVersion }}</strong>
                     &nbsp;&middot;&nbsp; Issued: <strong>{{ $issuedOn }}</strong>
                 </div>

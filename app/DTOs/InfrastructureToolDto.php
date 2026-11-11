@@ -9,13 +9,12 @@ class InfrastructureToolDto
     public function __construct(
         public readonly string $tech_stack_component,
         public readonly string $vendor,
-        public readonly ?float $monthly_fee = null,
-        public readonly ?float $annual_fee = null,
+        public readonly ?float $monthly_fee,
+        public readonly ?float $annual_fee,
         public readonly ?string $expired_date,
         public readonly string $status,
         public readonly ?string $notes = null,
-    )
-    {}
+    ) {}
 
     public function toArray(): array
     {

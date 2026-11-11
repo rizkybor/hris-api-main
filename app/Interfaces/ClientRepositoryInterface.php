@@ -35,5 +35,4 @@ interface ClientRepositoryInterface
     );
 
     public function getStatistic(): array;
-
 }

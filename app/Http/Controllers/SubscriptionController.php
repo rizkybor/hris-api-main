@@ -10,6 +10,7 @@ use App\Models\BankAccount;
 use App\Models\Invoice;
 use App\Models\Subscription;
 use App\Services\DocumentNumberService;
+use App\Services\SubscriptionInsightsService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -68,7 +69,7 @@ class SubscriptionController extends Controller implements HasMiddleware
     }
 
     /** Recap above the Subscriptions list (see SubscriptionInsightsService). */
-    public function summary(\App\Services\SubscriptionInsightsService $insights)
+    public function summary(SubscriptionInsightsService $insights)
     {
         return ResponseHelper::jsonResponse(true, 'Subscription Summary Retrieved Successfully', $insights->summary(), 200);
     }
@@ -259,6 +260,7 @@ class SubscriptionController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(false, 'Subscription Not Found', null, 404);
         } catch (\Throwable $e) {
             $status = $e->getCode() === 422 ? 422 : 500;
+
             return ResponseHelper::jsonResponse(false, $e->getMessage(), null, $status);
         }
     }

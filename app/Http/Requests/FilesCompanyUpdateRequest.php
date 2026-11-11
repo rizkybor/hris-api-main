@@ -19,7 +19,7 @@ class FilesCompanyUpdateRequest extends FormRequest
         return [
             'document_path' => ['sometimes', 'file', 'mimes:pdf,doc,docx,xlsx,png,jpg,jpeg', 'max:10240'],
             'document_name' => ['sometimes', 'string', 'max:255'],
-            'description'   => ['nullable', 'string'],
+            'description' => ['nullable', 'string'],
         ];
     }
 
@@ -31,7 +31,7 @@ class FilesCompanyUpdateRequest extends FormRequest
         return [
             'document_path' => 'File Dokumen',
             'document_name' => 'Nama Dokumen',
-            'description'   => 'Deskripsi',
+            'description' => 'Deskripsi',
         ];
     }
 }

@@ -16,9 +16,7 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 
 class ProjectCashTransactionController extends Controller implements HasMiddleware
 {
-    public function __construct(private CompanyCashLedgerSyncService $companyCashSync)
-    {
-    }
+    public function __construct(private CompanyCashLedgerSyncService $companyCashSync) {}
 
     public static function middleware()
     {

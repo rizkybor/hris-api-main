@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -10,7 +11,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Greeting extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -60,7 +61,7 @@ class Greeting extends Model
      * Matches entries for the given date: recurring entries by month+day
      * (any year), one-time entries by the exact date.
      */
-    public function scopeForDate($query, \Carbon\Carbon $date)
+    public function scopeForDate($query, Carbon $date)
     {
         return $query->where(function ($q) use ($date) {
             $q->where(function ($recurring) use ($date) {

@@ -52,7 +52,7 @@ class ClientAttachmentController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Client Attachment Retrieved Successfully', ClientAttachmentResource::collection($accounts), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -71,7 +71,7 @@ class ClientAttachmentController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Client Attachment Retrieved Successfully', PaginateResource::make($clients, ClientAttachmentResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -121,13 +121,12 @@ class ClientAttachmentController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(
                 false,
-                'Internal Server Error: ' . $e->getMessage(),
+                'Internal Server Error: '.$e->getMessage(),
                 null,
                 500
             );
         }
     }
-
 
     /**
      * Helper untuk format ukuran file
@@ -142,9 +141,8 @@ class ClientAttachmentController extends Controller implements HasMiddleware
 
         $bytes /= (1 << (10 * $pow));
 
-        return round($bytes, $precision) . ' ' . $units[$pow];
+        return round($bytes, $precision).' '.$units[$pow];
     }
-
 
     /**
      * Display the specified resource.
@@ -158,7 +156,7 @@ class ClientAttachmentController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Client Attachment Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -207,11 +205,9 @@ class ClientAttachmentController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Client Attachment Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
-
-
 
     /**
      * Remove the specified resource from storage.
@@ -228,7 +224,7 @@ class ClientAttachmentController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Client Attachment Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

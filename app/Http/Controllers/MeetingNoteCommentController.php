@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -148,7 +149,7 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, EmployeeProfile>  $mentionedEmployees
+     * @param  Collection<int, EmployeeProfile>  $mentionedEmployees
      */
     private function notifyMentionedEmployees(MeetingNoteComment $comment, $mentionedEmployees): void
     {
@@ -163,7 +164,7 @@ class MeetingNoteCommentController extends Controller implements HasMiddleware
 
     /**
      * @param  array<int>  $mentionedIds
-     * @param  \Illuminate\Support\Collection<int, EmployeeProfile>  $mentionedEmployees
+     * @param  Collection<int, EmployeeProfile>  $mentionedEmployees
      */
     private function logCommentActivity(MeetingNote $note, MeetingNoteComment $comment, User $user, array $mentionedIds, $mentionedEmployees): void
     {

@@ -47,7 +47,7 @@ class FixedCostController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Fixed Costs Retrieved Successfully', FixedCostResource::collection($costs), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -65,7 +65,7 @@ class FixedCostController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(
                 false,
-                'Internal Server Error: ' . $e->getMessage(),
+                'Internal Server Error: '.$e->getMessage(),
                 null,
                 500
             );
@@ -87,7 +87,7 @@ class FixedCostController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Fixed Costs Retrieved Successfully', PaginateResource::make($costs, FixedCostResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -119,7 +119,7 @@ class FixedCostController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Fixed Cost Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -153,7 +153,7 @@ class FixedCostController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Fixed Cost Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

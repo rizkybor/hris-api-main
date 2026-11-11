@@ -33,8 +33,8 @@ class SubscriptionReportExport implements FromCollection, ShouldAutoSize, WithEv
 
     /**
      * @var array<int, array{start:int,end:int}> spreadsheet row ranges (1
-     * header row + 1-indexed data rows) for each subscription's group,
-     * built while the rows are produced so registerEvents() can merge them.
+     *                                           header row + 1-indexed data rows) for each subscription's group,
+     *                                           built while the rows are produced so registerEvents() can merge them.
      */
     private array $groupRanges = [];
 
