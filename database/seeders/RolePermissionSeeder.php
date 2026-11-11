@@ -152,7 +152,9 @@ class RolePermissionSeeder extends Seeder
                 ]))->merge(Permission::whereIn('name', $superAdminOnlyWidgets)->get())
             );
 
-            $manager->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly, $managerScopeExcludedWidgets)));
+            // General > My Payslips is off by default for every role; grant it per role
+            // in Roles & Permissions when wanted.
+            $manager->syncPermissions($this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly, $managerScopeExcludedWidgets, ['payslip-view'])));
 
             $hr->syncPermissions(
                 $this->permissionsByPrefixes([
@@ -286,7 +288,6 @@ class RolePermissionSeeder extends Seeder
                     'profile-view',
                     'employee-list',
                     'team-view',
-                    'payslip-view',
                     'attendance-my-attendances',
                     'attendance-check-in',
                     'attendance-check-out',
@@ -335,7 +336,6 @@ class RolePermissionSeeder extends Seeder
                     'profile-view',
                     'employee-menu',
                     'employee-list',
-                    'payslip-view',
                     'attendance-menu',
                     'attendance-list',
                     // Correct staff attendance records (with Manager and

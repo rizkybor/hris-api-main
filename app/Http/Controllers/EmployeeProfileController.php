@@ -12,7 +12,9 @@ use App\Http\Resources\ProjectResource;
 use App\Http\Resources\TeamMemberResource;
 use App\Http\Resources\TeamResource;
 use App\Interfaces\EmployeeProfileRepositoryInterface;
+use App\Services\Cloudinary\CloudinaryUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -269,6 +271,7 @@ class EmployeeProfileController extends Controller implements HasMiddleware
         // Portrait badge size (54mm x 85.6mm) converted to points (1mm = 2.83465pt).
         $pdf = Pdf::loadView('pdf.id-card', [
             'employee' => $employee,
+            'photo' => $this->idCardPhoto($employee->user?->profile_photo),
         ])->setPaper([0, 0, 153.07, 242.69]);
 
         return $pdf->stream('ID-Card-'.$employee->code.'.pdf');
@@ -325,4 +328,32 @@ class EmployeeProfileController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
+
+    /**
+     * The profile photo as a data URI for the ID card, or null. dompdf has
+     * remote loading switched off, so the image is fetched here: a small
+     * portrait crop centred on the face, from Cloudinary. Any failure just
+     * leaves the photo off the card.
+     */
+    private function idCardPhoto(?string $publicId): ?string
+    {
+        $url = CloudinaryUrl::image($publicId);
+        if (! $url) {
+            return null;
+        }
+
+        $url = str_replace('/image/upload/', '/image/upload/c_fill,g_face,w_320,h_384,q_auto,f_jpg/', $url);
+
+        try {
+            $response = Http::timeout(6)->get($url);
+            if (! $response->successful() || ! str_starts_with((string) $response->header('Content-Type'), 'image/')) {
+                return null;
+            }
+
+            return 'data:image/jpeg;base64,'.base64_encode($response->body());
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
 }

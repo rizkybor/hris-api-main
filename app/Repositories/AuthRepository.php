@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Interfaces\AuthRepositoryInterface;
+use App\Models\EmergencyContact;
 use App\Models\User;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
@@ -93,7 +94,12 @@ class AuthRepository implements AuthRepositoryInterface
             $user = Auth::user();
 
             if (isset($data['name'])) {
-                $user->name = $data['name'];
+                // My Profile edits the full name, titles/degrees included.
+                $user->full_name = $data['name'];
+            }
+
+            if (isset($data['show_degree'])) {
+                $user->show_degree = $data['show_degree'];
             }
 
             if (! empty($data['password'])) {
@@ -118,6 +124,18 @@ class AuthRepository implements AuthRepositoryInterface
             // Email is intentionally not updatable
             $user->save();
 
+            // Self-service employee details (only the fields that were sent).
+            $employee = $user->employeeProfile;
+            if ($employee) {
+                if (! empty($data['employee'])) {
+                    $employee->fill($data['employee'])->save();
+                }
+
+                if (is_array($data['emergency_contacts'] ?? null)) {
+                    $this->syncOwnEmergencyContacts($employee->id, $data['emergency_contacts']);
+                }
+            }
+
             DB::commit();
 
             /** @var User $freshUser */
@@ -129,5 +147,36 @@ class AuthRepository implements AuthRepositoryInterface
             DB::rollBack();
             throw new \Exception($e->getMessage(), $e->getCode() ?: 500);
         }
+    }
+
+    /**
+     * Replace an employee's emergency contacts with the submitted list.
+     * Ids are only honoured when they belong to this employee, so nobody can
+     * edit another employee's contact by sending its id; contacts missing
+     * from the list are deleted (an empty list removes them all).
+     */
+    private function syncOwnEmergencyContacts(int $employeeId, array $contacts): void
+    {
+        $own = EmergencyContact::where('employee_id', $employeeId)->get()->keyBy('id');
+        $keep = [];
+
+        foreach ($contacts as $contact) {
+            $attributes = [
+                'full_name' => $contact['full_name'],
+                'relationship' => $contact['relationship'],
+                'phone' => $contact['phone'],
+                'email' => $contact['email'] ?? null,
+            ];
+
+            $id = (int) ($contact['id'] ?? 0);
+            if ($id && $own->has($id)) {
+                $own[$id]->update($attributes);
+                $keep[] = $id;
+            } else {
+                $keep[] = EmergencyContact::create($attributes + ['employee_id' => $employeeId])->id;
+            }
+        }
+
+        EmergencyContact::where('employee_id', $employeeId)->whereNotIn('id', $keep)->delete();
     }
 }

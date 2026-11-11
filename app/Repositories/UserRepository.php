@@ -63,7 +63,12 @@ class UserRepository implements UserRepositoryInterface
             $user = $this->getById($id);
 
             $userDto = UserDto::fromArrayForUpdate($data, $user);
-            $user->update($userDto->toArray());
+            // The employee form sends the full name (titles/degrees
+            // included), so it is stored exactly as typed.
+            $attributes = $userDto->toArray();
+            $attributes['full_name'] = $attributes['name'];
+            unset($attributes['name']);
+            $user->update($attributes);
 
             if (isset($data['roles'])) {
                 $roles = collect($data['roles'])

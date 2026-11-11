@@ -23,12 +23,22 @@ return new class extends Migration
         // total_days needs to hold 0.5 for a half-day request -- Schema's
         // fluent ->change() needs doctrine/dbal, which isn't installed here,
         // so this alters the column directly instead.
-        DB::statement('ALTER TABLE leave_requests MODIFY total_days DECIMAL(4,1) NOT NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('leave_requests', fn (Blueprint $table) => $table->decimal('total_days', 4, 1)->change());
+        } else {
+            DB::statement('ALTER TABLE leave_requests MODIFY total_days DECIMAL(4,1) NOT NULL');
+        }
     }
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE leave_requests MODIFY total_days INT NOT NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('leave_requests', fn (Blueprint $table) => $table->integer('total_days')->change());
+        } else {
+            DB::statement('ALTER TABLE leave_requests MODIFY total_days INT NOT NULL');
+        }
 
         Schema::table('leave_requests', function (Blueprint $table) {
             $table->dropColumn(['is_half_day', 'attachment_original_name', 'attachment_path', 'attachment_mime_type']);

@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -15,7 +17,12 @@ return new class extends Migration
         // gets combined with the date/sequence -- client_code has no
         // value to store in that case. Raw SQL (not ->nullable()->change())
         // since doctrine/dbal isn't installed in this project.
-        DB::statement('ALTER TABLE payment_receipts MODIFY client_code VARCHAR(255) NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('payment_receipts', fn (Blueprint $table) => $table->string('client_code', 255)->nullable()->change());
+        } else {
+            DB::statement('ALTER TABLE payment_receipts MODIFY client_code VARCHAR(255) NULL');
+        }
     }
 
     /**
@@ -23,6 +30,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('ALTER TABLE payment_receipts MODIFY client_code VARCHAR(255) NOT NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('payment_receipts', fn (Blueprint $table) => $table->string('client_code', 255)->change());
+        } else {
+            DB::statement('ALTER TABLE payment_receipts MODIFY client_code VARCHAR(255) NOT NULL');
+        }
     }
 };

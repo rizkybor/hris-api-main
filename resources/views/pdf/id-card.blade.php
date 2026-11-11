@@ -41,43 +41,49 @@
             position: absolute; top: 0; left: 0; width: 153.07pt; height: 242.69pt;
         }
 
-        /* ============ FRONT ============ */
-        /* The name is pre-wrapped into (at most) 2 lines in PHP and each
-           line placed at a fixed position, rather than one auto-wrapping
-           block: dompdf both ignores line-height on this embedded font
-           (renders ~1.6x the requested value) and doesn't reliably clip
-           overflow past max-height, so a long name could silently wrap to
-           a 3rd line and collide with the rule/job-title below it. Fixed
-           per-line positions make that impossible regardless of length. */
+        /* ============ FRONT (v4.0) ============
+           Background is the design team's artwork (logo + white contact
+           strip from 196pt). On top: portrait photo (only when the user has
+           one), name,
+           job title, and the contact rows on the white strip. The web
+           preview (EmployeeProfile.vue) uses these same pt values.
+
+           The name is pre-wrapped into (at most) 2 lines in PHP and each
+           line placed at a fixed position: dompdf ignores line-height on
+           the embedded font and does not clip overflow reliably. */
+        .photo {
+            position: absolute; top: 62pt; left: 14pt; width: 56pt; height: 67pt;
+            border: 1.5pt solid #ffffff; border-radius: 6pt;
+        }
         .name-line {
             position: absolute; left: 14pt; right: 12pt;
             font-family: 'Anton', 'Helvetica', sans-serif;
             font-weight: bold;
             color: #ffffff;
-            font-size: 12pt;
+            font-size: 13pt;
             line-height: 1;
             white-space: nowrap;
             overflow: hidden;
         }
-        .name-line-1 { top: 90pt; }
-        .name-line-2 { top: 108pt; }
-        .rule {
-            position: absolute; top: 150pt; left: 14pt; width: 24pt; height: 2pt; background-color: #ffffff;
-        }
         .job-title {
-            position: absolute; top: 156pt; left: 14pt; right: 14pt;
-            color: #ffffff; font-size: 9pt; white-space: nowrap; overflow: hidden;
+            position: absolute; left: 14pt; right: 14pt;
+            color: #c9d3ee; font-size: 8pt; white-space: nowrap; overflow: hidden;
         }
-        .panel { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        .panel span { position: absolute; font-size: 5.5pt; color: #1a1a2e; text-align: left; }
-        .panel .label { left: 14pt; font-weight: bold; }
-        .panel .colon { left: 52pt; }
-        .panel .value { left: 58pt; right: 6pt; white-space: nowrap; overflow: hidden; }
+        .row { position: absolute; left: 14pt; right: 10pt; }
+        .row .label {
+            position: absolute; left: 0; width: 44pt;
+            font-size: 5pt; letter-spacing: 0.4pt; text-transform: uppercase; color: #667085;
+        }
+        .row .value {
+            position: absolute; left: 47pt; right: 0;
+            font-size: 6pt; color: #0f1b2d; white-space: nowrap; overflow: hidden;
+        }
+        .row .mono { font-family: 'Courier', monospace; font-weight: bold; font-size: 6.5pt; }
     </style>
 </head>
 <body>
-    <!-- FRONT -- design team's background artwork, with the employee's
-         name/title/id/contact overlaid at the positions from their example. -->
+    <!-- FRONT -- design team's background artwork with the employee's
+         photo, name, title and contact rows overlaid (HRIS+ v4.0 layout). -->
     <div class="side">
         <img class="bg" src="{{ public_path('images/idcard-front-bg.png') }}">
 
@@ -113,18 +119,25 @@
                 $nameLine2 = mb_substr($nameLine2, 0, $maxChars - 1).'…';
             }
         @endphp
-        <div class="name-line name-line-1">{{ $nameLine1 }}</div>
-        @if($nameLine2 !== '')
-            <div class="name-line name-line-2">{{ $nameLine2 }}</div>
+        @php
+            // Without a photo nothing is drawn in its place; the name block
+            // moves up into that space instead.
+            $nameTop = $photo ? 139 : 90;
+            $jobTop = $nameTop + ($nameLine2 !== '' ? 36 : 20);
+        @endphp
+        @if($photo)
+            <img class="photo" src="{{ $photo }}">
         @endif
-        <div class="rule"></div>
-        <div class="job-title">{{ \Illuminate\Support\Str::limit(ucwords($employee->jobInformation->job_title ?? '-'), 28) }}</div>
 
-        <div class="panel">
-            <span class="label" style="top: 207.8pt;">Employee Id</span><span class="colon" style="top: 207.8pt;">:</span><span class="value" style="top: 207.8pt;">{{ $employee->code }}</span>
-            <span class="label" style="top: 216.8pt;">Phone</span><span class="colon" style="top: 216.8pt;">:</span><span class="value" style="top: 216.8pt;">{{ \Illuminate\Support\Str::limit($employee->phone ?? '-', 24) }}</span>
-            <span class="label" style="top: 225.8pt;">Email</span><span class="colon" style="top: 225.8pt;">:</span><span class="value" style="top: 225.8pt;">{{ \Illuminate\Support\Str::limit($employee->user->email ?? '-', 26) }}</span>
-        </div>
+        <div class="name-line" style="top: {{ $nameTop }}pt;">{{ $nameLine1 }}</div>
+        @if($nameLine2 !== '')
+            <div class="name-line" style="top: {{ $nameTop + 16 }}pt;">{{ $nameLine2 }}</div>
+        @endif
+        <div class="job-title" style="top: {{ $jobTop }}pt;">{{ \Illuminate\Support\Str::limit(ucwords($employee->jobInformation->job_title ?? '-'), 32) }}</div>
+
+        <div class="row" style="top: 204pt;"><span class="label">Employee ID</span><span class="value mono">{{ $employee->code }}</span></div>
+        <div class="row" style="top: 216pt;"><span class="label">Phone</span><span class="value">{{ \Illuminate\Support\Str::limit($employee->phone ?? '-', 26) }}</span></div>
+        <div class="row" style="top: 228pt;"><span class="label">Email</span><span class="value">{{ \Illuminate\Support\Str::limit($employee->user->email ?? '-', 30) }}</span></div>
     </div>
 
     <!-- BACK -- the design team's own artwork, unchanged: no per-employee

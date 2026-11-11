@@ -21,8 +21,18 @@ return new class extends Migration
         // Raw SQL (rather than ->change(), which needs doctrine/dbal) so
         // existing rows keep their data instead of a destructive
         // drop-and-recreate.
-        DB::statement('ALTER TABLE sdm_resources MODIFY metrik VARCHAR(255) NULL');
-        DB::statement('ALTER TABLE sdm_resources MODIFY capacity_target VARCHAR(255) NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('sdm_resources', fn (Blueprint $table) => $table->string('metrik', 255)->nullable()->change());
+        } else {
+            DB::statement('ALTER TABLE sdm_resources MODIFY metrik VARCHAR(255) NULL');
+        }
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('sdm_resources', fn (Blueprint $table) => $table->string('capacity_target', 255)->nullable()->change());
+        } else {
+            DB::statement('ALTER TABLE sdm_resources MODIFY capacity_target VARCHAR(255) NULL');
+        }
     }
 
     public function down(): void
@@ -32,7 +42,17 @@ return new class extends Migration
             $table->dropColumn('productive_hours_per_month');
         });
 
-        DB::statement('ALTER TABLE sdm_resources MODIFY metrik VARCHAR(255) NOT NULL');
-        DB::statement('ALTER TABLE sdm_resources MODIFY capacity_target VARCHAR(255) NOT NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('sdm_resources', fn (Blueprint $table) => $table->string('metrik', 255)->change());
+        } else {
+            DB::statement('ALTER TABLE sdm_resources MODIFY metrik VARCHAR(255) NOT NULL');
+        }
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('sdm_resources', fn (Blueprint $table) => $table->string('capacity_target', 255)->change());
+        } else {
+            DB::statement('ALTER TABLE sdm_resources MODIFY capacity_target VARCHAR(255) NOT NULL');
+        }
     }
 };
