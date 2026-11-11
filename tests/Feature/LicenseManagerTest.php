@@ -2864,3 +2864,18 @@ test('activate and refresh tell the app the key mode and, per device, which key 
         ->assertJsonPath('license.key_position', null)
         ->assertJsonPath('license.keys_total', null);
 });
+
+test('recent events load on scroll with before_id, without repeats', function () {
+    Sanctum::actingAs($this->admin);
+    foreach (range(1, 5) as $i) {
+        $this->postJson(lmLicenses(), occaIndividual(['licensee_name' => "Person {$i}"]))->assertStatus(201);
+    }
+
+    $first = $this->getJson('/api/v1/license-manager/events/recent?limit=3')->assertOk()->json('data');
+    $next = $this->getJson('/api/v1/license-manager/events/recent?limit=3&before_id='.end($first)['id'])->assertOk()->json('data');
+    $ids = array_merge(array_column($first, 'id'), array_column($next, 'id'));
+
+    expect($first)->toHaveCount(3)->and($next)->toHaveCount(2)
+        ->and(array_unique($ids))->toHaveCount(5)
+        ->and($ids)->toBe(LicenseEvent::query()->orderByDesc('created_at')->orderByDesc('id')->pluck('id')->all());
+});
