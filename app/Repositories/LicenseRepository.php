@@ -374,10 +374,19 @@ class LicenseRepository implements LicenseRepositoryInterface
      * Latest events of every product (deleted licenses included), newest
      * first.
      */
-    public function recentEvents(int $limit): Collection
+    /**
+     * Newest first; $beforeId continues after that event (load on scroll),
+     * by (created_at, id), so new events never shift the next page.
+     */
+    public function recentEvents(int $limit, ?int $beforeId = null): Collection
     {
+        $before = $beforeId ? LicenseEvent::query()->find($beforeId, ['id', 'created_at']) : null;
+
         return LicenseEvent::query()
             ->with(['user:id,name', 'license' => fn ($query) => $query->withTrashed()->with('product')])
+            ->when($before, fn ($query) => $query->where(fn ($q) => $q
+                ->where('created_at', '<', $before->created_at)
+                ->orWhere(fn ($same) => $same->where('created_at', $before->created_at)->where('id', '<', $before->id))))
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->limit($limit)
