@@ -129,6 +129,7 @@ class AuthController extends Controller
         try {
             $user = $this->authRepository->updateProfile([
                 'name' => $request->input('name'),
+                'show_degree' => $request->has('show_degree') ? $request->boolean('show_degree') : null,
                 'password' => $request->input('password'),
                 'profile_photo' => $request->file('profile_photo'),
                 // Only the employee fields that were sent; absent keys stay

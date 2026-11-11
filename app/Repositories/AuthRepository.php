@@ -94,7 +94,12 @@ class AuthRepository implements AuthRepositoryInterface
             $user = Auth::user();
 
             if (isset($data['name'])) {
-                $user->name = $data['name'];
+                // My Profile edits the full name, titles/degrees included.
+                $user->full_name = $data['name'];
+            }
+
+            if (isset($data['show_degree'])) {
+                $user->show_degree = $data['show_degree'];
             }
 
             if (! empty($data['password'])) {

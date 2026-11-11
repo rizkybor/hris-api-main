@@ -10,15 +10,22 @@ use App\Models\DocumentSetting;
  * convention -- prefix titles before the name, degrees after a comma
  * ("Dr. Ir. Budi Santoso, S.Kom., M.M.") -- so with degrees off the
  * prefix titles and everything after the first comma are dropped.
+ * Names of HRIS users follow that person's own setting instead.
  */
 class SignatoryName
 {
-    private const PREFIX_TITLES = '(?:prof|dr|drs|dra|ir|drg)\.?';
-
     public static function format(?string $name): ?string
     {
         if ($name === null || trim($name) === '') {
             return $name;
+        }
+
+        // A name that belongs to an HRIS user follows that person's own
+        // "show degree" choice (My Profile); anyone else follows the
+        // document setting.
+        $user = PersonName::findUser($name);
+        if ($user) {
+            return PersonName::display($user['name'], $user['show_degree']);
         }
 
         if (self::showDegree()) {
@@ -30,10 +37,7 @@ class SignatoryName
 
     public static function withoutDegree(string $name): string
     {
-        $bare = trim(explode(',', $name)[0]);
-        $bare = preg_replace('/^(?:'.self::PREFIX_TITLES.'\s+)+/i', '', $bare);
-
-        return trim(preg_replace('/\s+/', ' ', $bare)) ?: trim($name);
+        return PersonName::bare($name) ?: trim($name);
     }
 
     private static function showDegree(): bool

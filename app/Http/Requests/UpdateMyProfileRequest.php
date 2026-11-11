@@ -28,7 +28,10 @@ class UpdateMyProfileRequest extends FormRequest
     {
         return [
             // Account
+            // The full name as typed, titles/degrees included.
             'name' => ['required', 'string', 'max:255'],
+            // Show those titles/degrees wherever the name appears in HRIS.
+            'show_degree' => ['sometimes', 'boolean'],
             'password' => ['nullable', 'confirmed', PasswordRule::defaults()],
             'profile_photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
 
