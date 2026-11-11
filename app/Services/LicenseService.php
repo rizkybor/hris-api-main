@@ -381,6 +381,7 @@ class LicenseService
     private function response(License $license, string $deviceId, ?string $key = null): array
     {
         $key ??= $license->key;
+        $perDevice = $license->isPerDevice();
 
         return [
             'token' => $this->tokenService->issue($license, $deviceId, null, $key),
@@ -394,6 +395,13 @@ class LicenseService
                 'expires_at' => LicenseTokenService::isoUtc($license),
                 'max_devices' => $license->max_devices,
                 'devices_used' => $license->activations()->count(),
+                // shared: one key for every device; per_device: one key each,
+                // and a released key can never be used again (the app warns
+                // before releasing).
+                'key_mode' => $license->key_mode ?? License::KEY_MODE_SHARED,
+                // per_device only: this key's number and how many there are.
+                'key_position' => $perDevice ? $license->keys()->where('key', $key)->value('position') : null,
+                'keys_total' => $perDevice ? $license->keys()->count() : null,
             ],
         ];
     }

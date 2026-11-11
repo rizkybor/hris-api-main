@@ -174,6 +174,25 @@ platform has no numbers left, neither is created.
   looks within the product of the route: a key of another product answers
   `invalid_key`.
 
+### One key per device (`key_mode`)
+
+Chosen per license at creation (`key_mode`, fixed afterwards):
+
+- `shared`: one key (`licenses.key`) used by up to `max_devices` devices.
+- `per_device`: the license holds `max_devices` unique keys
+  (`license_keys`, position 1 = `licenses.key`; the others have the same
+  head and 4-digit number with fresh random groups). Each key binds to the
+  first device that activates it (`in_use`). Once that device is released
+  (from the app or by the admin) the key is `used` and never works again
+  (`key_used`); another device presenting a bound key gets `key_in_use`.
+  Raising Max devices adds keys; lowering it removes the highest available
+  keys, and below the number of keys in use or used is a 422.
+
+`2026_11_11_000001` turned every existing license into `per_device`: its
+key stays key 1, bound to the first device already using it; keys are added
+up to Max devices. Devices that already shared the old key keep refreshing,
+but activating a new device needs one of the new keys.
+
 ## Public endpoints
 
 No authentication. Rate limit: 20 requests per minute per IP
@@ -228,10 +247,18 @@ Response `200`:
     "licensee": "Jane Orienteer",
     "expires_at": "2027-05-09T00:00:00Z",
     "max_devices": 2,
-    "devices_used": 1
+    "devices_used": 1,
+    "key_mode": "per_device",
+    "key_position": 1,
+    "keys_total": 2
   }
 }
 ```
+
+`key` is the key this device uses. `key_mode` is `shared` or `per_device`;
+for `per_device`, `key_position` / `keys_total` say which key this is
+("key 1 of 2"); both are `null` for `shared`. With `per_device` the app
+should warn before releasing: the released key can never be used again.
 
 ### refresh
 
@@ -276,7 +303,8 @@ Lifetime key of an older major, `wrong_platform` for an iPad key). The
 ### deactivate
 
 `{ "key": "...", "device_id": "..." }`. Removes this device's activation
-(frees its slot). Always `200 {"ok": true}`, also for an unknown product,
+(frees its slot). For a `per_device` license only the key bound to the
+device releases it, and that key becomes `used` (dead). Always `200 {"ok": true}`, also for an unknown product,
 key or device, and also when the product is switched off.
 
 ### Error codes
@@ -291,6 +319,8 @@ key or device, and also when the product is switched off.
 | 403  | `expired`          | `expires_at` is in the past                                |
 | 403  | `wrong_platform`   | A Mac key on an iPad or an iPad key on a Mac               |
 | 409  | `device_limit`     | New device while `devices_used >= max_devices`             |
+| 403  | `key_used`         | `per_device`: the key's device was released; the key is dead |
+| 409  | `key_in_use`       | `per_device`: the key is activated on another device       |
 | 404  | `not_activated`    | `refresh` for a device that has no activation              |
 | 500  | `server_error`     | Unexpected failure (e.g. signing key missing)              |
 
@@ -534,6 +564,15 @@ fixed positioning, images embedded as base64):
   hris.jcdigital.co.id") and "Page X of Y". Dates like "10 November 2026"
   (Asia/Jakarta). No QR code (no QR library in composer.json).
 
+For a `per_device` license the key box says "key 1 of N" and a **Device
+Keys** page lists every key with its status. `?key_id=` (download) or
+`key_id` (`…/certificate/email`, `…/certificate/share-link`) makes the
+certificate of **one key** instead: only that key ("key n of N", one
+device), no Device Keys page, reference `LIC-OCCA-MAC-0001-K03`. The key
+may belong to the license or its bundle; a used key is a 422, a key of
+another license a 404. The share link signs the key into its URL; events
+carry `key` and `key_position` in `meta`.
+
 The terms version on page 1 and in the acknowledgement is the license's
 snapshot (`licenses.terms_version`); the appendix text is the product's
 current terms.
@@ -563,7 +602,7 @@ A logging failure is reported and swallowed, never breaking the request.
 | `refreshed`                 | Refresh; at most once per device per 24 h (`last_seen_at` always updates) |
 | `app_updated`               | A device reported another app version on activate / refresh (`meta`: from, to) |
 | `device_released`           | Deactivate from the app                                           |
-| `denied_device_limit` / `denied_inactive` / `denied_expired` / `denied_wrong_platform` | Denied activate / refresh on an existing key of the product |
+| `denied_device_limit` / `denied_inactive` / `denied_expired` / `denied_wrong_platform` / `denied_key_used` / `denied_key_in_use` | Denied activate / refresh on an existing key of the product |
 
 Admin events carry the admin's `user_id` and IP; app events carry the device
 and IP. `GET …/licenses/{id}/events`: paginated (`per_page`, default 15),
