@@ -377,7 +377,7 @@ class License extends Model
                 $groups[] = $group;
             }
             $key = $head.'-'.implode('-', $groups).'-'.$tail;
-        } while (self::withTrashed()->where('key', $key)->exists() || LicenseKey::where('key', $key)->exists());
+        } while (self::withTrashed()->where('key', $key)->exists() || LicenseKey::where('key', $key)->exists() || LicenseRetiredKey::where('key', $key)->exists());
 
         return $key;
     }
@@ -398,7 +398,7 @@ class License extends Model
                 $groups[] = $group;
             }
             $key = $head.'-'.implode('-', $groups).'-'.$tail;
-        } while (self::withTrashed()->where('key', $key)->exists() || LicenseKey::where('key', $key)->exists());
+        } while (self::withTrashed()->where('key', $key)->exists() || LicenseKey::where('key', $key)->exists() || LicenseRetiredKey::where('key', $key)->exists());
 
         return $key;
     }

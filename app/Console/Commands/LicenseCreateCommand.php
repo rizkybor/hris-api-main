@@ -11,6 +11,7 @@ use App\Support\IndonesianRegions;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class LicenseCreateCommand extends Command
 {
@@ -160,18 +161,29 @@ class LicenseCreateCommand extends Command
             default => now()->addMonthsNoOverflow((int) $input['months']),
         };
 
-        $license = $repository->create($product, array_merge(
-            array_diff_key($input, array_flip(['months', 'days', 'max_devices'])),
-            [
-                'type' => $type,
-                'duration' => $lifetime ? null : LicenseDto::DURATION_CUSTOM,
-                'expires_at' => $expiresAt?->toDateTimeString(),
-                'max_devices' => (int) $input['max_devices'],
-                'notes' => $this->option('notes'),
-                'is_active' => true,
-                'source' => 'cli',
-            ]
-        ));
+        try {
+            $license = $repository->create($product, array_merge(
+                array_diff_key($input, array_flip(['months', 'days', 'max_devices'])),
+                [
+                    'type' => $type,
+                    'duration' => $lifetime ? null : LicenseDto::DURATION_CUSTOM,
+                    'expires_at' => $expiresAt?->toDateTimeString(),
+                    'max_devices' => (int) $input['max_devices'],
+                    'notes' => $this->option('notes'),
+                    'is_active' => true,
+                    'source' => 'cli',
+                ]
+            ));
+        } catch (ValidationException $e) {
+            // E.g. the email already has a license of this platform.
+            foreach ($e->errors() as $messages) {
+                foreach ($messages as $message) {
+                    $this->error($message);
+                }
+            }
+
+            return self::FAILURE;
+        }
 
         $this->info($product->name.' license created.');
         $keys = collect([$license])->merge($license->bundleSiblings());
