@@ -2954,3 +2954,26 @@ test('recent events load on scroll with before_id, without repeats', function ()
         ->and(array_unique($ids))->toHaveCount(5)
         ->and($ids)->toBe(LicenseEvent::query()->orderByDesc('created_at')->orderByDesc('id')->pluck('id')->all());
 });
+
+test('the license list shows a Mac + iPad bundle as one row, unless filtering on a platform', function () {
+    $mac = perDeviceLicense($this, 2, ['platform' => 'both', 'licensee_name' => 'Bundle Club']);
+    $ipad = License::where('bundle_id', $mac->bundle_id)->where('platform', 'ipad')->first();
+    $this->postJson(lmLicenses(), occaIndividual(['licensee_name' => 'Solo']))->assertStatus(201);
+    $this->postJson('/api/occa/license/activate', ['key' => $ipad->keys()->first()->key, 'device_id' => 'P', 'platform' => 'iPadOS'])->assertOk();
+
+    $rows = $this->getJson(lmLicenses().'/all/paginated?per_page=10')->assertOk()->json('data.data');
+    $bundle = collect($rows)->firstWhere('id', $mac->id);
+    expect($rows)->toHaveCount(2)
+        ->and(collect($rows)->pluck('id'))->not->toContain($ipad->id)
+        ->and($bundle['bundle'][0])->toMatchArray(['id' => $ipad->id, 'platform' => 'ipad', 'devices_used' => 1, 'max_devices' => 2])
+        ->and($bundle['bundle'][0]['keys_summary'])->toMatchArray(['total' => 2, 'in_use' => 1]);
+
+    // Filtering on iPad shows the iPad license itself.
+    $ipadRows = $this->getJson(lmLicenses().'/all/paginated?per_page=10&platform=ipad')->assertOk()->json('data.data');
+    expect(collect($ipadRows)->pluck('id')->all())->toBe([$ipad->id]);
+
+    // A plan filter only the iPad license matches: its own row.
+    $this->putJson(lmLicenses()."/{$mac->id}", ['plan' => 'lifetime'])->assertOk();
+    $pro = $this->getJson(lmLicenses().'/all/paginated?per_page=10&plan=professional')->assertOk()->json('data.data');
+    expect(collect($pro)->pluck('id'))->toContain($ipad->id)->not->toContain($mac->id);
+});

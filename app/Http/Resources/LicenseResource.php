@@ -56,6 +56,12 @@ class LicenseResource extends JsonResource
                 'platform_label' => $sibling->platformLabel(),
                 'plan' => $sibling->plan,
                 'is_active' => $sibling->is_active,
+                // For the list, where a bundle is one row.
+                'plan_label' => $sibling->planLabel(),
+                'key_mode' => $sibling->key_mode,
+                'max_devices' => $sibling->max_devices,
+                'devices_used' => $sibling->activations_count ?? $sibling->activations()->count(),
+                'keys_summary' => $sibling->isPerDevice() ? self::summaryOf($sibling) : null,
                 // One key per device: the sibling's keys (detail only).
                 'keys' => $sibling->isPerDevice() && $sibling->relationLoaded('keys')
                     ? $sibling->keys->map(fn ($key) => ['id' => $key->id, 'position' => $key->position, 'key' => $key->key, 'status' => $key->status])->values()
@@ -124,14 +130,19 @@ class LicenseResource extends JsonResource
      */
     private function keysSummary(): array
     {
-        if ($this->relationLoaded('keys')) {
-            $total = $this->keys->count();
-            $inUse = $this->keys->where('status', LicenseKey::STATUS_IN_USE)->count();
-            $used = $this->keys->where('status', LicenseKey::STATUS_USED)->count();
+        return self::summaryOf($this->resource);
+    }
+
+    private static function summaryOf(License $license): array
+    {
+        if ($license->relationLoaded('keys')) {
+            $total = $license->keys->count();
+            $inUse = $license->keys->where('status', LicenseKey::STATUS_IN_USE)->count();
+            $used = $license->keys->where('status', LicenseKey::STATUS_USED)->count();
         } else {
-            $total = (int) ($this->keys_total_count ?? $this->keys()->count());
-            $inUse = (int) ($this->keys_in_use_count ?? $this->keys()->where('status', LicenseKey::STATUS_IN_USE)->count());
-            $used = (int) ($this->keys_used_count ?? $this->keys()->where('status', LicenseKey::STATUS_USED)->count());
+            $total = (int) ($license->keys_total_count ?? $license->keys()->count());
+            $inUse = (int) ($license->keys_in_use_count ?? $license->keys()->where('status', LicenseKey::STATUS_IN_USE)->count());
+            $used = (int) ($license->keys_used_count ?? $license->keys()->where('status', LicenseKey::STATUS_USED)->count());
         }
 
         return ['total' => $total, 'available' => $total - $inUse - $used, 'in_use' => $inUse, 'used' => $used];

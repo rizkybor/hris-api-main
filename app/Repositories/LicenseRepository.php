@@ -38,7 +38,12 @@ class LicenseRepository implements LicenseRepositoryInterface
     ): Builder|Collection {
         $query = License::query()
             ->forProduct($product)
-            ->with('product')
+            ->with(['product', 'bundleMembers' => fn ($members) => $members->withCount([
+                'activations',
+                'keys as keys_total_count',
+                'keys as keys_in_use_count' => fn ($query) => $query->where('status', LicenseKey::STATUS_IN_USE),
+                'keys as keys_used_count' => fn ($query) => $query->where('status', LicenseKey::STATUS_USED),
+            ])])
             ->withCount('activations')
             ->withCount([
                 'keys as keys_total_count',
@@ -55,6 +60,26 @@ class LicenseRepository implements LicenseRepositoryInterface
             ->when($type, fn ($query) => $query->where('type', $type))
             ->when($plan, fn ($query) => $query->where('plan', $plan))
             ->when($platform, fn ($query) => $query->where('platform', $platform));
+
+        // A Mac + iPad bundle is one row (the Mac one, carrying the iPad key
+        // under "bundle"): the iPad license is left out when its Mac
+        // sibling is in the same result. Filtering on a platform shows
+        // every license of it.
+        if (! $platform) {
+            $macsShown = License::query()
+                ->forProduct($product)
+                ->where('platform', License::PLATFORM_MAC)
+                ->whereNotNull('bundle_id')
+                ->when($search, fn ($query) => $query->search(trim($search)))
+                ->when($status, fn ($query) => $query->status($status))
+                ->when($type, fn ($query) => $query->where('type', $type))
+                ->when($plan, fn ($query) => $query->where('plan', $plan))
+                ->select('bundle_id');
+            $query->where(fn ($rows) => $rows
+                ->where('platform', '!=', License::PLATFORM_IPAD)
+                ->orWhereNull('bundle_id')
+                ->orWhereNotIn('bundle_id', $macsShown));
+        }
 
         $direction = $sortDir === 'asc' ? 'asc' : 'desc';
         if ($sortBy === 'expires_at') {
