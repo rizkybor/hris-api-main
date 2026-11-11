@@ -75,6 +75,19 @@ class StaffTaskController extends Controller implements HasMiddleware
                 $query->where('title', 'like', '%'.$request->search.'%');
             }
 
+            // Same buckets as the summary tiles (dates in WIB), so a tile's
+            // count matches the filtered list. Unknown values are ignored.
+            $today = Carbon::now('Asia/Jakarta')->startOfDay();
+            match ($request->filter) {
+                'open' => $query->open(),
+                'done' => $query->done(),
+                'overdue' => $query->open()->whereDate('due_date', '<', $today->toDateString()),
+                'due_this_week' => $query->open()
+                    ->whereDate('due_date', '>=', $today->toDateString())
+                    ->whereDate('due_date', '<=', $today->copy()->endOfWeek()->toDateString()),
+                default => null,
+            };
+
             $rowPerPage = (int) ($request->row_per_page ?? 10);
             $tasks = $query->paginate($rowPerPage);
 

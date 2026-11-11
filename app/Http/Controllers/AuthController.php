@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\LoginStoreRequest;
+use App\Http\Requests\UpdateMyProfileFields;
+use App\Http\Requests\UpdateMyProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Interfaces\AuthRepositoryInterface;
 use App\Notifications\ResetPasswordLink;
@@ -120,19 +122,21 @@ class AuthController extends Controller
         return ResponseHelper::jsonResponse(true, 'Password reset successfully. You can now log in.', null, 200);
     }
 
-    public function updateProfile(Request $request)
+    public function updateProfile(UpdateMyProfileRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'password' => ['nullable', 'confirmed', PasswordRule::defaults()],
-            'profile_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-        ]);
+        $validated = $request->validated();
 
         try {
             $user = $this->authRepository->updateProfile([
                 'name' => $request->input('name'),
+                'show_degree' => $request->has('show_degree') ? $request->boolean('show_degree') : null,
                 'password' => $request->input('password'),
                 'profile_photo' => $request->file('profile_photo'),
+                // Only the employee fields that were sent; absent keys stay
+                // untouched (see UpdateMyProfileRequest).
+                'employee' => array_intersect_key($validated, array_flip(UpdateMyProfileFields::EMPLOYEE)),
+                // Sent but null (an empty list in multipart form data) = remove all.
+                'emergency_contacts' => array_key_exists('emergency_contacts', $validated) ? ($validated['emergency_contacts'] ?? []) : null,
             ]);
 
             return ResponseHelper::jsonResponse(true, 'Profile Updated Successfully', new UserResource($user), 200);

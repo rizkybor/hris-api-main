@@ -17,15 +17,6 @@ class FilesCompanyFactory extends Factory
      */
     public function definition(): array
     {
-        $fileTypes = [
-            'pdf' => 'PDF Document',
-            'docx' => 'Word Document',
-            'xlsx' => 'Excel Spreadsheet',
-            'pptx' => 'PowerPoint Presentation',
-            'png' => 'Image',
-            'jpg' => 'Image',
-        ];
-
         $categories = [
             'policies',
             'contracts',
@@ -37,13 +28,24 @@ class FilesCompanyFactory extends Factory
             'operations',
         ];
 
-        $fileType = fake()->randomElement(array_keys($fileTypes));
         $category = fake()->randomElement($categories);
         $fileName = fake()->words(2, true);
 
+        $mimes = [
+            'pdf' => 'application/pdf',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'png' => 'image/png',
+            'jpg' => 'image/jpeg',
+        ];
+        $extension = fake()->randomElement(array_keys($mimes));
+
+        // document_path holds the Cloudinary public id, as the controller stores it.
         return [
-            'path' => "company-files/{$category}/{$fileName}.{$fileType}",
-            'name' => fake()->words(3, true),
+            'document_name' => ucfirst(fake()->words(3, true)),
+            'document_path' => "hris/company-files/{$category}/".str_replace(' ', '-', $fileName),
+            'type_file' => $mimes[$extension],
+            'size_file' => fake()->numberBetween(10_000, 5_000_000),
             'description' => fake()->optional(0.8)->sentence(),
         ];
     }

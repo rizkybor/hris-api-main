@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +21,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('ALTER TABLE `credential_accounts` MODIFY `password` TEXT NOT NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('credential_accounts', fn (Blueprint $table) => $table->text('password')->change());
+        } else {
+            DB::statement('ALTER TABLE `credential_accounts` MODIFY `password` TEXT NOT NULL');
+        }
 
         DB::table('credential_accounts')->whereNotNull('password')->orderBy('id')->get(['id', 'password'])
             ->each(function ($row) {
@@ -48,6 +55,11 @@ return new class extends Migration
                 ]);
             });
 
-        DB::statement('ALTER TABLE `credential_accounts` MODIFY `password` VARCHAR(255) NOT NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('credential_accounts', fn (Blueprint $table) => $table->string('password', 255)->change());
+        } else {
+            DB::statement('ALTER TABLE `credential_accounts` MODIFY `password` VARCHAR(255) NOT NULL');
+        }
     }
 };

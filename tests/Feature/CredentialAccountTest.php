@@ -96,14 +96,13 @@ test('authenticated user can get paginated credential accounts', function () {
                         'notes',
                     ],
                 ],
-                'current_page',
-                'per_page',
-                'total',
+                // PaginateResource puts the paging info under `meta`.
+                'meta' => ['current_page', 'per_page', 'total'],
             ],
         ]);
 
     expect($response->json('data.data'))->toHaveCount(10);
-    expect($response->json('data.total'))->toBe(15);
+    expect($response->json('data.meta.total'))->toBe(15);
 });
 
 test('authenticated user can search credential accounts', function () {

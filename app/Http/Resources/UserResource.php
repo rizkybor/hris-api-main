@@ -18,7 +18,10 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'profile_photo' => CloudinaryUrl::image($this->profile_photo),
+            // Shown name (follows show_degree) and the full stored name.
             'name' => $this->name,
+            'full_name' => $this->full_name,
+            'show_degree' => (bool) $this->show_degree,
             'email' => $this->email,
             'is_active' => (bool) $this->is_active,
             'employee_profile' => new EmployeeProfileResource($this->whenLoaded('employeeProfile')),

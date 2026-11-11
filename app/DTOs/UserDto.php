@@ -39,11 +39,12 @@ class UserDto
     public static function fromArrayForUpdate(array $data, User $existingUser): self
     {
         return new self(
-            name: $data['name'] ?? $existingUser->name,
+            // The full stored name (titles/degrees included), not the shown one.
+            name: $data['name'] ?? $existingUser->full_name,
             email: $data['email'] ?? $existingUser->email,
             password: $data['password'] ?? $existingUser->password,
             profile_photo: array_key_exists('profile_photo', $data) ? $data['profile_photo'] : $existingUser->profile_photo,
-            roles: $data['roles'] ?? $existingUser->roles,
+            roles: $data['roles'] ?? $existingUser->roles->pluck('name')->all(),
         );
     }
 }

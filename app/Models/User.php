@@ -3,7 +3,9 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\PersonName;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -48,6 +50,8 @@ class User extends Authenticatable
     protected $fillable = [
         'profile_photo',
         'name',
+        'full_name',
+        'show_degree',
         'email',
         'password',
     ];
@@ -73,7 +77,44 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'show_degree' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => PersonName::flush());
+    }
+
+    /**
+     * Shown name: the stored full name ("Aldi PP, S.Ikom") with or without
+     * titles/degrees, as the person chose in My Profile (show_degree,
+     * default off). Applies everywhere a user's name is read or serialized.
+     * Writing `name` without titles/degrees keeps the existing ones (forms
+     * that showed the display name don't strip them); use `full_name` to
+     * set the name exactly as typed.
+     */
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value, array $attributes) {
+                $show = array_key_exists('show_degree', $attributes)
+                    ? (bool) $attributes['show_degree']
+                    : (isset($attributes['id']) && PersonName::showsDegree((int) $attributes['id']));
+
+                return PersonName::display($value, $show);
+            },
+            set: fn ($value) => $value === null ? null : PersonName::mergeKeepingDegree((string) $value, $this->attributes['name'] ?? null),
+        );
+    }
+
+    /** The name exactly as stored, titles and degrees included. */
+    protected function fullName(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value, array $attributes) => $attributes['name'] ?? null,
+            set: fn ($value) => ['name' => $value === null ? null : trim(preg_replace('/\s+/', ' ', (string) $value))],
+        );
     }
 
     public function employeeProfile()

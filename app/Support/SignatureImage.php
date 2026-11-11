@@ -15,6 +15,7 @@ class SignatureImage
         'aldi' => 'aldi.png',
         'andy saputra' => 'andy.png',
         'rizky ajie' => 'rizky.png',
+        'rizky aji' => 'rizky.png', // the account name is spelled "Aji"
     ];
 
     public static function pathFor(?string $name): ?string
@@ -23,7 +24,9 @@ class SignatureImage
             return null;
         }
 
-        $normalized = strtolower(trim(preg_replace('/\s+/', ' ', explode(',', $name)[0])));
+        // Titles before the name and degrees after the comma are ignored,
+        // so the signature shows whether or not the name carries them.
+        $normalized = mb_strtolower(PersonName::bare($name));
 
         foreach (self::SIGNATURES as $prefix => $file) {
             if ($normalized === $prefix || str_starts_with($normalized, $prefix.' ')) {
