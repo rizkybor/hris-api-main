@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -14,7 +16,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('ALTER TABLE job_information MODIFY monthly_salary DECIMAL(12,2) NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('job_information', fn (Blueprint $table) => $table->decimal('monthly_salary', 12, 2)->nullable()->change());
+        } else {
+            DB::statement('ALTER TABLE job_information MODIFY monthly_salary DECIMAL(12,2) NULL');
+        }
     }
 
     /**
@@ -22,6 +29,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('ALTER TABLE job_information MODIFY monthly_salary DECIMAL(12,2) NOT NULL');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('job_information', fn (Blueprint $table) => $table->decimal('monthly_salary', 12, 2)->change());
+        } else {
+            DB::statement('ALTER TABLE job_information MODIFY monthly_salary DECIMAL(12,2) NOT NULL');
+        }
     }
 };

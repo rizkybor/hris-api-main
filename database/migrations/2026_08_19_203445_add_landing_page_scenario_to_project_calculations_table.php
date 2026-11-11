@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -13,7 +15,12 @@ return new class extends Migration
         // Laravel's Schema builder can't alter an existing enum's allowed
         // values cross-DB-safely, so this is raw SQL -- same approach as
         // every other enum widening in this codebase.
-        DB::statement("ALTER TABLE project_calculations MODIFY scenario ENUM('feature', 'build', 'landing_page') NOT NULL");
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('project_calculations', fn (Blueprint $table) => $table->enum('scenario', ['feature', 'build', 'landing_page'])->change());
+        } else {
+            DB::statement("ALTER TABLE project_calculations MODIFY scenario ENUM('feature', 'build', 'landing_page') NOT NULL");
+        }
     }
 
     /**
@@ -25,6 +32,11 @@ return new class extends Migration
         // re-narrowed enum, so it has to go before the column is narrowed.
         DB::table('project_calculations')->where('scenario', 'landing_page')->delete();
 
-        DB::statement("ALTER TABLE project_calculations MODIFY scenario ENUM('feature', 'build') NOT NULL");
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite (test suite) has no MODIFY; same column change via the schema builder.
+            Schema::table('project_calculations', fn (Blueprint $table) => $table->enum('scenario', ['feature', 'build'])->change());
+        } else {
+            DB::statement("ALTER TABLE project_calculations MODIFY scenario ENUM('feature', 'build') NOT NULL");
+        }
     }
 };

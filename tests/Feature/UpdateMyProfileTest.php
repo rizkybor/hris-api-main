@@ -5,10 +5,13 @@ use App\Models\EmployeeProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    // EmployeeProfileFactory gives users it creates itself the `staff` role.
+    Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'sanctum']);
     $this->user = User::factory()->create(['name' => 'Andi Pratama']);
     $this->employee = EmployeeProfile::factory()->create(['user_id' => $this->user->id, 'city' => 'Bandung']);
 });
