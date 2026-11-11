@@ -69,6 +69,10 @@
     .eyebrow { font-size: 7pt; letter-spacing: 2.4pt; text-transform: uppercase; color: {{ $accent }}; font-weight: bold; }
     h1.title { font-size: 19pt; font-weight: normal; margin: 0.8mm 0 1mm 0; letter-spacing: 0.2pt; }
     .lede { font-size: 8.2pt; color: #4b4f63; margin: 0; }
+    .keys-note { width: 100%; margin-top: 4mm; border-collapse: collapse; border-top: 0.3mm solid #E3E5EC; border-bottom: 0.3mm solid #E3E5EC; font-size: 8pt; color: #14161F; }
+    .keys-note td { padding: 2.2mm 0; vertical-align: middle; }
+    .keys-note td.ref { text-align: right; white-space: nowrap; color: #6b6f83; font-size: 7.4pt; padding-left: 4mm; }
+    .keys-note .mono { font-family: 'DejaVu Sans Mono', monospace; font-size: 7.4pt; }
 
     /* Security-foil key box: pre-rendered pearl / silver foil
        (cert-foil*.png: faint cool shimmer, soft sheens, fine lines,
@@ -240,6 +244,16 @@
     issued by Jendela Cakra Digital under the terms set out on this certificate.
 </p>
 
+{{-- All keys of a "one key per device" license: no key box, the keys are
+     on the Device Keys page; one line instead. --}}
+@if ($perDevice && ! $singleKey)
+    <table class="keys-note">
+        <tr>
+            <td><strong>{{ $keysPerLicense }} license {{ \Illuminate\Support\Str::plural('key', $keysPerLicense) }}{{ $isBundle ? ' per platform ('.$platformsLabel.')' : '' }}</strong>, one per device, listed on the Device Keys page.</td>
+            <td class="ref">Issued {{ $issuedOn }} &nbsp;&middot;&nbsp; Ref <span class="mono">{{ $reference }}</span></td>
+        </tr>
+    </table>
+@else
 <div class="holo{{ $isBundle ? ' bundle' : '' }}">
     @if ($foil)
         <img class="foil" src="{{ $foil }}" alt="">
@@ -297,6 +311,7 @@
         @endif
     @endif
 </div>
+@endif
 
 <table style="margin-top: 4.5mm;">
     <tr>
@@ -461,8 +476,11 @@
                     @if ($singleKey)
                         <strong class="mono">{{ $singleKey->key }}</strong> (key {{ $singleKey->position }} of {{ $keysPerLicense }})
                     @else
+                    @if ($perDevice)
+                        the {{ $keysPerLicense }}{{ $isBundle ? ' per platform' : '' }} keys on the Device Keys page
+                    @else
                     @foreach ($keys as $key)<strong class="mono">{{ $key->key }}</strong>@if ($isBundle) ({{ $key->platformLabel() }})@endif{{ $loop->last ? '' : ', ' }}@endforeach
-                    @if ($perDevice) and the other keys on the Device Keys page @endif
+                    @endif
                     @endif
                     &nbsp;&middot;&nbsp; Terms version: <strong>{{ $termsVersion }}</strong>
                     &nbsp;&middot;&nbsp; Issued: <strong>{{ $issuedOn }}</strong>
