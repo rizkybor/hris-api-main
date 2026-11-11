@@ -56,6 +56,10 @@ class LicenseResource extends JsonResource
                 'platform_label' => $sibling->platformLabel(),
                 'plan' => $sibling->plan,
                 'is_active' => $sibling->is_active,
+                // One key per device: the sibling's keys (detail only).
+                'keys' => $sibling->isPerDevice() && $sibling->relationLoaded('keys')
+                    ? $sibling->keys->map(fn ($key) => ['position' => $key->position, 'key' => $key->key, 'status' => $key->status])->values()
+                    : null,
             ])->values()),
             'category' => $this->category(),
             'type' => $this->type,
