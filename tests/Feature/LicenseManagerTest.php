@@ -6,6 +6,7 @@ use App\Models\License;
 use App\Models\LicenseActivation;
 use App\Models\LicenseEvent;
 use App\Models\LicenseProduct;
+use App\Models\LicenseRetiredKey;
 use App\Models\User;
 use App\Services\LicenseCertificateService;
 use App\Services\LicenseTokenService;
@@ -65,6 +66,7 @@ const LICENSE_TEST_MIGRATIONS = [
     'database/migrations/2026_11_10_000013_add_installer_file_to_license_releases.php',
     'database/migrations/2026_11_10_000014_add_license_release_permissions.php',
     'database/migrations/2026_11_11_000001_create_license_keys_table.php',
+    'database/migrations/2026_11_11_000002_create_license_retired_keys_table.php',
 ];
 
 const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
@@ -139,11 +141,19 @@ function occaActivate($test, License $license, string $deviceId = 'device-1', ar
 /**
  * A complete individual (professional, term) store payload.
  */
+function occaEmailSeq(): int
+{
+    static $n = 0;
+
+    return ++$n;
+}
+
 function occaIndividual(array $overrides = []): array
 {
     return array_merge([
         'licensee_name' => 'Jane Orienteer',
-        'licensee_email' => 'jane@example.com',
+        // One license per email per product and platform: a fresh email per call.
+        'licensee_email' => 'jane'.occaEmailSeq().'@example.com',
         'phone' => '+62 812-1111-2222',
         'country' => 'Indonesia',
         'province_code' => '32',
@@ -167,7 +177,7 @@ function occaOrganization(array $overrides = []): array
         'licensee_name' => 'Jakarta Orienteering Club',
         'organization_type' => 'club',
         'contact_name' => 'Budi Santoso',
-        'licensee_email' => 'club@example.com',
+        'licensee_email' => 'club'.occaEmailSeq().'@example.com',
         'phone' => '021 555 1234',
         'address' => 'Jl. Sudirman 1',
         ...JAKARTA,
@@ -1032,7 +1042,8 @@ test('admin create, update, extend, toggle, plan change and delete are tracked',
         ->and(occaEvents($license, 'activated_by_admin'))->toHaveCount(1);
 
     $this->putJson("/api/v1/license-manager/products/occa/licenses/{$id}", ['plan' => 'trial'])->assertOk();
-    expect(occaEvents($license, 'plan_changed')->sole()->meta)->toBe(['old_plan' => 'professional', 'new_plan' => 'trial']);
+    expect(occaEvents($license, 'plan_changed')->sole()->meta)
+        ->toMatchArray(['old_plan' => 'professional', 'new_plan' => 'trial', 'keys_replaced' => 1, 'devices_signed_out' => 0]);
 
     // Toggling does not also write an "updated" event; saving unchanged data writes nothing.
     $count = occaEvents($license)->count();
@@ -1041,7 +1052,7 @@ test('admin create, update, extend, toggle, plan change and delete are tracked',
         ->and(occaEvents($license, 'updated'))->toHaveCount(1);
 
     $this->deleteJson("/api/v1/license-manager/products/occa/licenses/{$id}")->assertOk();
-    expect(occaEvents($license, 'deleted')->sole()->meta['key'])->toBe($license->key);
+    expect(occaEvents($license, 'deleted')->sole()->meta['key'])->toBe(License::withTrashed()->find($license->id)->key);
 });
 
 test('device activation, re-activation and app release are tracked', function () {
@@ -1262,7 +1273,7 @@ test('occa:license-create makes trials with --days or --months, never lifetime',
         ->and($trial->type)->toBe('term')
         ->and($trial->expires_at->isSameDay(now()->addDays(14)))->toBeTrue();
 
-    $this->artisan('occa:license-create', ['--name' => 'Trial Months', '--plan' => 'trial', '--months' => 1] + OCCA_CLI_PERSON)->assertSuccessful();
+    $this->artisan('occa:license-create', ['--name' => 'Trial Months', '--plan' => 'trial', '--months' => 1, '--email' => 'months@example.com'] + OCCA_CLI_PERSON)->assertSuccessful();
     expect(License::where('licensee_name', 'Trial Months')->firstOrFail()->plan)->toBe('trial');
 
     $this->artisan('occa:license-create', ['--name' => 'Bad', '--plan' => 'trial', '--lifetime' => true] + OCCA_CLI_PERSON)->assertFailed();
@@ -1273,7 +1284,12 @@ test('occa:license-create makes trials with --days or --months, never lifetime',
     expect(License::where('licensee_name', 'Bad')->exists())->toBeFalse();
 
     // --days works for any term plan.
-    $this->artisan('occa:license-create', ['--name' => 'Pro Days', '--days' => 30] + OCCA_CLI_PERSON)->assertSuccessful();
+    $this->artisan('occa:license-create', ['--name' => 'Pro Days', '--days' => 30, '--email' => 'pro-days@example.com'] + OCCA_CLI_PERSON)->assertSuccessful();
+
+    // One license per email and platform: the same email again is refused.
+    $this->artisan('occa:license-create', ['--name' => 'Again', '--days' => 30] + OCCA_CLI_PERSON)
+        ->expectsOutputToContain('already has a OCCA Mac license')
+        ->assertFailed();
     expect(License::where('licensee_name', 'Pro Days')->firstOrFail()->expires_at->isSameDay(now()->addDays(30)))->toBeTrue();
 });
 
@@ -1986,15 +2002,74 @@ test('two creates in a row get consecutive numbers from the locked counter', fun
     expect($occa->fresh()->mac_license_sequence)->toBe(9999);
 });
 
-test('the key never changes when the plan changes, and the reference uses the sequence', function () {
+test('a plan change gives a new key with the new plan code and the same number; the old key is replaced', function () {
     Sanctum::actingAs($this->admin);
     $created = $this->postJson(lmLicenses(), occaIndividual())->json('data');
+    $license = License::find($created['id']);
+    occaActivate($this, $license)->assertOk();
 
-    $this->putJson(lmLicenses()."/{$created['id']}", ['plan' => 'lifetime'])->assertOk()
-        ->assertJsonPath('data.key', $created['key'])
-        ->assertJsonPath('data.plan', 'lifetime');
+    $newKey = $this->putJson(lmLicenses()."/{$created['id']}", ['plan' => 'lifetime'])->assertOk()
+        ->assertJsonPath('data.plan', 'lifetime')
+        ->json('data.key');
 
-    expect(LicenseCertificateService::reference(License::find($created['id'])))->toBe('LIC-OCCA-MAC-0001');
+    expect($newKey)->not->toBe($created['key'])->toStartWith('OC33-')->toEndWith('-0001')
+        ->and($license->activations()->count())->toBe(0)
+        ->and(LicenseCertificateService::reference($license->fresh()))->toBe('LIC-OCCA-MAC-0001')
+        ->and(occaEvents($license, 'plan_changed')->sole()->meta)->toMatchArray([
+            'old_key' => $created['key'], 'new_key' => $newKey, 'keys_replaced' => 1, 'devices_signed_out' => 1,
+        ]);
+
+    // The old key: key_replaced (logged), the new key activates.
+    $this->postJson('/api/occa/license/refresh', ['key' => $created['key'], 'device_id' => 'device-1'])
+        ->assertStatus(403)->assertJsonPath('error', 'key_replaced');
+    $this->postJson('/api/occa/license/activate', ['key' => $created['key'], 'device_id' => 'device-1', 'platform' => 'macOS'])
+        ->assertStatus(403)->assertJsonPath('error', 'key_replaced');
+    expect(occaEvents($license, 'denied_key_replaced')->count())->toBe(2);
+    $this->postJson('/api/occa/license/activate', ['key' => $newKey, 'device_id' => 'device-1', 'platform' => 'macOS'])->assertOk();
+
+    // Saving the same plan keeps the key.
+    $this->putJson(lmLicenses()."/{$created['id']}", ['plan' => 'lifetime', 'notes' => 'paid'])->assertOk()->assertJsonPath('data.key', $newKey);
+});
+
+test('a per-device license gets a fresh set of keys on a plan change', function () {
+    $license = perDeviceLicense($this, 3);
+    $oldKeys = $license->keys->pluck('key');
+    $this->postJson('/api/occa/license/activate', ['key' => $oldKeys[1], 'device_id' => 'B', 'platform' => 'macOS'])->assertOk();
+
+    $this->putJson(lmLicenses()."/{$license->id}", ['plan' => 'lifetime'])->assertOk();
+    $keys = $license->fresh()->keys;
+
+    expect($keys)->toHaveCount(3)
+        ->and($keys->pluck('status')->unique()->all())->toBe(['available'])
+        ->and($keys->pluck('key')->intersect($oldKeys))->toBeEmpty()
+        ->and($keys->first()->key)->toBe($license->fresh()->key)->toStartWith('OC33-')
+        ->and(LicenseRetiredKey::where('license_id', $license->id)->count())->toBe(3);
+    $this->postJson('/api/occa/license/activate', ['key' => $oldKeys[2], 'device_id' => 'C', 'platform' => 'macOS'])
+        ->assertStatus(403)->assertJsonPath('error', 'key_replaced');
+});
+
+test('one license per email per product and platform', function () {
+    Sanctum::actingAs($this->admin);
+    $this->postJson(lmLicenses(), occaIndividual(['licensee_email' => 'Same@Example.com']))->assertStatus(201);
+
+    // Same email (any case), same platform: refused, whatever the plan.
+    $this->postJson(lmLicenses(), occaIndividual(['licensee_email' => ' same@example.com', 'plan' => 'lifetime']))
+        ->assertStatus(422)->assertJsonValidationErrors('licensee_email');
+    // A Mac + iPad bundle needs both platforms free.
+    $this->postJson(lmLicenses(), occaIndividual(['licensee_email' => 'same@example.com', 'platform' => 'both']))
+        ->assertStatus(422)->assertJsonValidationErrors('licensee_email');
+    // The other platform is fine.
+    $this->postJson(lmLicenses(), occaIndividual(['licensee_email' => 'same@example.com', 'platform' => 'ipad']))->assertStatus(201);
+
+    // Editing another license to that email is refused too.
+    $other = $this->postJson(lmLicenses(), occaIndividual(['licensee_email' => 'other@example.com']))->json('data.id');
+    $this->putJson(lmLicenses()."/{$other}", ['licensee_email' => 'SAME@example.com'])
+        ->assertStatus(422)->assertJsonValidationErrors('licensee_email');
+
+    // A deleted license frees the email.
+    $first = License::whereRaw('LOWER(licensee_email) = ?', ['same@example.com'])->where('platform', 'mac')->first();
+    $this->deleteJson(lmLicenses()."/{$first->id}")->assertOk();
+    $this->postJson(lmLicenses(), occaIndividual(['licensee_email' => 'same@example.com']))->assertStatus(201);
 });
 
 test('key prefixes are 1-6 uppercase letters and OCCA uses OC', function () {
@@ -2878,4 +2953,27 @@ test('recent events load on scroll with before_id, without repeats', function ()
     expect($first)->toHaveCount(3)->and($next)->toHaveCount(2)
         ->and(array_unique($ids))->toHaveCount(5)
         ->and($ids)->toBe(LicenseEvent::query()->orderByDesc('created_at')->orderByDesc('id')->pluck('id')->all());
+});
+
+test('the license list shows a Mac + iPad bundle as one row, unless filtering on a platform', function () {
+    $mac = perDeviceLicense($this, 2, ['platform' => 'both', 'licensee_name' => 'Bundle Club']);
+    $ipad = License::where('bundle_id', $mac->bundle_id)->where('platform', 'ipad')->first();
+    $this->postJson(lmLicenses(), occaIndividual(['licensee_name' => 'Solo']))->assertStatus(201);
+    $this->postJson('/api/occa/license/activate', ['key' => $ipad->keys()->first()->key, 'device_id' => 'P', 'platform' => 'iPadOS'])->assertOk();
+
+    $rows = $this->getJson(lmLicenses().'/all/paginated?per_page=10')->assertOk()->json('data.data');
+    $bundle = collect($rows)->firstWhere('id', $mac->id);
+    expect($rows)->toHaveCount(2)
+        ->and(collect($rows)->pluck('id'))->not->toContain($ipad->id)
+        ->and($bundle['bundle'][0])->toMatchArray(['id' => $ipad->id, 'platform' => 'ipad', 'devices_used' => 1, 'max_devices' => 2])
+        ->and($bundle['bundle'][0]['keys_summary'])->toMatchArray(['total' => 2, 'in_use' => 1]);
+
+    // Filtering on iPad shows the iPad license itself.
+    $ipadRows = $this->getJson(lmLicenses().'/all/paginated?per_page=10&platform=ipad')->assertOk()->json('data.data');
+    expect(collect($ipadRows)->pluck('id')->all())->toBe([$ipad->id]);
+
+    // A plan filter only the iPad license matches: its own row.
+    $this->putJson(lmLicenses()."/{$mac->id}", ['plan' => 'lifetime'])->assertOk();
+    $pro = $this->getJson(lmLicenses().'/all/paginated?per_page=10&plan=professional')->assertOk()->json('data.data');
+    expect(collect($pro)->pluck('id'))->toContain($ipad->id)->not->toContain($mac->id);
 });

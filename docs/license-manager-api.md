@@ -164,9 +164,20 @@ platform has no numbers left, neither is created.
     create transaction, so concurrent creates never collide; numbers are
     never reused (also after deletes). Stored on the license as `sequence`;
     the product resource has `next_sequences: {mac, ipad}` (a preview only).
-- **Keys never change.** The code is the platform and plan at creation:
-  changing the plan later keeps the key (an `OC32-…` key may belong to a
-  Lifetime license). The platform itself can never change.
+- **A plan change gives a new key.** The code names the plan, so changing
+  the plan (upgrade or downgrade) generates a new key with the new plan's
+  code and the **same number** (`OC32-…-0001` → `OC33-…-0001`). Every old
+  key of the license (all device keys of a `per_device` license) is
+  retired (`license_retired_keys`) and answers `key_replaced`; every device
+  is signed out and has to activate again with the new key. The
+  `plan_changed` event has `old_key`, `new_key`, `keys_replaced` and
+  `devices_signed_out` in `meta`. The platform itself can never change.
+- **One license per licensee.** A licensee (email, case-insensitive) holds
+  at most one license per product and platform (a Mac and an iPad license,
+  or a Mac + iPad bundle, are fine). A second one for the same email and
+  platform is a 422 on `licensee_email` (create, edit and the CLI); a
+  different plan is a plan change on the existing license. Deleted
+  licenses do not count.
 - `2026_11_10_000008` reset every key issued before the platform split
   (the apps were not released yet): all existing licenses became Mac
   licenses, renumbered in creation order, with a new key.
@@ -321,6 +332,7 @@ key or device, and also when the product is switched off.
 | 409  | `device_limit`     | New device while `devices_used >= max_devices`             |
 | 403  | `key_used`         | `per_device`: the key's device was released; the key is dead |
 | 409  | `key_in_use`       | `per_device`: the key is activated on another device       |
+| 403  | `key_replaced`     | The key was replaced by a new one after a plan change      |
 | 404  | `not_activated`    | `refresh` for a device that has no activation              |
 | 500  | `server_error`     | Unexpected failure (e.g. signing key missing)              |
 
@@ -602,7 +614,7 @@ A logging failure is reported and swallowed, never breaking the request.
 | `refreshed`                 | Refresh; at most once per device per 24 h (`last_seen_at` always updates) |
 | `app_updated`               | A device reported another app version on activate / refresh (`meta`: from, to) |
 | `device_released`           | Deactivate from the app                                           |
-| `denied_device_limit` / `denied_inactive` / `denied_expired` / `denied_wrong_platform` / `denied_key_used` / `denied_key_in_use` | Denied activate / refresh on an existing key of the product |
+| `denied_device_limit` / `denied_inactive` / `denied_expired` / `denied_wrong_platform` / `denied_key_used` / `denied_key_in_use` / `denied_key_replaced` | Denied activate / refresh on an existing key of the product |
 
 Admin events carry the admin's `user_id` and IP; app events carry the device
 and IP. `GET …/licenses/{id}/events`: paginated (`per_page`, default 15),
