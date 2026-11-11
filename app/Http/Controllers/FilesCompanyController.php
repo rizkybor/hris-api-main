@@ -138,7 +138,10 @@ class FilesCompanyController extends Controller implements HasMiddleware
             // =========================
             // 1️⃣ Tangani remove_file
             // =========================
-            if ($request->boolean('remove_file') && $fileModel->document_path) {
+            // (remove_file always comes with a replacement upload, see
+            // FilesCompanyUpdateRequest; the upload below deletes the old
+            // file, so only handle it here when there is no new file.)
+            if ($request->boolean('remove_file') && $fileModel->document_path && ! $request->hasFile('document_path')) {
                 $this->cloudinary->delete($fileModel->document_path, CloudinaryResourceType::fromMime($fileModel->type_file));
                 $validated['document_path'] = null;
                 $validated['type_file'] = null;
