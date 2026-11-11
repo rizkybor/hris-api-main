@@ -7,6 +7,7 @@ use App\Interfaces\LicenseRepositoryInterface;
 use App\Models\License;
 use App\Models\LicenseActivation;
 use App\Models\LicenseEvent;
+use App\Models\LicenseKey;
 use App\Models\LicenseProduct;
 use App\Services\LicenseEventLogger;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -38,6 +39,11 @@ class LicenseRepository implements LicenseRepositoryInterface
             ->forProduct($product)
             ->with('product')
             ->withCount('activations')
+            ->withCount([
+                'keys as keys_total_count',
+                'keys as keys_in_use_count' => fn ($query) => $query->where('status', LicenseKey::STATUS_IN_USE),
+                'keys as keys_used_count' => fn ($query) => $query->where('status', LicenseKey::STATUS_USED),
+            ])
             ->withMax('activations', 'last_seen_at')
             ->where(function ($query) use ($search) {
                 if ($search) {
@@ -105,8 +111,13 @@ class LicenseRepository implements LicenseRepositoryInterface
     ): License {
         return License::query()
             ->forProduct($product)
-            ->with(['product', 'bundleMembers', 'activations' => fn ($query) => $query->orderByDesc('last_seen_at')])
+            ->with(['product', 'bundleMembers', 'keys', 'activations' => fn ($query) => $query->orderByDesc('last_seen_at')])
             ->withCount('activations')
+            ->withCount([
+                'keys as keys_total_count',
+                'keys as keys_in_use_count' => fn ($query) => $query->where('status', LicenseKey::STATUS_IN_USE),
+                'keys as keys_used_count' => fn ($query) => $query->where('status', LicenseKey::STATUS_USED),
+            ])
             ->withMax('activations', 'last_seen_at')
             ->findOrFail($id);
     }
@@ -123,7 +134,7 @@ class LicenseRepository implements LicenseRepositoryInterface
         // The product row is locked while the platforms' counters move, so
         // concurrent creates never get the same number; numbers are never
         // reused. Mac and iPad count separately. A bundle is all or nothing.
-        $licenses = DB::transaction(function () use ($product, $licenseDto, $platforms, $bundleId) {
+        $licenses = DB::transaction(function () use ($product, $licenseDto, $platforms, $bundleId, $data) {
             $locked = LicenseProduct::query()->lockForUpdate()->findOrFail($product->id);
             $created = [];
 
@@ -145,6 +156,7 @@ class LicenseRepository implements LicenseRepositoryInterface
                         'product_id' => $locked->id,
                         'platform' => $platform,
                         'bundle_id' => $bundleId,
+                        'key_mode' => in_array($data['key_mode'] ?? null, License::KEY_MODES, true) ? $data['key_mode'] : License::KEY_MODE_SHARED,
                         'sequence' => $sequence,
                         'key' => License::generateKey($locked->key_prefix, $platform, $licenseDto->plan, $sequence),
                         // Lifetime: the major version it gets updates for.
@@ -153,6 +165,7 @@ class LicenseRepository implements LicenseRepositoryInterface
                         'terms_version' => $locked->terms ? $locked->terms_version : null,
                     ]
                 ));
+                $this->syncKeys(end($created));
             }
 
             return $created;
@@ -192,7 +205,21 @@ class LicenseRepository implements LicenseRepositoryInterface
             array_key_exists('updates_major', $data) ? $data['updates_major'] : $license->updates_major,
             $product
         );
-        $license->update(array_merge($licenseDto->toArray(), ['updates_major' => $updatesMajor]));
+        // "One key per device": the number of keys follows max_devices; it
+        // can never drop below the keys already used.
+        if ($license->isPerDevice() && $licenseDto->max_devices < $license->max_devices) {
+            $taken = $license->keys()->where('status', '!=', LicenseKey::STATUS_AVAILABLE)->count();
+            if ($licenseDto->max_devices < $taken) {
+                throw ValidationException::withMessages([
+                    'max_devices' => "This license already has {$taken} used ".Str::plural('key', $taken).', so Max devices cannot be lower than that.',
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($license, $licenseDto, $updatesMajor) {
+            $license->update(array_merge($licenseDto->toArray(), ['updates_major' => $updatesMajor]));
+            $this->syncKeys($license);
+        });
         $this->eventLogger->logAdminChanges($license, $original, $license->getChanges());
 
         return $this->getById($product, $id);
@@ -227,6 +254,8 @@ class LicenseRepository implements LicenseRepositoryInterface
         $license = License::forProduct($product)->findOrFail($licenseId);
         $activation = $license->activations()->findOrFail($activationId);
         $activation->delete();
+        // Released: a per-device key never works again.
+        $activation->licenseKey?->markUsed();
 
         activity('License Manager')
             ->performedOn($license)
@@ -325,6 +354,11 @@ class LicenseRepository implements LicenseRepositoryInterface
         return License::query()
             ->with('product')
             ->withCount('activations')
+            ->withCount([
+                'keys as keys_total_count',
+                'keys as keys_in_use_count' => fn ($query) => $query->where('status', LicenseKey::STATUS_IN_USE),
+                'keys as keys_used_count' => fn ($query) => $query->where('status', LicenseKey::STATUS_USED),
+            ])
             ->withMax('activations', 'last_seen_at')
             ->where('is_active', true)
             ->whereNotNull('expires_at')
@@ -365,5 +399,44 @@ class LicenseRepository implements LicenseRepositoryInterface
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate($rowPerPage);
+    }
+
+    /**
+     * "One key per device": keep exactly max_devices keys. Key 1 is the
+     * license's own key; missing keys are added with the same head and
+     * license number; when max_devices drops, the highest available keys
+     * go (never key 1, never a used one -- update() checks the count).
+     */
+    public function syncKeys(License $license): void
+    {
+        if (! $license->isPerDevice()) {
+            return;
+        }
+
+        $keys = $license->keys()->get();
+        if ($keys->isEmpty()) {
+            $license->keys()->create(['position' => 1, 'key' => $license->key, 'status' => LicenseKey::STATUS_AVAILABLE]);
+            $keys = $license->keys()->get();
+        }
+
+        $target = max(1, (int) $license->max_devices);
+        if ($keys->count() > $target) {
+            $keys->where('status', LicenseKey::STATUS_AVAILABLE)
+                ->where('position', '>', 1)
+                ->sortByDesc('position')
+                ->take($keys->count() - $target)
+                ->each->delete();
+
+            return;
+        }
+
+        $position = (int) $keys->max('position');
+        for ($i = $keys->count(); $i < $target; $i++) {
+            $license->keys()->create([
+                'position' => ++$position,
+                'key' => License::generateSiblingKey($license->key),
+                'status' => LicenseKey::STATUS_AVAILABLE,
+            ]);
+        }
     }
 }

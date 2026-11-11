@@ -63,6 +63,12 @@ class LicenseEvent extends Model
     /** A Mac key tried on an iPad, or the other way round. */
     public const DENIED_WRONG_PLATFORM = 'denied_wrong_platform';
 
+    /** A per-device key that was already used (and released) tried again. */
+    public const DENIED_KEY_USED = 'denied_key_used';
+
+    /** A per-device key tried on a second device while bound to another. */
+    public const DENIED_KEY_IN_USE = 'denied_key_in_use';
+
     public const EVENTS = [
         self::CREATED,
         self::UPDATED,
@@ -85,6 +91,8 @@ class LicenseEvent extends Model
         self::DENIED_INACTIVE,
         self::DENIED_EXPIRED,
         self::DENIED_WRONG_PLATFORM,
+        self::DENIED_KEY_USED,
+        self::DENIED_KEY_IN_USE,
     ];
 
     public const LABELS = [
@@ -109,6 +117,8 @@ class LicenseEvent extends Model
         self::DENIED_INACTIVE => 'Denied: license switched off',
         self::DENIED_EXPIRED => 'Denied: license expired',
         self::DENIED_WRONG_PLATFORM => 'Denied: wrong platform',
+        self::DENIED_KEY_USED => 'Denied: key already used',
+        self::DENIED_KEY_IN_USE => 'Denied: key in use on another device',
     ];
 
     /**
