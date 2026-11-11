@@ -77,7 +77,12 @@ class PersonName
 
     public static function showsDegree(int $userId): bool
     {
-        self::$showDegreeIds ??= DB::table('users')->where('show_degree', true)->pluck('id')->flip()->map(fn () => true)->all();
+        try {
+            self::$showDegreeIds ??= DB::table('users')->where('show_degree', true)->pluck('id')->flip()->map(fn () => true)->all();
+        } catch (\Throwable) {
+            // users.show_degree not migrated yet: everyone shows without degrees.
+            self::$showDegreeIds = [];
+        }
 
         return isset(self::$showDegreeIds[$userId]);
     }
@@ -93,7 +98,13 @@ class PersonName
         }
         if (self::$usersByBareName === null) {
             self::$usersByBareName = [];
-            foreach (DB::table('users')->whereNull('deleted_at')->get(['name', 'show_degree']) as $row) {
+            try {
+                $rows = DB::table('users')->whereNull('deleted_at')->get(['name', 'show_degree']);
+            } catch (\Throwable) {
+                // users.show_degree not migrated yet.
+                $rows = DB::table('users')->whereNull('deleted_at')->get(['name'])->each(fn ($r) => $r->show_degree = false);
+            }
+            foreach ($rows as $row) {
                 $key = mb_strtolower(self::bare($row->name));
                 // Two people with the same bare name: don't guess.
                 self::$usersByBareName[$key] = isset(self::$usersByBareName[$key])
