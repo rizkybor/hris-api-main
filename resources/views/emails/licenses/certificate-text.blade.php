@@ -20,6 +20,8 @@ It holds one key for each platform: use the Mac key on a Mac and the iPad key on
 Listed on the Device Keys page of the attached certificate.
 @endif
 @endforeach
+@elseif($singleKey)
+License key (key {{ $singleKey->position }} of {{ $keysTotal }}): {{ $singleKey->key }}
 @else
 @foreach($keys as $key)
 {{ $keys->count() > 1 ? $key->platformLabel().' license key' : 'License key' }}: {{ $key->key }}
@@ -27,7 +29,7 @@ Listed on the Device Keys page of the attached certificate.
 @endif
 Plan: {{ $license->planLabel() }}
 Valid until: {{ $expiresOn ?? 'Lifetime, never expires' }}
-Devices: {{ $perDevice ? $license->max_devices.', one key each (a key cannot be reused once its device is released)' : 'up to '.$license->max_devices.' at a time'.($keys->count() > 1 ? ' per key' : '') }}
+Devices: {{ $singleKey ? '1 (this key works on one device; it cannot be reused once its device is released)' : ($perDevice ? $license->max_devices.', one key each (a key cannot be reused once its device is released)' : 'up to '.$license->max_devices.' at a time'.($keys->count() > 1 ? ' per key' : '')) }}
 
 To activate, open {{ $product?->name }}, open License from the plan chip next to the app name, then paste the key and activate. Please keep the key private.
 

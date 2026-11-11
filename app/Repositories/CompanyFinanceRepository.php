@@ -34,7 +34,6 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
         return $query;
     }
 
-
     public function getById(
         string $id
     ): CompanyFinance {
@@ -44,7 +43,7 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
     public function create(
         array $data
     ): CompanyFinance {
-        $dto = CompanyFinanceDTO::fromArray($data);
+        $dto = CompanyFinanceDto::fromArray($data);
         $array = $dto->toArray();
 
         return CompanyFinance::create($array);
@@ -56,7 +55,7 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('saldo_company', 'like', '%' . $search . '%');
+                $q->where('saldo_company', 'like', '%'.$search.'%');
                 // tambahkan kolom lain jika perlu
             });
         }
@@ -73,13 +72,12 @@ class CompanyFinanceRepository implements CompanyFinanceRepositoryInterface
         ];
     }
 
-
     public function update(
         string $id,
         array $data
     ): CompanyFinance {
         $finance = $this->getById($id);
-        $dto = CompanyFinanceDTO::fromArrayForUpdate($data, $finance);
+        $dto = CompanyFinanceDto::fromArrayForUpdate($data, $finance);
         $finance->update($dto->toArray());
 
         return $finance;

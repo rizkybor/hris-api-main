@@ -12,8 +12,6 @@ class CompanyAboutRepository implements CompanyAboutRepositoryInterface
 {
     /**
      * Ambil semua Company About
-     *
-     * @return Collection
      */
     public function getAll(): Collection
     {
@@ -22,9 +20,6 @@ class CompanyAboutRepository implements CompanyAboutRepositoryInterface
 
     /**
      * Ambil Company About berdasarkan ID
-     *
-     * @param string $id
-     * @return CompanyAbout
      */
     public function getById(string $id): CompanyAbout
     {
@@ -33,24 +28,18 @@ class CompanyAboutRepository implements CompanyAboutRepositoryInterface
 
     /**
      * Buat Company About baru
-     *
-     * @param array $data
-     * @return CompanyAbout
      */
     public function create(array $data): CompanyAbout
     {
         return DB::transaction(function () use ($data) {
             $dto = CompanyAboutDto::fromArray($data);
+
             return CompanyAbout::create($dto->toArray());
         });
     }
 
     /**
      * Update Company About
-     *
-     * @param string $id
-     * @param array $data
-     * @return CompanyAbout
      */
     public function update(string $id, array $data): CompanyAbout
     {
@@ -66,9 +55,6 @@ class CompanyAboutRepository implements CompanyAboutRepositoryInterface
 
     /**
      * Hapus Company About
-     *
-     * @param string $id
-     * @return CompanyAbout
      */
     public function delete(string $id): CompanyAbout
     {

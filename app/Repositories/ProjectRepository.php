@@ -9,6 +9,7 @@ use App\Models\PaymentReceipt;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\TeamMember;
+use App\Models\User;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -41,7 +42,7 @@ class ProjectRepository implements ProjectRepositoryInterface
             ->withCount('tasks')
             ->orderByDesc('created_at');
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = Auth::user();
 
         if ($user->hasRole('staff')) {

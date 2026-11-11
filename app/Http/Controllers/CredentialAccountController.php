@@ -136,4 +136,3 @@ class CredentialAccountController extends Controller implements HasMiddleware
         }
     }
 }
-

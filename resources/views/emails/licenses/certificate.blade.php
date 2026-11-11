@@ -57,6 +57,11 @@
                                         </td>
                                     </tr>
                                 @endforeach
+                            @elseif($singleKey)
+                                <tr>
+                                    <td style="padding:10px 0; font-size:13px; color:#64748b; width:38%;">License key<br><span style="font-size:12px;">key {{ $singleKey->position }} of {{ $keysTotal }}</span></td>
+                                    <td style="padding:10px 0; font-size:14px; color:#0b1d51; font-weight:bold; font-family:Menlo, Consolas, monospace; letter-spacing:1px;">{{ $singleKey->key }}</td>
+                                </tr>
                             @else
                                 @foreach($keys as $key)
                                     <tr>
@@ -75,7 +80,7 @@
                             </tr>
                             <tr>
                                 <td style="padding:10px 0; font-size:13px; color:#64748b; border-top:1px solid #f0f2f6;">Devices</td>
-                                <td style="padding:10px 0; font-size:13px; color:#1f2937; font-weight:bold; border-top:1px solid #f0f2f6;">{{ $perDevice ? $license->max_devices.', one key each (a key cannot be reused once its device is released)' : 'Up to '.$license->max_devices.' at a time'.($keys->count() > 1 ? ' per key' : '') }}</td>
+                                <td style="padding:10px 0; font-size:13px; color:#1f2937; font-weight:bold; border-top:1px solid #f0f2f6;">{{ $singleKey ? '1 (this key works on one device; it cannot be reused once its device is released)' : ($perDevice ? $license->max_devices.', one key each (a key cannot be reused once its device is released)' : 'Up to '.$license->max_devices.' at a time'.($keys->count() > 1 ? ' per key' : '')) }}</td>
                             </tr>
                         </table>
 

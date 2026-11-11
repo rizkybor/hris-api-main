@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Collection;
+
 /**
  * Code-defined catalog of dashboard widgets -- each key maps 1:1 to a Vue
  * component on the frontend (see hris-fe-main/src/dashboard/widgetRegistry.js).
@@ -97,7 +99,7 @@ class DashboardWidgetRegistry
      * registry's own declaration order as a last resort for a role with no
      * defined default (or a user with no matching role at all).
      */
-    public static function defaultOrderFor(\Illuminate\Support\Collection $userRoleNames): array
+    public static function defaultOrderFor(Collection $userRoleNames): array
     {
         foreach (self::ROLE_PRIORITY as $role) {
             if ($userRoleNames->contains($role)) {

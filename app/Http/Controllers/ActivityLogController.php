@@ -156,7 +156,7 @@ class ActivityLogController extends Controller implements HasMiddleware
                 ->whereDate('created_at', '<=', $validated['end_date'])
                 ->delete();
 
-            return ResponseHelper::jsonResponse(true, "{$deleted} activity log entr".($deleted === 1 ? 'y' : 'ies')." deleted", ['deleted' => $deleted], 200);
+            return ResponseHelper::jsonResponse(true, "{$deleted} activity log entr".($deleted === 1 ? 'y' : 'ies').' deleted', ['deleted' => $deleted], 200);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

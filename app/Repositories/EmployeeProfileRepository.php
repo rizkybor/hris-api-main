@@ -739,7 +739,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             ->firstOrFail();
 
         if (! $employee->jobInformation || ! $employee->jobInformation->team) {
-            return new Collection();
+            return new Collection;
         }
 
         return $employee->jobInformation->team
@@ -761,7 +761,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             ->firstOrFail();
 
         if (! $employee->jobInformation || ! $employee->jobInformation->team) {
-            return new Collection();
+            return new Collection;
         }
 
         return $employee->jobInformation->team

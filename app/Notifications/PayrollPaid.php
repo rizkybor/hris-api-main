@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\PayrollDetail;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -38,8 +39,8 @@ class PayrollPaid extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $payroll = $this->payrollDetail->payroll;
-        $salaryMonth = \Carbon\Carbon::parse($payroll->salary_month)->format('F Y');
-        $paymentDate = \Carbon\Carbon::parse($payroll->payment_date)->format('d F Y');
+        $salaryMonth = Carbon::parse($payroll->salary_month)->format('F Y');
+        $paymentDate = Carbon::parse($payroll->payment_date)->format('d F Y');
 
         return (new MailMessage)
             ->subject('Slip Gaji '.$salaryMonth.' Telah Dibayar')
@@ -69,7 +70,7 @@ class PayrollPaid extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
-        $salaryMonth = \Carbon\Carbon::parse($this->payrollDetail->payroll->salary_month)->format('F Y');
+        $salaryMonth = Carbon::parse($this->payrollDetail->payroll->salary_month)->format('F Y');
 
         return [
             'title' => 'Slip Gaji Telah Dibayar',

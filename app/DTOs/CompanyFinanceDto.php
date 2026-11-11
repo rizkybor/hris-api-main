@@ -6,16 +6,14 @@ use App\Models\CompanyFinance;
 
 class CompanyFinanceDto
 {
-
     public function __construct(
         public readonly ?float $saldo_company
-    )
-    {}
+    ) {}
 
     public function toArray(): array
     {
         return [
-            'saldo_company' => $this->saldo_company
+            'saldo_company' => $this->saldo_company,
         ];
     }
 

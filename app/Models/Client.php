@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+
 class Client extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -32,10 +32,10 @@ class Client extends Model
         'npwp',
         'siup_number',
         'nib_number',
-        'notes'
+        'notes',
     ];
 
-     /**
+    /**
      * Relasi ke task pivots
      */
     public function taskPivots()
@@ -47,9 +47,9 @@ class Client extends Model
      * Relasi ke attachments
      */
     public function attachments()
-{
-    return $this->hasMany(ClientAttachment::class, 'client_id');
-}
+    {
+        return $this->hasMany(ClientAttachment::class, 'client_id');
+    }
 
     /**
      * Rating/evaluation history -- optional, a client may have none yet.
@@ -80,14 +80,13 @@ class Client extends Model
     public function scopeSearch($query, $search)
     {
         return $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', '%' . $search . '%')
-                ->orWhere('pic_name', 'like', '%' . $search . '%')
-                ->orWhere('pic_phone', 'like', '%' . $search . '%')
-                ->orWhere('email', 'like', '%' . $search . '%')
-                ->orWhere('address', 'like', '%' . $search . '%')
-                ->orWhere('type', 'like', '%' . $search . '%')
-                ->orWhere('field', 'like', '%' . $search . '%')
-            ;
+            $q->where('name', 'like', '%'.$search.'%')
+                ->orWhere('pic_name', 'like', '%'.$search.'%')
+                ->orWhere('pic_phone', 'like', '%'.$search.'%')
+                ->orWhere('email', 'like', '%'.$search.'%')
+                ->orWhere('address', 'like', '%'.$search.'%')
+                ->orWhere('type', 'like', '%'.$search.'%')
+                ->orWhere('field', 'like', '%'.$search.'%');
         });
     }
 }

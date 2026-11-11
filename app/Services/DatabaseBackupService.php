@@ -37,7 +37,7 @@ class DatabaseBackupService
      * browser download.
      *
      * @param  int|null  $userId  null for scheduled/automated backups, which
-     *   have no causing user
+     *                            have no causing user
      */
     public function createAndStore(?int $userId, bool $isAutomatic = false): Backup
     {

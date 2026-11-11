@@ -2,8 +2,9 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use App\Enums\OperationalCostStatus;
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class InfrastructureToolUpdateRequest extends FormRequest
@@ -11,13 +12,13 @@ class InfrastructureToolUpdateRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'tech_stack_component' => ['sometimes', 'required', 'string', 'max:255'],
-            'vendor' => ['sometimes','required', 'string', 'max:255'],
+            'vendor' => ['sometimes', 'required', 'string', 'max:255'],
             'monthly_fee' => ['nullable', 'required', 'numeric', 'min:0'],
             'annual_fee' => ['nullable', 'required', 'numeric', 'min:0'],
             // Required while the tool is in use; optional once it isn't.

@@ -98,7 +98,7 @@ class AttendanceRepository implements AttendanceRepositoryInterface
         $employeeId = Auth::user()->employeeProfile?->id;
 
         if (! $employeeId) {
-            return new Collection();
+            return new Collection;
         }
 
         return Attendance::with(['employee.user'])

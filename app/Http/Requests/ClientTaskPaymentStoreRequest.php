@@ -11,8 +11,8 @@ class ClientTaskPaymentStoreRequest extends FormRequest
         return [
             'document_name' => ['required', 'string', 'max:255'],
             'document_path' => ['required', 'string', 'max:500'],
-            'amount'        => ['nullable', 'numeric', 'min:0'],
-            'payment_date'  => ['nullable', 'date'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'payment_date' => ['nullable', 'date'],
             'pivot_id' => ['required', 'exists:client_task_pivots,id'],
         ];
     }
@@ -22,8 +22,8 @@ class ClientTaskPaymentStoreRequest extends FormRequest
         return [
             'document_name' => 'Document Name',
             'document_path' => 'Document Path',
-            'amount'        => 'Amount',
-            'payment_date'  => 'Payment Date',
+            'amount' => 'Amount',
+            'payment_date' => 'Payment Date',
             'pivot_id' => 'Pivot',
         ];
     }

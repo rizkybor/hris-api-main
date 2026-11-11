@@ -171,7 +171,7 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
      */
     public function title(): string
     {
-        $month = \Carbon\Carbon::parse($this->payroll->salary_month)->format('F Y');
+        $month = Carbon::parse($this->payroll->salary_month)->format('F Y');
 
         return "Payroll {$month}";
     }
@@ -214,7 +214,7 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
                 // Add summary information at the top (before the table)
                 $sheet->insertNewRowBefore(1, 5);
 
-                $month = \Carbon\Carbon::parse($this->payroll->salary_month)->format('F Y');
+                $month = Carbon::parse($this->payroll->salary_month)->format('F Y');
                 $totalEmployees = $this->payroll->payrollDetails()->count();
                 $totalAmount = $this->payroll->payrollDetails()->sum('final_salary');
                 $avgSalary = $totalEmployees > 0 ? $totalAmount / $totalEmployees : 0;
@@ -228,7 +228,7 @@ class PayrollExport implements FromCollection, ShouldAutoSize, WithEvents, WithH
                 $sheet->setCellValue('D4', 'Status: '.($this->payroll->status === 'paid' ? 'Sudah Dibayar' : 'Menunggu'));
 
                 if ($this->payroll->payment_date) {
-                    $paymentDate = \Carbon\Carbon::parse($this->payroll->payment_date)->format('d F Y');
+                    $paymentDate = Carbon::parse($this->payroll->payment_date)->format('d F Y');
                     $sheet->setCellValue('A5', "Tanggal Pembayaran: {$paymentDate}");
                 }
 

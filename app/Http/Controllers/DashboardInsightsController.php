@@ -7,12 +7,12 @@ use App\Models\MaintenanceContract;
 use App\Models\MaintenancePeriod;
 use App\Models\Subscription;
 use App\Services\KeyMetricsService;
-use App\Services\SubscriptionInsightsService;
 use App\Services\MaintenanceService;
+use App\Services\SubscriptionInsightsService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 /**

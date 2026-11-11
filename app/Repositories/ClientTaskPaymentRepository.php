@@ -15,7 +15,7 @@ class ClientTaskPaymentRepository implements ClientTaskPaymentRepositoryInterfac
     public function getAll(?string $search, ?int $limit, bool $execute): Builder|Collection
     {
         $query = ClientTaskPayment::query()
-            ->when($search, fn($q) => $q->search($search))
+            ->when($search, fn ($q) => $q->search($search))
             ->orderByDesc('created_at');
 
         if ($limit) {
@@ -46,6 +46,7 @@ class ClientTaskPaymentRepository implements ClientTaskPaymentRepositoryInterfac
     {
         return DB::transaction(function () use ($data) {
             $dto = ClientTaskPaymentDto::fromArray($data);
+
             return ClientTaskPayment::create($dto->toArray());
         });
     }
