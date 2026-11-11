@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+
 class CompanyFinance extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -22,10 +22,10 @@ class CompanyFinance extends Model
     }
 
     protected $fillable = [
-        'saldo_company'
+        'saldo_company',
     ];
 
     protected $casts = [
-        'saldo_company' => 'decimal:2'
+        'saldo_company' => 'decimal:2',
     ];
 }

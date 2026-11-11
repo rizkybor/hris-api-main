@@ -10,7 +10,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Subscription extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     // `amount` is a computed accessor (sum of `services`), not a real
     // column -- without $appends it silently drops out of toArray()/JSON

@@ -136,4 +136,3 @@ class ClientTaskPivotController extends Controller implements HasMiddleware
         }
     }
 }
-

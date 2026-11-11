@@ -47,9 +47,9 @@ class PayrollRepository implements PayrollRepositoryInterface
             ->when($search, function ($query) use ($search) {
                 $query->whereHas('payrollDetails.employee', function ($q) use ($search) {
                     $q->whereHas('user', function ($userQuery) use ($search) {
-                        $userQuery->where('name', 'like', '%' . $search . '%');
+                        $userQuery->where('name', 'like', '%'.$search.'%');
                     })
-                        ->orWhere('code', 'like', '%' . $search . '%');
+                        ->orWhere('code', 'like', '%'.$search.'%');
                 });
             })
             ->orderBy('salary_month', 'desc');
@@ -158,7 +158,7 @@ class PayrollRepository implements PayrollRepositoryInterface
             }
 
             if ($existingPayroll && ! $regenerate) {
-                throw new \Exception('Payroll untuk bulan ' . $month->format('F Y') . ' sudah dibuat');
+                throw new \Exception('Payroll untuk bulan '.$month->format('F Y').' sudah dibuat');
             }
 
             if ($existingPayroll) {
@@ -299,7 +299,7 @@ class PayrollRepository implements PayrollRepositoryInterface
                     'bpjs_jkm_company' => $calc['bpjs_jkm_company'],
                     'pph21' => $calc['pph21'],
                     'total_deduction' => round($totalDeduction, 2),
-                    'notes' => "Hari kerja: {$workingDays} | Hadir: {$attendedDays} | Terlambat: {$lateDays} | Sakit: {$sickDays} | Izin: {$permissionDays} | Alpha: {$absentDays} | Potongan Absensi: Rp " . number_format($attendanceDeduction, 0, ',', '.') . ' | BPJS: Rp ' . number_format($calc['bpjs_kesehatan_employee'] + $calc['bpjs_jht_employee'] + $calc['bpjs_jp_employee'], 0, ',', '.') . ' | PPh21: Rp ' . number_format($calc['pph21'], 0, ',', '.'),
+                    'notes' => "Hari kerja: {$workingDays} | Hadir: {$attendedDays} | Terlambat: {$lateDays} | Sakit: {$sickDays} | Izin: {$permissionDays} | Alpha: {$absentDays} | Potongan Absensi: Rp ".number_format($attendanceDeduction, 0, ',', '.').' | BPJS: Rp '.number_format($calc['bpjs_kesehatan_employee'] + $calc['bpjs_jht_employee'] + $calc['bpjs_jp_employee'], 0, ',', '.').' | PPh21: Rp '.number_format($calc['pph21'], 0, ',', '.'),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -416,7 +416,7 @@ class PayrollRepository implements PayrollRepositoryInterface
                     'bpjs_jkm_company' => 0,
                     'pph21' => $calc['pph21'],
                     'total_deduction' => $calc['pph21'],
-                    'notes' => "THR -- Masa kerja: {$calc['months_of_service']}/12 bulan | Gaji bulanan: Rp ".number_format($monthlySalary, 0, ',', '.')." | THR Kotor: Rp ".number_format($calc['gross_thr'], 0, ',', '.').' | PPh21: Rp '.number_format($calc['pph21'], 0, ',', '.'),
+                    'notes' => "THR -- Masa kerja: {$calc['months_of_service']}/12 bulan | Gaji bulanan: Rp ".number_format($monthlySalary, 0, ',', '.').' | THR Kotor: Rp '.number_format($calc['gross_thr'], 0, ',', '.').' | PPh21: Rp '.number_format($calc['pph21'], 0, ',', '.'),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -610,7 +610,7 @@ class PayrollRepository implements PayrollRepositoryInterface
     public function getPayrollStatistics(string $payrollId)
     {
         // Cache key for payroll-specific statistics
-        $cacheKey = CacheConstants::CACHE_KEY_PAYROLL_STATISTICS . $payrollId . '_' . now()->format('Y-m-d-H');
+        $cacheKey = CacheConstants::CACHE_KEY_PAYROLL_STATISTICS.$payrollId.'_'.now()->format('Y-m-d-H');
 
         // Cache for 1 hour
         return cache()->remember($cacheKey, CacheConstants::ONE_HOUR, function () use ($payrollId) {

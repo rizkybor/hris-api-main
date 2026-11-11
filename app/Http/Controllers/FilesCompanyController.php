@@ -54,7 +54,7 @@ class FilesCompanyController extends Controller implements HasMiddleware
                 200
             );
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -78,7 +78,7 @@ class FilesCompanyController extends Controller implements HasMiddleware
                 200
             );
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -94,10 +94,9 @@ class FilesCompanyController extends Controller implements HasMiddleware
                 200
             );
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
-
 
     public function store(FilesCompanyStoreRequest $request)
     {
@@ -180,7 +179,6 @@ class FilesCompanyController extends Controller implements HasMiddleware
         }
     }
 
-
     public function show(string $id)
     {
         try {
@@ -190,10 +188,9 @@ class FilesCompanyController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
-
 
     public function destroy(string $id)
     {
@@ -202,11 +199,12 @@ class FilesCompanyController extends Controller implements HasMiddleware
             $this->cloudinary->delete($fileModel->document_path, CloudinaryResourceType::fromMime($fileModel->type_file));
 
             $this->filesCompanyRepository->delete($id);
+
             return ResponseHelper::jsonResponse(true, 'Company File Deleted Successfully', null, 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company File Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

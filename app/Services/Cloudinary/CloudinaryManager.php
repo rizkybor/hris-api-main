@@ -168,8 +168,8 @@ class CloudinaryManager
      * @param  array<string, mixed>  $options
      *
      * @throws \RuntimeException a user-safe message; the real SDK/cURL
-     *   error (which can leak transport details like hostnames or timeouts)
-     *   is logged instead of being allowed to reach the API response.
+     *                           error (which can leak transport details like hostnames or timeouts)
+     *                           is logged instead of being allowed to reach the API response.
      */
     /**
      * Uploads a file Cloudinary already hosts (by URL) as an *image*

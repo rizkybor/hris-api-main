@@ -32,10 +32,10 @@ class ClientAttachmentDto
         return [
             'document_name' => $this->document_name,
             'document_path' => $this->document_path,
-            'type_file'     => $this->type_file,
-            'size_file'     => $this->size_file,
-            'description'   => $this->description,
-            'client_id'     => $this->client_id,
+            'type_file' => $this->type_file,
+            'size_file' => $this->size_file,
+            'description' => $this->description,
+            'client_id' => $this->client_id,
         ];
     }
 

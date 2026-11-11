@@ -6,12 +6,12 @@ use App\Enums\OperationalCostStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+
 class SdmResource extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -23,7 +23,7 @@ class SdmResource extends Model
     }
 
     protected $fillable = [
-        'sdm_component', 'sdm_field_id', 'productive_hours_per_month', 'capacity_target', 'actual', 'status', 'expired_date', 'notes'
+        'sdm_component', 'sdm_field_id', 'productive_hours_per_month', 'capacity_target', 'actual', 'status', 'expired_date', 'notes',
     ];
 
     protected $casts = [

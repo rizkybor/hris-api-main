@@ -19,10 +19,10 @@ class ClientTaskPaymentDto
     public function toArray(): array
     {
         return [
-            'document_name'   => $this->document_name,
-            'document_path'   => $this->document_path,
-            'amount'          => $this->amount,
-            'payment_date'    => $this->payment_date
+            'document_name' => $this->document_name,
+            'document_path' => $this->document_path,
+            'amount' => $this->amount,
+            'payment_date' => $this->payment_date,
         ];
     }
 

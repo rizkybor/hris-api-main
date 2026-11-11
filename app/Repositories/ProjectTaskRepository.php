@@ -91,7 +91,7 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
         $query = ProjectTask::with(['project'])
             ->where('assignee_id', $employeeId)
             ->when(! $includeCompleted, fn ($q) => $q->whereIn('status', ['todo', 'in_progress', 'review']))
-            ->orderByRaw("CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC");
+            ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC');
 
         if ($limit) {
             $query->take($limit);

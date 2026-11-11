@@ -1,6 +1,7 @@
 <?php
 
 use App\Interfaces\LicenseRepositoryInterface;
+use App\Mail\LicenseCertificateMail;
 use App\Models\License;
 use App\Models\LicenseActivation;
 use App\Models\LicenseEvent;
@@ -8,11 +9,14 @@ use App\Models\LicenseProduct;
 use App\Models\User;
 use App\Services\LicenseCertificateService;
 use App\Services\LicenseTokenService;
+use App\Support\IndonesianRegions;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -60,6 +64,7 @@ const LICENSE_TEST_MIGRATIONS = [
     'database/migrations/2026_11_10_000012_import_occa_release_history.php',
     'database/migrations/2026_11_10_000013_add_installer_file_to_license_releases.php',
     'database/migrations/2026_11_10_000014_add_license_release_permissions.php',
+    'database/migrations/2026_11_11_000001_create_license_keys_table.php',
 ];
 
 const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
@@ -2495,7 +2500,7 @@ test('versions have their own permission module, copied from license manager on 
 // ---------------------------------------------------------------------
 
 test('the certificate can be emailed with the PDF attached, for a bundle once with both keys', function () {
-    Illuminate\Support\Facades\Mail::fake();
+    Mail::fake();
     Sanctum::actingAs($this->admin);
 
     $mac = License::find($this->postJson(lmLicenses(), occaIndividual(['platform' => 'both']))->json('data.id'));
@@ -2505,7 +2510,7 @@ test('the certificate can be emailed with the PDF attached, for a bundle once wi
         'to' => 'jane@example.com', 'cc' => ['boss@example.com'], 'recipient_name' => 'Jane', 'message' => 'Welcome aboard!',
     ])->assertOk()->assertJsonPath('data.to', 'jane@example.com');
 
-    Illuminate\Support\Facades\Mail::assertSent(App\Mail\LicenseCertificateMail::class, function ($mail) use ($mac, $ipad) {
+    Mail::assertSent(LicenseCertificateMail::class, function ($mail) use ($mac, $ipad) {
         $html = $mail->render();
 
         return $mail->hasTo('jane@example.com') && $mail->hasCc('boss@example.com')
@@ -2573,5 +2578,269 @@ test('an empty region list is never cached, so rows added later (not via the imp
         ->assertHeader('Cache-Control', 'max-age=86400, private');
 
     // A non-empty list is cached as before.
-    expect(Illuminate\Support\Facades\Cache::get(App\Support\IndonesianRegions::cacheKey('province', null)))->toHaveCount(2);
+    expect(Cache::get(IndonesianRegions::cacheKey('province', null)))->toHaveCount(2);
+});
+
+// ---------------------------------------------------------------------
+// One key per device: max_devices unique keys, each for one device;
+// a key whose device was released never works again.
+// ---------------------------------------------------------------------
+
+function perDeviceLicense($test, int $devices = 3, array $overrides = []): License
+{
+    Sanctum::actingAs($test->admin);
+    $id = $test->postJson(lmLicenses(), occaIndividual(array_merge(['key_mode' => 'per_device', 'max_devices' => $devices], $overrides)))
+        ->assertStatus(201)->json('data.id');
+
+    return License::with('keys')->find($id);
+}
+
+test('a per-device license gets one unique key per device, all with the license number', function () {
+    $license = perDeviceLicense($this, 3);
+    $keys = $license->keys;
+
+    expect($license->key_mode)->toBe('per_device')
+        ->and($keys)->toHaveCount(3)
+        ->and($keys->pluck('position')->all())->toBe([1, 2, 3])
+        ->and($keys->first()->key)->toBe($license->key)
+        ->and($keys->pluck('key')->unique())->toHaveCount(3)
+        ->and($keys->pluck('status')->unique()->all())->toBe(['available']);
+    foreach ($keys as $key) {
+        expect($key->key)->toMatch(OCCA_KEY_REGEX)->toStartWith('OC32-')->toEndWith('-0001');
+    }
+
+    $this->getJson(lmLicenses()."/{$license->id}")->assertOk()
+        ->assertJsonPath('data.key_mode', 'per_device')
+        ->assertJsonPath('data.key_mode_label', 'One key per device')
+        ->assertJsonPath('data.keys_summary', ['total' => 3, 'available' => 3, 'in_use' => 0, 'used' => 0])
+        ->assertJsonCount(3, 'data.keys');
+    // The list shows the summary too, and finds the license by any of its keys.
+    $this->getJson(lmLicenses().'/all/paginated?search='.$keys[2]->key)->assertOk()
+        ->assertJsonPath('data.data.0.id', $license->id)
+        ->assertJsonPath('data.data.0.keys_summary.total', 3);
+});
+
+test('each per-device key activates exactly one device, and a released key never works again', function () {
+    $license = perDeviceLicense($this, 3);
+    [$k1, $k2, $k3] = $license->keys->pluck('key')->all();
+    $activate = fn ($key, $device) => $this->postJson('/api/occa/license/activate', ['key' => $key, 'device_id' => $device, 'device_name' => "Mac {$device}", 'platform' => 'macOS']);
+
+    // Key 1 on device A; the token carries key 1.
+    $token = $activate($k1, 'A')->assertOk()->assertJsonPath('license.key', $k1)->json('token');
+    expect(app(LicenseTokenService::class)->verify($token)['key'])->toBe($k1);
+    // Same key, same device (reinstall): fine. Same key, another device: refused.
+    $activate($k1, 'A')->assertOk();
+    $activate($k1, 'B')->assertStatus(409)->assertJsonPath('error', 'key_in_use');
+    // Key 2 on device B.
+    $activate($k2, 'B')->assertOk()->assertJsonPath('license.key', $k2);
+
+    $statuses = fn () => $license->keys()->pluck('status', 'position')->all();
+    expect($statuses())->toBe([1 => 'in_use', 2 => 'in_use', 3 => 'available'])
+        ->and($license->keys()->where('position', 1)->value('device_name'))->toBe('Mac A');
+
+    // Refresh only works for the device the key is bound to.
+    $this->postJson('/api/occa/license/refresh', ['key' => $k1, 'device_id' => 'A'])->assertOk()->assertJsonPath('license.key', $k1);
+    $this->postJson('/api/occa/license/refresh', ['key' => $k2, 'device_id' => 'A'])->assertStatus(404)->assertJsonPath('error', 'not_activated');
+
+    // Released from the app: key 1 is used up, also on the same device.
+    $this->postJson('/api/occa/license/deactivate', ['key' => $k1, 'device_id' => 'A'])->assertExactJson(['ok' => true]);
+    expect($statuses()[1])->toBe('used')->and($license->keys()->where('position', 1)->value('used_at'))->not->toBeNull();
+    $activate($k1, 'A')->assertStatus(403)->assertJsonPath('error', 'key_used');
+    $activate($k1, 'C')->assertStatus(403)->assertJsonPath('error', 'key_used');
+    $this->postJson('/api/occa/license/refresh', ['key' => $k1, 'device_id' => 'A'])->assertStatus(403)->assertJsonPath('error', 'key_used');
+    expect(occaEvents($license, LicenseEvent::DENIED_KEY_USED)->count())->toBeGreaterThanOrEqual(2)
+        ->and(occaEvents($license, LicenseEvent::DENIED_KEY_IN_USE)->count())->toBe(1);
+
+    // Released by an admin: key 2 is used up as well.
+    Sanctum::actingAs($this->admin);
+    $activation = $license->activations()->where('device_id', 'B')->first();
+    $this->deleteJson(lmLicenses()."/{$license->id}/activations/{$activation->id}")->assertOk();
+    expect($statuses())->toBe([1 => 'used', 2 => 'used', 3 => 'available']);
+    $activate($k2, 'D')->assertStatus(403)->assertJsonPath('error', 'key_used');
+
+    // Key 3 is still good.
+    $activate($k3, 'D')->assertOk();
+    $this->getJson(lmLicenses()."/{$license->id}")->assertJsonPath('data.keys_summary', ['total' => 3, 'available' => 0, 'in_use' => 1, 'used' => 2]);
+});
+
+test('raising Max devices adds keys; lowering removes unused keys but never below the used ones', function () {
+    $license = perDeviceLicense($this, 3);
+    [$k1, $k2] = $license->keys->pluck('key')->all();
+    $this->postJson('/api/occa/license/activate', ['key' => $k1, 'device_id' => 'A', 'platform' => 'macOS'])->assertOk();
+    $this->postJson('/api/occa/license/activate', ['key' => $k2, 'device_id' => 'B', 'platform' => 'macOS'])->assertOk();
+
+    Sanctum::actingAs($this->admin);
+    $this->putJson(lmLicenses()."/{$license->id}", ['max_devices' => 5])->assertOk()->assertJsonCount(5, 'data.keys');
+    expect($license->keys()->pluck('position')->all())->toBe([1, 2, 3, 4, 5])
+        ->and($license->keys()->pluck('key')->every(fn ($key) => str_ends_with($key, '-0001')))->toBeTrue();
+
+    $this->putJson(lmLicenses()."/{$license->id}", ['max_devices' => 1])->assertStatus(422)->assertJsonValidationErrors('max_devices');
+    expect($license->keys()->count())->toBe(5);
+
+    $this->putJson(lmLicenses()."/{$license->id}", ['max_devices' => 2])->assertOk()->assertJsonCount(2, 'data.keys');
+    expect($license->keys()->pluck('key')->all())->toBe([$k1, $k2]);
+});
+
+test('a shared-key license works as before and has no per-device keys', function () {
+    Sanctum::actingAs($this->admin);
+    $id = $this->postJson(lmLicenses(), occaIndividual(['max_devices' => 3]))->assertStatus(201)
+        ->assertJsonPath('data.key_mode', 'shared')->assertJsonMissingPath('data.keys_summary')->json('data.id');
+    $license = License::find($id);
+
+    expect($license->keys()->count())->toBe(0);
+    foreach (['A', 'B', 'C'] as $device) {
+        $this->postJson('/api/occa/license/activate', ['key' => $license->key, 'device_id' => $device, 'platform' => 'macOS'])->assertOk();
+    }
+    $this->postJson('/api/occa/license/activate', ['key' => $license->key, 'device_id' => 'D', 'platform' => 'macOS'])->assertStatus(409)->assertJsonPath('error', 'device_limit');
+    // The key mode is fixed after creation.
+    $this->putJson(lmLicenses()."/{$id}", ['key_mode' => 'per_device'])->assertOk();
+    expect($license->fresh()->key_mode)->toBe('shared');
+});
+
+test('a Mac + iPad bundle with one key per device gets keys for both licenses', function () {
+    $mac = perDeviceLicense($this, 2, ['platform' => 'both']);
+    $ipad = License::where('bundle_id', $mac->bundle_id)->where('platform', 'ipad')->first();
+
+    expect($mac->keys)->toHaveCount(2)->and($ipad->keys()->count())->toBe(2)
+        ->and($ipad->keys()->pluck('key')->every(fn ($key) => str_starts_with($key, 'OC52-')))->toBeTrue();
+
+    $this->postJson('/api/occa/license/activate', ['key' => $ipad->keys()->value('key'), 'device_id' => 'ipad-1', 'platform' => 'iPadOS'])->assertOk();
+    $this->postJson('/api/occa/license/activate', ['key' => $mac->keys->first()->key, 'device_id' => 'ipad-2', 'platform' => 'iPadOS'])->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+});
+
+test('the key migration turns existing licenses into per-device ones, keeping the key and its device', function () {
+    $license = License::factory()->create(['max_devices' => 3]);
+    $this->postJson('/api/occa/license/activate', ['key' => $license->key, 'device_id' => 'old-mac', 'device_name' => 'Old Mac', 'platform' => 'macOS'])->assertOk();
+
+    (require base_path('database/migrations/2026_11_11_000001_create_license_keys_table.php'))->down();
+    (require base_path('database/migrations/2026_11_11_000001_create_license_keys_table.php'))->up();
+
+    $license = License::with('keys')->find($license->id);
+    expect($license->key_mode)->toBe('per_device')
+        ->and($license->keys)->toHaveCount(3)
+        ->and($license->keys[0]->only(['key', 'status', 'device_id', 'device_name']))->toBe(['key' => $license->key, 'status' => 'in_use', 'device_id' => 'old-mac', 'device_name' => 'Old Mac'])
+        ->and($license->keys[1]->status)->toBe('available')
+        ->and($license->activations()->first()->license_key_id)->toBe($license->keys[0]->id);
+
+    // The old device keeps refreshing with its key; another device needs another key.
+    $this->postJson('/api/occa/license/refresh', ['key' => $license->key, 'device_id' => 'old-mac'])->assertOk();
+    $this->postJson('/api/occa/license/activate', ['key' => $license->key, 'device_id' => 'new-mac', 'platform' => 'macOS'])->assertStatus(409)->assertJsonPath('error', 'key_in_use');
+    $this->postJson('/api/occa/license/activate', ['key' => $license->keys[1]->key, 'device_id' => 'new-mac', 'platform' => 'macOS'])->assertOk();
+});
+
+test('license:create --key-mode=per_device makes one key per device', function () {
+    $this->artisan('license:create', [...OCCA_CLI_PERSON, '--name' => 'Seat User', '--key-mode' => 'per_device', '--max-devices' => 4, '--months' => 12])->assertSuccessful();
+    $license = License::where('licensee_name', 'Seat User')->first();
+    expect($license->key_mode)->toBe('per_device')->and($license->keys()->count())->toBe(4);
+});
+
+test('the certificate of a per-device license lists every key with its status', function () {
+    $license = perDeviceLicense($this, 3);
+    [$k1, $k2, $k3] = $license->keys->pluck('key')->all();
+    $this->postJson('/api/occa/license/activate', ['key' => $k1, 'device_id' => 'A', 'device_name' => 'Studio Mac', 'platform' => 'macOS'])->assertOk();
+    $this->postJson('/api/occa/license/activate', ['key' => $k2, 'device_id' => 'B', 'device_name' => 'Old Mac', 'platform' => 'macOS'])->assertOk();
+    $this->postJson('/api/occa/license/deactivate', ['key' => $k2, 'device_id' => 'B'])->assertOk();
+
+    $data = app(LicenseCertificateService::class)->data($license->fresh());
+    expect($data['perDevice'])->toBeTrue()->and($data['keysPerLicense'])->toBe(3);
+
+    $html = view('pdf.license-certificate', $data)->render();
+    expect($html)->toContain('key 1 of 3')->toContain('Device Keys')->toContain('One key per device')
+        ->toContain($k1)->toContain($k2)->toContain($k3)
+        ->toContain('In use')->toContain('Studio Mac')->toContain('was Old Mac')->toContain('Available');
+});
+
+test('the email of a per-device license lists up to ten keys, more are referred to the PDF', function () {
+    Mail::fake();
+    $small = perDeviceLicense($this, 3);
+    $large = perDeviceLicense($this, 12);
+
+    $this->postJson(lmLicenses()."/{$small->id}/certificate/email", ['to' => 'a@example.com'])->assertOk();
+    $this->postJson(lmLicenses()."/{$large->id}/certificate/email", ['to' => 'b@example.com'])->assertOk();
+
+    Mail::assertSent(LicenseCertificateMail::class, function ($mail) use ($small) {
+        if (! $mail->hasTo('a@example.com')) {
+            return false;
+        }
+        $html = $mail->render();
+
+        return $small->keys->every(fn ($key) => str_contains($html, $key->key)) && str_contains($html, 'one key each');
+    });
+    Mail::assertSent(LicenseCertificateMail::class, function ($mail) use ($large) {
+        if (! $mail->hasTo('b@example.com')) {
+            return false;
+        }
+        $html = $mail->render();
+
+        return str_contains($html, 'Listed on the Device Keys page') && ! str_contains($html, $large->keys->last()->key);
+    });
+});
+
+// ---------------------------------------------------------------------
+// One-key certificates: download / email / share a single device key
+// ---------------------------------------------------------------------
+
+test('a certificate can be made for one key: download, email and share link', function () {
+    Mail::fake();
+    $license = perDeviceLicense($this, 3);
+    [$k1, $k2, $k3] = $license->keys->all();
+
+    // The service: only that key, no Device Keys page, its own reference.
+    $data = app(LicenseCertificateService::class)->data($license->fresh(), $k2);
+    $html = view('pdf.license-certificate', $data)->render();
+    expect($data['reference'])->toBe('LIC-OCCA-MAC-0001-K02')
+        ->and($html)->toContain($k2->key)->toContain('key 2 of 3')->toContain('1 device (this key)')
+        ->not->toContain($k3->key)->not->toContain('Your license keys');
+
+    // Download.
+    $response = $this->get(lmLicenses()."/{$license->id}/certificate?key_id={$k2->id}")->assertOk();
+    expect($response->headers->get('Content-Disposition'))->toContain("occa-License-{$k2->key}.pdf")
+        ->and(occaEvents($license, LicenseEvent::CERTIFICATE_DOWNLOADED)->first()->meta)
+        ->toMatchArray(['reference' => 'LIC-OCCA-MAC-0001-K02', 'key' => $k2->key, 'key_position' => 2]);
+
+    // Email: the body and the PDF name carry only that key.
+    $this->postJson(lmLicenses()."/{$license->id}/certificate/email", ['to' => 'member@example.com', 'key_id' => $k3->id])->assertOk();
+    Mail::assertSent(LicenseCertificateMail::class, function ($mail) use ($k1, $k3) {
+        $html = $mail->render();
+
+        return $mail->filename === "occa-License-{$k3->key}.pdf"
+            && str_contains($html, $k3->key) && str_contains($html, 'key 3 of 3') && ! str_contains($html, $k1->key);
+    });
+
+    // Share link: the key is signed into the URL.
+    $url = $this->postJson(lmLicenses()."/{$license->id}/certificate/share-link", ['key_id' => $k2->id])->assertOk()->json('data.url');
+    expect($url)->toContain('key='.$k2->id);
+    app('auth')->forgetGuards();
+    $path = parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY);
+    $opened = $this->get($path)->assertOk();
+    expect($opened->headers->get('Content-Disposition'))->toContain($k2->key);
+    // Swapping the key breaks the signature.
+    $this->get(str_replace('key='.$k2->id, 'key='.$k3->id, $path))->assertStatus(403);
+});
+
+test('a one-key certificate refuses a used key or a key of another license', function () {
+    $license = perDeviceLicense($this, 2);
+    $other = perDeviceLicense($this, 2);
+    [$k1, $k2] = $license->keys->all();
+    $this->postJson('/api/occa/license/activate', ['key' => $k2->key, 'device_id' => 'B', 'platform' => 'macOS'])->assertOk();
+    $this->postJson('/api/occa/license/deactivate', ['key' => $k2->key, 'device_id' => 'B'])->assertOk();
+
+    $this->getJson(lmLicenses()."/{$license->id}/certificate?key_id={$k2->id}")->assertStatus(422);
+    $this->getJson(lmLicenses()."/{$license->id}/certificate?key_id={$other->keys->first()->id}")->assertStatus(404);
+    $this->postJson(lmLicenses()."/{$license->id}/certificate/share-link", ['key_id' => $k2->id])->assertStatus(422);
+    $this->get(lmLicenses()."/{$license->id}/certificate?key_id={$k1->id}")->assertOk();
+});
+
+test('a bundle key certificate covers only the platform of that key', function () {
+    $mac = perDeviceLicense($this, 2, ['platform' => 'both']);
+    $ipad = License::with('keys')->where('bundle_id', $mac->bundle_id)->where('platform', 'ipad')->first();
+    $ipadKey = $ipad->keys->last();
+
+    // Asked from the Mac license, for an iPad key.
+    $response = $this->get(lmLicenses()."/{$mac->id}/certificate?key_id={$ipadKey->id}")->assertOk();
+    expect($response->headers->get('Content-Disposition'))->toContain($ipadKey->key);
+
+    $data = app(LicenseCertificateService::class)->data($mac, $ipadKey);
+    expect($data['isBundle'])->toBeFalse()->and($data['license']->id)->toBe($ipad->id)
+        ->and($data['reference'])->toBe('LIC-OCCA-IPAD-0001-K02');
 });

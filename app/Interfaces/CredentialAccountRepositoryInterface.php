@@ -32,4 +32,3 @@ interface CredentialAccountRepositoryInterface
         string $id
     );
 }
-

@@ -2,20 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Helpers\ResponseHelper;
-
-use App\Models\ClientTaskList;
 use App\Http\Requests\ClientTaskListStoreRequest;
 use App\Http\Requests\ClientTaskListUpdateRequest;
 use App\Http\Resources\ClientTaskListResource;
-
-use App\Models\ClientTaskPivot;
 use App\Http\Resources\ClientTaskPivotResource;
-
 use App\Http\Resources\PaginateResource;
 use App\Interfaces\ClientTaskListRepositoryInterface;
+use App\Models\ClientTaskList;
+use App\Models\ClientTaskPivot;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -53,7 +50,7 @@ class ClientTaskListController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Client Task List Retrieved Successfully', ClientTaskListResource::collection($accounts), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -72,7 +69,7 @@ class ClientTaskListController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Client Task List Retrieved Successfully', PaginateResource::make($clients, ClientTaskListResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -96,13 +93,13 @@ class ClientTaskListController extends Controller implements HasMiddleware
                 true,
                 'Task List Created and Pivot Updated Successfully',
                 [
-                    'task'  => new ClientTaskListResource($task),
+                    'task' => new ClientTaskListResource($task),
                     'pivot' => new ClientTaskPivotResource($pivot),
                 ],
                 201
             );
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -118,10 +115,9 @@ class ClientTaskListController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Client Account Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
-
 
     /**
      * Update the specified resource in storage.
@@ -133,7 +129,7 @@ class ClientTaskListController extends Controller implements HasMiddleware
         try {
             $task = $this->clientsTaskListRepository->update($id, $validated);
 
-            if (!empty($validated['pivot_id'])) {
+            if (! empty($validated['pivot_id'])) {
                 $pivot = ClientTaskPivot::findOrFail($validated['pivot_id']);
                 $pivot->task_client_id = $task->id;
                 $pivot->save();
@@ -143,18 +139,17 @@ class ClientTaskListController extends Controller implements HasMiddleware
                 true,
                 'Task List Updated Successfully',
                 [
-                    'task'  => new ClientTaskListResource($task),
+                    'task' => new ClientTaskListResource($task),
                     'pivot' => isset($pivot) ? new ClientTaskPivotResource($pivot) : null,
                 ],
                 200
             );
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Task List or Pivot Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
-
 
     /**
      * Remove the specified resource from storage.
@@ -168,7 +163,7 @@ class ClientTaskListController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Client Account Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

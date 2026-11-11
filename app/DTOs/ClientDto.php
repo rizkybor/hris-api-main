@@ -26,17 +26,17 @@ class ClientDto
     public function toArray(): array
     {
         return [
-            'name'       => $this->name,
-            'pic_name'   => $this->pic_name,
-            'pic_phone'  => $this->pic_phone,
-            'email'      => $this->email,
-            'address'    => $this->address,
-            'type'       => $this->type,
-            'field'      => $this->field,
-            'npwp'       => $this->npwp,
+            'name' => $this->name,
+            'pic_name' => $this->pic_name,
+            'pic_phone' => $this->pic_phone,
+            'email' => $this->email,
+            'address' => $this->address,
+            'type' => $this->type,
+            'field' => $this->field,
+            'npwp' => $this->npwp,
             'siup_number' => $this->siup_number,
             'nib_number' => $this->nib_number,
-            'notes'      => $this->notes,
+            'notes' => $this->notes,
         ];
     }
 

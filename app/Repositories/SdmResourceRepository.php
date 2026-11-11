@@ -75,7 +75,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
             'items' => $items,
             'summary' => [
                 'total_actual' => $totalActual,
-            ]
+            ],
         ];
     }
 
@@ -96,7 +96,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
     public function create(
         array $data
     ): SdmResource {
-        $dto = SdmResourceDTO::fromArray($data);
+        $dto = SdmResourceDto::fromArray($data);
         $array = $dto->toArray();
 
         return SdmResource::create($array);
@@ -107,7 +107,7 @@ class SdmResourceRepository implements SdmResourceRepositoryInterface
         array $data
     ): SdmResource {
         $resource = $this->getById($id);
-        $dto = SdmResourceDTO::fromArrayForUpdate($data, $resource);
+        $dto = SdmResourceDto::fromArrayForUpdate($data, $resource);
         $resource->update($dto->toArray());
 
         return $resource;

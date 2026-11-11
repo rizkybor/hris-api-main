@@ -9,7 +9,7 @@ class ClientTaskListUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'     => ['sometimes', 'required', 'string', 'max:255'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
             'pivot_id' => ['sometimes', 'exists:client_task_pivots,id'],
         ];
     }
@@ -17,7 +17,7 @@ class ClientTaskListUpdateRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name'     => 'Task Name',
+            'name' => 'Task Name',
             'pivot_id' => 'Pivot',
         ];
     }

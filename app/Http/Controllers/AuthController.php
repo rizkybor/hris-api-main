@@ -6,6 +6,7 @@ use App\Helpers\ResponseHelper;
 use App\Http\Requests\LoginStoreRequest;
 use App\Http\Resources\UserResource;
 use App\Interfaces\AuthRepositoryInterface;
+use App\Notifications\ResetPasswordLink;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -80,7 +81,7 @@ class AuthController extends Controller
             $request->only('email'),
             function ($user, string $token) {
                 $url = rtrim(config('app.frontend_url'), '/')."/auth/reset-password?token={$token}&email=".urlencode($user->email);
-                $user->notify(new \App\Notifications\ResetPasswordLink($url));
+                $user->notify(new ResetPasswordLink($url));
             }
         );
 

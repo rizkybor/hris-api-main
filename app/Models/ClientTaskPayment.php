@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+
 class ClientTaskPayment extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -28,7 +28,7 @@ class ClientTaskPayment extends Model
         'document_name',
         'document_path',
         'amount',
-        'payment_date'
+        'payment_date',
     ];
 
     /**
@@ -42,8 +42,8 @@ class ClientTaskPayment extends Model
     public function scopeSearch($query, $search)
     {
         return $query->where(function ($q) use ($search) {
-            $q->where('document_name', 'like', '%' . $search . '%')
-                ->orWhere('payment_date', 'like', '%' . $search . '%');
+            $q->where('document_name', 'like', '%'.$search.'%')
+                ->orWhere('payment_date', 'like', '%'.$search.'%');
         });
     }
 

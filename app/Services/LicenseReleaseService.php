@@ -39,7 +39,7 @@ class LicenseReleaseService
         $published = $product->releases()->published()->forPlatform($platform);
 
         $latest = (clone $published)->ordered()->first();
-        $license = $key ? License::forProduct($product)->where('key', License::normalizeKey($key))->first() : null;
+        $license = $key ? app(LicenseService::class)->findByKey($product, $key) : null;
         $covered = $license?->updates_major !== null
             ? (clone $published)->where('major', '<=', $license->updates_major)->ordered()->first()
             : $latest;
@@ -75,7 +75,7 @@ class LicenseReleaseService
             throw new LicenseException('not_found', 'This version has no installer to download.', 404);
         }
 
-        $license = $key ? License::forProduct($product)->where('key', License::normalizeKey($key))->first() : null;
+        $license = $key ? app(LicenseService::class)->findByKey($product, $key) : null;
         if (! $license) {
             throw LicenseException::invalidKey();
         }

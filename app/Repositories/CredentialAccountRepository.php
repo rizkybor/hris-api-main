@@ -83,4 +83,3 @@ class CredentialAccountRepository implements CredentialAccountRepositoryInterfac
         return $account;
     }
 }
-
