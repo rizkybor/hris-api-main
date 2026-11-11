@@ -14,6 +14,8 @@ class LicenseActivationResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            // Mac + iPad on one page: which license the device belongs to.
+            'license_id' => $this->license_id,
             'device_id' => $this->device_id,
             'device_name' => $this->device_name,
             // One key per device: the key this device activated with.

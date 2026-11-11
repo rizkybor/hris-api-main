@@ -22,17 +22,7 @@ class LicenseResource extends JsonResource
             'key_mode_label' => License::KEY_MODE_LABELS[$this->key_mode] ?? $this->key_mode,
             // Per-device keys: how many there are and how many are taken.
             'keys_summary' => $this->when($this->isPerDevice(), fn () => $this->keysSummary()),
-            'keys' => $this->when($this->isPerDevice() && $this->relationLoaded('keys'), fn () => $this->keys->map(fn ($key) => [
-                'id' => $key->id,
-                'position' => $key->position,
-                'key' => $key->key,
-                'status' => $key->status,
-                'device_id' => $key->device_id,
-                'device_name' => $key->device_name,
-                'platform' => $key->platform,
-                'activated_at' => $key->activated_at,
-                'used_at' => $key->used_at,
-            ])->values()),
+            'keys' => $this->when($this->isPerDevice() && $this->relationLoaded('keys'), fn () => $this->keys->map(fn ($key) => self::keyRow($key))->values()),
             'product_id' => $this->product_id,
             'sequence' => $this->sequence,
             'product' => $this->whenLoaded('product', fn () => [
@@ -64,7 +54,11 @@ class LicenseResource extends JsonResource
                 'keys_summary' => $sibling->isPerDevice() ? self::summaryOf($sibling) : null,
                 // One key per device: the sibling's keys (detail only).
                 'keys' => $sibling->isPerDevice() && $sibling->relationLoaded('keys')
-                    ? $sibling->keys->map(fn ($key) => ['id' => $key->id, 'position' => $key->position, 'key' => $key->key, 'status' => $key->status])->values()
+                    ? $sibling->keys->map(fn ($key) => self::keyRow($key))->values()
+                    : null,
+                // Detail: the sibling's devices (Mac + iPad on one page).
+                'activations' => $sibling->relationLoaded('activations')
+                    ? LicenseActivationResource::collection($sibling->activations)->resolve()
                     : null,
             ])->values()),
             'category' => $this->category(),
@@ -131,6 +125,23 @@ class LicenseResource extends JsonResource
     private function keysSummary(): array
     {
         return self::summaryOf($this->resource);
+    }
+
+    /** One per-device key with the device it is (or was) bound to. */
+    private static function keyRow(LicenseKey $key): array
+    {
+        return [
+            'id' => $key->id,
+            'license_id' => $key->license_id,
+            'position' => $key->position,
+            'key' => $key->key,
+            'status' => $key->status,
+            'device_id' => $key->device_id,
+            'device_name' => $key->device_name,
+            'platform' => $key->platform,
+            'activated_at' => $key->activated_at,
+            'used_at' => $key->used_at,
+        ];
     }
 
     private static function summaryOf(License $license): array
