@@ -83,6 +83,12 @@ class LicenseException extends RuntimeException
         return new self('key_in_use', 'This license key is already activated on another device.', 409);
     }
 
+    /** The key was replaced by a new one when the license changed plan. */
+    public static function keyReplaced(): self
+    {
+        return new self('key_replaced', 'This license key was replaced after a plan change. Use the new key from your license certificate.', 403);
+    }
+
     public static function notActivated(): self
     {
         return new self('not_activated', 'This device is not activated for this license key.', 404);

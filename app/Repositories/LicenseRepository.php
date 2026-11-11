@@ -9,6 +9,7 @@ use App\Models\LicenseActivation;
 use App\Models\LicenseEvent;
 use App\Models\LicenseKey;
 use App\Models\LicenseProduct;
+use App\Models\LicenseRetiredKey;
 use App\Services\LicenseEventLogger;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -130,6 +131,8 @@ class LicenseRepository implements LicenseRepositoryInterface
         // "both" generates a Mac and an iPad license together (one bundle).
         $platforms = License::platformsFor($licenseDto->platform);
         $bundleId = count($platforms) > 1 ? (string) Str::uuid() : null;
+        // One license per licensee (email) per product and platform.
+        $this->assertUniqueLicensee($product, $platforms, $data['licensee_email'] ?? null);
 
         // The product row is locked while the platforms' counters move, so
         // concurrent creates never get the same number; numbers are never
@@ -216,11 +219,21 @@ class LicenseRepository implements LicenseRepositoryInterface
             }
         }
 
-        DB::transaction(function () use ($license, $licenseDto, $updatesMajor) {
+        $this->assertUniqueLicensee($product, [$license->platform], $licenseDto->licensee_email ?? $license->licensee_email, $license->id);
+
+        $planMeta = [];
+        $changes = [];
+        DB::transaction(function () use ($license, $licenseDto, $updatesMajor, $product, &$planMeta, &$changes) {
+            $oldPlan = $license->plan;
             $license->update(array_merge($licenseDto->toArray(), ['updates_major' => $updatesMajor]));
+            $changes = $license->getChanges();
+            // The key's code names the plan, so a new plan gets a new key.
+            if ($license->plan !== $oldPlan) {
+                $planMeta = $this->replaceKeys($license, $product, $oldPlan);
+            }
             $this->syncKeys($license);
         });
-        $this->eventLogger->logAdminChanges($license, $original, $license->getChanges());
+        $this->eventLogger->logAdminChanges($license, $original, $changes, $planMeta);
 
         return $this->getById($product, $id);
     }
@@ -408,6 +421,75 @@ class LicenseRepository implements LicenseRepositoryInterface
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate($rowPerPage);
+    }
+
+    /**
+     * A licensee (by email, case-insensitive) holds at most one license per
+     * product and platform; a different plan is a plan change on that
+     * license (which gets a new key), not a second license.
+     *
+     * @param  array<int, string>  $platforms
+     */
+    private function assertUniqueLicensee(LicenseProduct $product, array $platforms, ?string $email, ?int $ignoreId = null): void
+    {
+        $email = Str::lower(trim((string) $email));
+        if ($email === '') {
+            return;
+        }
+
+        $existing = License::query()
+            ->forProduct($product)
+            ->whereIn('platform', $platforms)
+            ->whereRaw('LOWER(TRIM(licensee_email)) = ?', [$email])
+            ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))
+            ->orderBy('id')
+            ->first();
+
+        if ($existing) {
+            throw ValidationException::withMessages([
+                'licensee_email' => "{$existing->licensee_email} already has a {$product->name} {$existing->platformLabel()} license ({$existing->key}, {$existing->planLabel()}). "
+                    .'Change the plan of that license instead; it gets a new key.',
+            ]);
+        }
+    }
+
+    /**
+     * Plan change: every key of the license is retired (it never works
+     * again; the app is told key_replaced), every device is signed out and
+     * the license gets a new key with the new plan's code and the same
+     * number. A per-device license gets a fresh set of keys (syncKeys).
+     *
+     * @return array<string, mixed> plan_changed event meta
+     */
+    private function replaceKeys(License $license, LicenseProduct $product, string $oldPlan): array
+    {
+        $oldKey = $license->key;
+        $retired = collect([$oldKey])->merge($license->keys()->pluck('key'))->unique()->values();
+        $now = now();
+        foreach ($retired as $key) {
+            LicenseRetiredKey::query()->create([
+                'license_id' => $license->id,
+                'key' => $key,
+                'plan' => $oldPlan,
+                'reason' => LicenseRetiredKey::REASON_PLAN_CHANGED,
+                'retired_at' => $now,
+            ]);
+        }
+
+        $signedOut = $license->activations()->count();
+        $license->activations()->delete();
+        $license->keys()->delete();
+
+        $license->forceFill([
+            'key' => License::generateKey($product->key_prefix, $license->platform, $license->plan, (int) $license->sequence),
+        ])->save();
+
+        return [
+            'old_key' => $oldKey,
+            'new_key' => $license->key,
+            'keys_replaced' => $retired->count(),
+            'devices_signed_out' => $signedOut,
+        ];
     }
 
     /**

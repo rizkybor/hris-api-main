@@ -8,6 +8,7 @@ use App\Models\LicenseActivation;
 use App\Models\LicenseEvent;
 use App\Models\LicenseKey;
 use App\Models\LicenseProduct;
+use App\Models\LicenseRetiredKey;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -27,6 +28,7 @@ class LicenseService
         'wrong_platform' => LicenseEvent::DENIED_WRONG_PLATFORM,
         'key_used' => LicenseEvent::DENIED_KEY_USED,
         'key_in_use' => LicenseEvent::DENIED_KEY_IN_USE,
+        'key_replaced' => LicenseEvent::DENIED_KEY_REPLACED,
     ];
 
     public function __construct(
@@ -242,7 +244,7 @@ class LicenseService
         }
 
         try {
-            $license = $this->findByKey($product, $key);
+            $license = $this->findByKey($product, $key) ?? $this->retiredLicense($product, $key);
             if (! $license) {
                 return;
             }
@@ -317,6 +319,16 @@ class LicenseService
     }
 
     /**
+     * The license whose key this was before a plan change, or null.
+     */
+    private function retiredLicense(LicenseProduct $product, string $key): ?License
+    {
+        $retired = LicenseRetiredKey::query()->where('key', License::normalizeKey($key))->first();
+
+        return $retired ? License::query()->forProduct($product)->find($retired->license_id) : null;
+    }
+
+    /**
      * Find the license and run the checks shared by activate and refresh.
      */
     /**
@@ -327,7 +339,7 @@ class LicenseService
         [$license, $keyRow] = $this->resolveKey($product, $key, $lock);
 
         if (! $license) {
-            throw LicenseException::invalidKey();
+            throw $this->retiredLicense($product, $key) ? LicenseException::keyReplaced() : LicenseException::invalidKey();
         }
         $license->setRelation('product', $product);
         if (! $license->is_active) {
