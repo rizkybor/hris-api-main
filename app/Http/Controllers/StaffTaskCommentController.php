@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\StaffTaskCommentMention;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 
@@ -161,7 +162,7 @@ class StaffTaskCommentController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, EmployeeProfile>  $mentionedEmployees
+     * @param  Collection<int, EmployeeProfile>  $mentionedEmployees
      */
     private function notifyMentionedEmployees(StaffTaskComment $comment, $mentionedEmployees): void
     {
@@ -176,7 +177,7 @@ class StaffTaskCommentController extends Controller
 
     /**
      * @param  array<int>  $mentionedIds
-     * @param  \Illuminate\Support\Collection<int, EmployeeProfile>  $mentionedEmployees
+     * @param  Collection<int, EmployeeProfile>  $mentionedEmployees
      */
     private function logCommentActivity(StaffTask $task, StaffTaskComment $comment, User $user, array $mentionedIds, $mentionedEmployees): void
     {

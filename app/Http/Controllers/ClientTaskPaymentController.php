@@ -2,20 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Helpers\ResponseHelper;
-
-use App\Models\ClientTaskPayment;
 use App\Http\Requests\ClientTaskPaymentStoreRequest;
 use App\Http\Requests\ClientTaskPaymentUpdateRequest;
 use App\Http\Resources\ClientTaskPaymentResource;
-
-use App\Models\ClientTaskPivot;
 use App\Http\Resources\ClientTaskPivotResource;
-
 use App\Http\Resources\PaginateResource;
 use App\Interfaces\ClientTaskPaymentRepositoryInterface;
+use App\Models\ClientTaskPayment;
+use App\Models\ClientTaskPivot;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -53,7 +50,7 @@ class ClientTaskPaymentController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Client Task Payment Retrieved Successfully', ClientTaskPaymentResource::collection($accounts), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -72,7 +69,7 @@ class ClientTaskPaymentController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Client Task Payment Retrieved Successfully', PaginateResource::make($clients, ClientTaskPaymentResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -87,8 +84,8 @@ class ClientTaskPaymentController extends Controller implements HasMiddleware
             $task = ClientTaskPayment::create([
                 'document_name' => $validated['document_name'],
                 'document_path' => $validated['document_path'] ?? null,
-                'amount'        => $validated['amount'] ?? null,
-                'payment_date'  => $validated['payment_date'] ?? null,
+                'amount' => $validated['amount'] ?? null,
+                'payment_date' => $validated['payment_date'] ?? null,
             ]);
 
             $pivot = ClientTaskPivot::findOrFail($validated['pivot_id']);
@@ -99,16 +96,15 @@ class ClientTaskPaymentController extends Controller implements HasMiddleware
                 true,
                 'Task Payment Created and Pivot Updated Successfully',
                 [
-                    'task'  => new ClientTaskPaymentResource($task),
+                    'task' => new ClientTaskPaymentResource($task),
                     'pivot' => new ClientTaskPivotResource($pivot),
                 ],
                 201
             );
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
-
 
     /**
      * Display the specified resource.
@@ -122,10 +118,9 @@ class ClientTaskPaymentController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Client Task Payment Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
-
 
     /**
      * Update the specified resource in storage.
@@ -137,7 +132,7 @@ class ClientTaskPaymentController extends Controller implements HasMiddleware
         try {
             $task = $this->clientsTaskPaymentRepository->update($id, $validated);
 
-            if (!empty($validated['pivot_id'])) {
+            if (! empty($validated['pivot_id'])) {
                 $pivot = ClientTaskPivot::findOrFail($validated['pivot_id']);
                 $pivot->payment_client_id = $task->id;
                 $pivot->save();
@@ -147,18 +142,17 @@ class ClientTaskPaymentController extends Controller implements HasMiddleware
                 true,
                 'Task Payment Updated Successfully',
                 [
-                    'task'  => new ClientTaskPaymentResource($task),
+                    'task' => new ClientTaskPaymentResource($task),
                     'pivot' => isset($pivot) ? new ClientTaskPivotResource($pivot) : null,
                 ],
                 200
             );
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Task Payment or Pivot Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
-
 
     /**
      * Remove the specified resource from storage.
@@ -172,7 +166,7 @@ class ClientTaskPaymentController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Client Task Payment Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

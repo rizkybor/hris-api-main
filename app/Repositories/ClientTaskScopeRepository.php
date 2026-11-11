@@ -18,7 +18,7 @@ class ClientTaskScopeRepository implements ClientTaskScopeRepositoryInterface
     public function getAll(?string $search, ?int $limit, bool $execute): Builder|Collection
     {
         $query = ClientTaskScope::query()
-            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
+            ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
             ->orderByDesc('created_at');
 
         if ($limit) {

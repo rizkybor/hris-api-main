@@ -2,10 +2,10 @@
 
 namespace App\Services\OperationalCostStatistic;
 
-use App\Repositories\FixedCostRepository;
-use App\Repositories\SdmResourceRepository;
-use App\Repositories\InfrastructureToolRepository;
 use App\Repositories\CompanyFinanceRepository;
+use App\Repositories\FixedCostRepository;
+use App\Repositories\InfrastructureToolRepository;
+use App\Repositories\SdmResourceRepository;
 
 class OperationalCostStatisticService
 {
@@ -18,8 +18,6 @@ class OperationalCostStatisticService
 
     /**
      * Get aggregated operational cost statistics (no cache, no search filter)
-     *
-     * @return array
      */
     public function getStatistic(): array
     {
@@ -42,7 +40,7 @@ class OperationalCostStatisticService
             'company_balance' => number_format($companyBalance, 2, '.', ''),
             'fixed_cost_byMonth' => $fixedCostDataByMonth,
             'sdm_resource_byMonth' => $sdmDataByMonth,
-            'infrastructure_byMonth' => $infraDataByMonth
+            'infrastructure_byMonth' => $infraDataByMonth,
         ];
     }
 }

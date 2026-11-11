@@ -14,7 +14,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  */
 class MonitoredServer extends Model
 {
-    use SoftDeletes, LogsActivity;
+    use LogsActivity, SoftDeletes;
 
     // A server that hasn't reported for this long is shown as offline (the
     // agent reports every 5 minutes).

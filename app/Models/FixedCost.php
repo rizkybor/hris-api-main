@@ -6,12 +6,12 @@ use App\Enums\OperationalCostStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+
 class FixedCost extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -23,7 +23,7 @@ class FixedCost extends Model
     }
 
     protected $fillable = [
-        'financial_items', 'description', 'actual', 'status', 'expired_date', 'notes'
+        'financial_items', 'description', 'actual', 'status', 'expired_date', 'notes',
     ];
 
     protected $casts = [
@@ -37,7 +37,7 @@ class FixedCost extends Model
         return $query->where('status', OperationalCostStatus::ACTIVE->value);
     }
 
-        public function scopeSearch($query, $search)
+    public function scopeSearch($query, $search)
     {
         return $query->where(function ($q) use ($search) {
             $q->where('financial_items', 'like', '%'.$search.'%');

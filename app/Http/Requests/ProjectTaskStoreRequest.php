@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\TaskColor;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProjectTaskStoreRequest extends FormRequest
@@ -20,7 +21,7 @@ class ProjectTaskStoreRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

@@ -22,9 +22,9 @@ class FilesCompanyDto
         return [
             'document_name' => $this->document_name,
             'document_path' => $this->document_path,
-            'type_file'     => $this->type_file,
-            'size_file'     => $this->size_file,
-            'description'   => $this->description,
+            'type_file' => $this->type_file,
+            'size_file' => $this->size_file,
+            'description' => $this->description,
         ];
     }
 
@@ -37,7 +37,7 @@ class FilesCompanyDto
             document_name: $data['document_name'],
             document_path: $data['document_path'],
             type_file: $data['type_file'] ?? null,
-            size_file: isset($data['size_file']) ? (int)$data['size_file'] : null,
+            size_file: isset($data['size_file']) ? (int) $data['size_file'] : null,
             description: $data['description'] ?? null,
         );
     }
@@ -52,7 +52,7 @@ class FilesCompanyDto
             // kalau data['document_path'] null karena dihapus, set null
             document_path: array_key_exists('document_path', $data) ? $data['document_path'] : $existingFile->document_path,
             type_file: $data['type_file'] ?? $existingFile->type_file,
-            size_file: isset($data['size_file']) ? (int)$data['size_file'] : $existingFile->size_file,
+            size_file: isset($data['size_file']) ? (int) $data['size_file'] : $existingFile->size_file,
             description: $data['description'] ?? $existingFile->description,
         );
     }

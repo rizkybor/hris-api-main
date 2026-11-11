@@ -2775,3 +2775,72 @@ test('the email of a per-device license lists up to ten keys, more are referred 
         return str_contains($html, 'Listed on the Device Keys page') && ! str_contains($html, $large->keys->last()->key);
     });
 });
+
+// ---------------------------------------------------------------------
+// One-key certificates: download / email / share a single device key
+// ---------------------------------------------------------------------
+
+test('a certificate can be made for one key: download, email and share link', function () {
+    Mail::fake();
+    $license = perDeviceLicense($this, 3);
+    [$k1, $k2, $k3] = $license->keys->all();
+
+    // The service: only that key, no Device Keys page, its own reference.
+    $data = app(LicenseCertificateService::class)->data($license->fresh(), $k2);
+    $html = view('pdf.license-certificate', $data)->render();
+    expect($data['reference'])->toBe('LIC-OCCA-MAC-0001-K02')
+        ->and($html)->toContain($k2->key)->toContain('key 2 of 3')->toContain('1 device (this key)')
+        ->not->toContain($k3->key)->not->toContain('Your license keys');
+
+    // Download.
+    $response = $this->get(lmLicenses()."/{$license->id}/certificate?key_id={$k2->id}")->assertOk();
+    expect($response->headers->get('Content-Disposition'))->toContain("occa-License-{$k2->key}.pdf")
+        ->and(occaEvents($license, LicenseEvent::CERTIFICATE_DOWNLOADED)->first()->meta)
+        ->toMatchArray(['reference' => 'LIC-OCCA-MAC-0001-K02', 'key' => $k2->key, 'key_position' => 2]);
+
+    // Email: the body and the PDF name carry only that key.
+    $this->postJson(lmLicenses()."/{$license->id}/certificate/email", ['to' => 'member@example.com', 'key_id' => $k3->id])->assertOk();
+    Mail::assertSent(LicenseCertificateMail::class, function ($mail) use ($k1, $k3) {
+        $html = $mail->render();
+
+        return $mail->filename === "occa-License-{$k3->key}.pdf"
+            && str_contains($html, $k3->key) && str_contains($html, 'key 3 of 3') && ! str_contains($html, $k1->key);
+    });
+
+    // Share link: the key is signed into the URL.
+    $url = $this->postJson(lmLicenses()."/{$license->id}/certificate/share-link", ['key_id' => $k2->id])->assertOk()->json('data.url');
+    expect($url)->toContain('key='.$k2->id);
+    app('auth')->forgetGuards();
+    $path = parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY);
+    $opened = $this->get($path)->assertOk();
+    expect($opened->headers->get('Content-Disposition'))->toContain($k2->key);
+    // Swapping the key breaks the signature.
+    $this->get(str_replace('key='.$k2->id, 'key='.$k3->id, $path))->assertStatus(403);
+});
+
+test('a one-key certificate refuses a used key or a key of another license', function () {
+    $license = perDeviceLicense($this, 2);
+    $other = perDeviceLicense($this, 2);
+    [$k1, $k2] = $license->keys->all();
+    $this->postJson('/api/occa/license/activate', ['key' => $k2->key, 'device_id' => 'B', 'platform' => 'macOS'])->assertOk();
+    $this->postJson('/api/occa/license/deactivate', ['key' => $k2->key, 'device_id' => 'B'])->assertOk();
+
+    $this->getJson(lmLicenses()."/{$license->id}/certificate?key_id={$k2->id}")->assertStatus(422);
+    $this->getJson(lmLicenses()."/{$license->id}/certificate?key_id={$other->keys->first()->id}")->assertStatus(404);
+    $this->postJson(lmLicenses()."/{$license->id}/certificate/share-link", ['key_id' => $k2->id])->assertStatus(422);
+    $this->get(lmLicenses()."/{$license->id}/certificate?key_id={$k1->id}")->assertOk();
+});
+
+test('a bundle key certificate covers only the platform of that key', function () {
+    $mac = perDeviceLicense($this, 2, ['platform' => 'both']);
+    $ipad = License::with('keys')->where('bundle_id', $mac->bundle_id)->where('platform', 'ipad')->first();
+    $ipadKey = $ipad->keys->last();
+
+    // Asked from the Mac license, for an iPad key.
+    $response = $this->get(lmLicenses()."/{$mac->id}/certificate?key_id={$ipadKey->id}")->assertOk();
+    expect($response->headers->get('Content-Disposition'))->toContain($ipadKey->key);
+
+    $data = app(LicenseCertificateService::class)->data($mac, $ipadKey);
+    expect($data['isBundle'])->toBeFalse()->and($data['license']->id)->toBe($ipad->id)
+        ->and($data['reference'])->toBe('LIC-OCCA-IPAD-0001-K02');
+});

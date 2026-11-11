@@ -24,15 +24,15 @@ class ClientTaskPivotDto
     public function toArray(): array
     {
         return [
-            'client_id'       => $this->client_id,
+            'client_id' => $this->client_id,
             'scope_client_id' => $this->scope_client_id,
-            'task_client_id'  => $this->task_client_id,
+            'task_client_id' => $this->task_client_id,
             'payment_client_id' => $this->payment_client_id,
-            'maintenance'     => $this->maintenance,
-            'contract_value'  => $this->contract_value,
+            'maintenance' => $this->maintenance,
+            'contract_value' => $this->contract_value,
             'contract_status' => $this->contract_status,
-            'contract_start'  => $this->contract_start,
-            'contract_end'    => $this->contract_end,
+            'contract_start' => $this->contract_start,
+            'contract_end' => $this->contract_end,
         ];
     }
 

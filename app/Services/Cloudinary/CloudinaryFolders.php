@@ -2,6 +2,8 @@
 
 namespace App\Services\Cloudinary;
 
+use Illuminate\Support\Str;
+
 /**
  * Central place for this app's two Cloudinary folders and its file-naming
  * convention, so every controller/repository that uploads something builds
@@ -59,7 +61,7 @@ class CloudinaryFolders
         $words = preg_split('/[^\p{L}\p{N}]+/u', trim($name)) ?: [];
         $initials = '';
         foreach ($words as $word) {
-            $ascii = preg_replace('/[^A-Za-z0-9]/', '', \Illuminate\Support\Str::ascii($word));
+            $ascii = preg_replace('/[^A-Za-z0-9]/', '', Str::ascii($word));
             if ($ascii !== '') {
                 $initials .= strtoupper($ascii[0]);
             }

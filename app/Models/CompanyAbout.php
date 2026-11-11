@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+
 class CompanyAbout extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -24,10 +24,10 @@ class CompanyAbout extends Model
     protected $table = 'company_abouts';
 
     protected $fillable = [
-        'name', 'legal_name', 'npwp', 'description', 'established_date', 'vision', 'mission', 'branches', 'address', 'email', 'phone'
+        'name', 'legal_name', 'npwp', 'description', 'established_date', 'vision', 'mission', 'branches', 'address', 'email', 'phone',
     ];
 
-        protected $casts = [
+    protected $casts = [
         'established_date' => 'date',
         'mission' => 'array',
         'branches' => 'array',

@@ -77,7 +77,7 @@ class FixedCostRepository implements FixedCostRepositoryInterface
             'summary' => [
                 'total_actual' => $totalActual,
                 'total_items' => $totalItems,
-            ]
+            ],
         ];
     }
 
@@ -96,12 +96,10 @@ class FixedCostRepository implements FixedCostRepositoryInterface
         return $result->toArray(); // Mengembalikan hasil sebagai array
     }
 
-
-
     public function create(
         array $data
     ): FixedCost {
-        $dto = FixedCostDTO::fromArray($data);
+        $dto = FixedCostDto::fromArray($data);
         $array = $dto->toArray();
 
         return FixedCost::create($array);
@@ -112,7 +110,7 @@ class FixedCostRepository implements FixedCostRepositoryInterface
         array $data
     ): FixedCost {
         $cost = $this->getById($id);
-        $dto = FixedCostDTO::fromArrayForUpdate($data, $cost);
+        $dto = FixedCostDto::fromArrayForUpdate($data, $cost);
         $cost->update($dto->toArray());
 
         return $cost;

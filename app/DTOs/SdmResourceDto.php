@@ -7,7 +7,6 @@ use App\Models\SdmResource;
 
 class SdmResourceDto
 {
-
     public function __construct(
         public readonly string $sdm_component,
         public readonly ?int $sdm_field_id = null,

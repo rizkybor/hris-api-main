@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+
 class ClientAttachment extends Model
 {
-    use SoftDeletes, LogsActivity;
+    use LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -26,7 +26,7 @@ class ClientAttachment extends Model
         'document_path',
         'type_file',
         'size_file',
-        'description'
+        'description',
     ];
 
     /**
@@ -43,10 +43,10 @@ class ClientAttachment extends Model
     public function scopeSearch($query, $search)
     {
         return $query->where(function ($q) use ($search) {
-            $q->where('document_name', 'like', '%' . $search . '%')
-              ->orWhere('type_file', 'like', '%' . $search . '%')
-              ->orWhere('size_file', 'like', '%' . $search . '%')
-              ->orWhere('description', 'like', '%' . $search . '%');
+            $q->where('document_name', 'like', '%'.$search.'%')
+                ->orWhere('type_file', 'like', '%'.$search.'%')
+                ->orWhere('size_file', 'like', '%'.$search.'%')
+                ->orWhere('description', 'like', '%'.$search.'%');
         });
     }
 }
