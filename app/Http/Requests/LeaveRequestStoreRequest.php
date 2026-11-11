@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Enums\LeaveType;
+use Carbon\Carbon;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -11,7 +13,7 @@ class LeaveRequestStoreRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -66,7 +68,7 @@ class LeaveRequestStoreRequest extends FormRequest
             }
 
             if ($this->input('leave_type') === 'sick_leave' && ! $this->boolean('is_half_day') && $this->input('start_date') && $this->input('end_date')) {
-                $days = \Carbon\Carbon::parse($this->input('start_date'))->diffInDays(\Carbon\Carbon::parse($this->input('end_date'))) + 1;
+                $days = Carbon::parse($this->input('start_date'))->diffInDays(Carbon::parse($this->input('end_date'))) + 1;
 
                 if ($days > 1 && ! $this->hasFile('attachment')) {
                     $validator->errors()->add('attachment', 'Lampiran surat keterangan dokter wajib diunggah untuk cuti sakit lebih dari 1 hari.');

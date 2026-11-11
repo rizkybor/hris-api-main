@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class StaffTaskCommentResource extends JsonResource
 {
@@ -25,7 +26,7 @@ class StaffTaskCommentResource extends JsonResource
                 return [
                     'id' => $this->parent->id,
                     'user_name' => $this->parent->user?->name,
-                    'snippet' => \Illuminate\Support\Str::limit($this->parent->body, 60),
+                    'snippet' => Str::limit($this->parent->body, 60),
                 ];
             }),
             'can_delete' => $this->when($request->user(), function () use ($request) {

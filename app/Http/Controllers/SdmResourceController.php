@@ -23,7 +23,7 @@ class SdmResourceController extends Controller implements HasMiddleware
         $this->sdmResourceRepository = $sdmResourceRepository;
     }
 
-   public static function middleware()
+    public static function middleware()
     {
         return [
             new Middleware(PermissionMiddleware::using(['sdm-resource-list|sdm-resource-create|sdm-resource-edit|sdm-resource-delete']), only: ['index', 'getAllPaginated', 'show']),
@@ -47,7 +47,7 @@ class SdmResourceController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'SDM Resources Retrieved Successfully', SdmResource::collection($resources), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -66,11 +66,11 @@ class SdmResourceController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'SDM Resources Retrieved Successfully', PaginateResource::make($resources, SdmResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
-        /**
+    /**
      * Store a newly created resource in storage.
      */
     public function store(SdmResourceStoreRequest $request)
@@ -98,7 +98,7 @@ class SdmResourceController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'SDM Resource Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -132,7 +132,7 @@ class SdmResourceController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'SDM Resource Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

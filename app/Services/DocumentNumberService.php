@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CertificateSetting;
 use App\Models\DocumentNumberSequence;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -163,7 +164,7 @@ class DocumentNumberService
         string $companyCode,
         string $categoryCode,
         string $programCode,
-        \Carbon\Carbon $date,
+        Carbon $date,
         ?string $format = null
     ): array {
         $year = (int) $date->year;
@@ -183,7 +184,7 @@ class DocumentNumberService
         string $companyCode,
         string $categoryCode,
         string $programCode,
-        \Carbon\Carbon $date,
+        Carbon $date,
         ?string $format = null
     ): array {
         $year = (int) $date->year;
@@ -208,7 +209,7 @@ class DocumentNumberService
         string $monthRoman,
         int $sequence
     ): string {
-        $format = $format ?: \App\Models\CertificateSetting::DEFAULT_FORMAT;
+        $format = $format ?: CertificateSetting::DEFAULT_FORMAT;
 
         return strtr($format, [
             '{company}' => strtoupper($companyCode),

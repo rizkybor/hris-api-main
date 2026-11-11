@@ -26,4 +26,3 @@ class CredentialAccountResource extends JsonResource
         ];
     }
 }
-

@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\ProposalRequest;
-use App\Mail\ProposalShareMail;
 use App\Http\Resources\PaginateResource;
 use App\Http\Resources\ProposalResource;
+use App\Mail\ProposalShareMail;
 use App\Models\Proposal;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;

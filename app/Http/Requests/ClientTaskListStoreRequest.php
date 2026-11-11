@@ -9,7 +9,7 @@ class ClientTaskListStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'     => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'pivot_id' => ['required', 'exists:client_task_pivots,id'],
         ];
     }
@@ -17,7 +17,7 @@ class ClientTaskListStoreRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name'     => 'Task Name',
+            'name' => 'Task Name',
             'pivot_id' => 'Pivot',
         ];
     }

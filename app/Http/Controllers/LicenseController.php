@@ -152,6 +152,9 @@ class LicenseController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(true, 'License Updated Successfully', new LicenseResource($license), 200);
         } catch (ModelNotFoundException $e) {
             return $this->notFound();
+        } catch (ValidationException $e) {
+            // E.g. Max devices below the per-device keys already used: 422.
+            throw $e;
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

@@ -5,12 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
+use Illuminate\Support\Collection;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+
 class Project extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -141,9 +142,9 @@ class Project extends Model
      * fixed small number of queries regardless of how many ids are checked
      * against it (unlike calling isEmployeeProjectParticipant() in a loop).
      *
-     * @return \Illuminate\Support\Collection<int, int>
+     * @return Collection<int, int>
      */
-    public function getParticipantEmployeeIds(): \Illuminate\Support\Collection
+    public function getParticipantEmployeeIds(): Collection
     {
         $teamMemberIds = TeamMember::whereNull('left_at')
             ->whereHas('team.projects', fn ($query) => $query->where('projects.id', $this->id))

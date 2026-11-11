@@ -2,8 +2,6 @@
 
 namespace App\Interfaces;
 
-use Illuminate\Database\Eloquent\Collection;
-
 interface ClientAttachmentRepositoryInterface
 {
     public function getAll(

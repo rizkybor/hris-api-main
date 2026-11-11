@@ -18,7 +18,7 @@ class ClientTaskPivotRepository implements ClientTaskPivotRepositoryInterface
     public function getAll(?string $search, ?int $limit, bool $execute): Builder|Collection
     {
         $query = ClientTaskPivot::with(['client', 'scopeClient', 'taskClient', 'paymentClient'])
-            ->when($search, fn($q) => $q->whereHas('client', fn($q2) => $q2->search($search)))
+            ->when($search, fn ($q) => $q->whereHas('client', fn ($q2) => $q2->search($search)))
             ->orderByDesc('created_at');
 
         if ($limit) {
@@ -54,6 +54,7 @@ class ClientTaskPivotRepository implements ClientTaskPivotRepositoryInterface
     {
         return DB::transaction(function () use ($data) {
             $dto = ClientTaskPivotDto::fromArray($data);
+
             return ClientTaskPivot::create($dto->toArray());
         });
     }

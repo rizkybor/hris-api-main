@@ -41,12 +41,35 @@
                         @endif
 
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e6e9ef; border-bottom:1px solid #e6e9ef; margin:0 0 22px 0;">
-                            @foreach($keys as $key)
+                            @if($perDevice)
+                                @foreach($deviceKeys as $group)
+                                    <tr>
+                                        <td style="padding:10px 0; font-size:13px; color:#64748b; width:38%; vertical-align:top; {{ $loop->first ? '' : 'border-top:1px solid #f0f2f6;' }}">
+                                            {{ $keys->count() > 1 ? $group['license']->platformLabel().' keys' : 'License keys' }}<br>
+                                            <span style="font-size:12px;">{{ $group['keys']->count() }} &middot; one per device</span>
+                                        </td>
+                                        <td style="padding:10px 0; font-size:13px; color:#0b1d51; font-weight:bold; font-family:Menlo, Consolas, monospace; letter-spacing:1px; line-height:1.7; {{ $loop->first ? '' : 'border-top:1px solid #f0f2f6;' }}">
+                                            @if($group['keys']->count() <= $maxListed)
+                                                @foreach($group['keys'] as $deviceKey){{ $deviceKey->key }}<br>@endforeach
+                                            @else
+                                                <span style="font-family:Helvetica, Arial, sans-serif; font-weight:normal; color:#1f2937;">Listed on the Device Keys page of the attached certificate.</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @elseif($singleKey)
                                 <tr>
-                                    <td style="padding:10px 0; font-size:13px; color:#64748b; width:38%; {{ $loop->first ? '' : 'border-top:1px solid #f0f2f6;' }}">{{ $keys->count() > 1 ? $key->platformLabel().' license key' : 'License key' }}</td>
-                                    <td style="padding:10px 0; font-size:14px; color:#0b1d51; font-weight:bold; font-family:Menlo, Consolas, monospace; letter-spacing:1px; {{ $loop->first ? '' : 'border-top:1px solid #f0f2f6;' }}">{{ $key->key }}</td>
+                                    <td style="padding:10px 0; font-size:13px; color:#64748b; width:38%;">License key<br><span style="font-size:12px;">key {{ $singleKey->position }} of {{ $keysTotal }}</span></td>
+                                    <td style="padding:10px 0; font-size:14px; color:#0b1d51; font-weight:bold; font-family:Menlo, Consolas, monospace; letter-spacing:1px;">{{ $singleKey->key }}</td>
                                 </tr>
-                            @endforeach
+                            @else
+                                @foreach($keys as $key)
+                                    <tr>
+                                        <td style="padding:10px 0; font-size:13px; color:#64748b; width:38%; {{ $loop->first ? '' : 'border-top:1px solid #f0f2f6;' }}">{{ $keys->count() > 1 ? $key->platformLabel().' license key' : 'License key' }}</td>
+                                        <td style="padding:10px 0; font-size:14px; color:#0b1d51; font-weight:bold; font-family:Menlo, Consolas, monospace; letter-spacing:1px; {{ $loop->first ? '' : 'border-top:1px solid #f0f2f6;' }}">{{ $key->key }}</td>
+                                    </tr>
+                                @endforeach
+                            @endif
                             <tr>
                                 <td style="padding:10px 0; font-size:13px; color:#64748b; border-top:1px solid #f0f2f6;">Plan</td>
                                 <td style="padding:10px 0; font-size:13px; color:#1f2937; font-weight:bold; border-top:1px solid #f0f2f6;">{{ $license->planLabel() }}</td>
@@ -57,7 +80,7 @@
                             </tr>
                             <tr>
                                 <td style="padding:10px 0; font-size:13px; color:#64748b; border-top:1px solid #f0f2f6;">Devices</td>
-                                <td style="padding:10px 0; font-size:13px; color:#1f2937; font-weight:bold; border-top:1px solid #f0f2f6;">Up to {{ $license->max_devices }} at a time{{ $keys->count() > 1 ? ' per key' : '' }}</td>
+                                <td style="padding:10px 0; font-size:13px; color:#1f2937; font-weight:bold; border-top:1px solid #f0f2f6;">{{ $singleKey ? '1 (this key works on one device; it cannot be reused once its device is released)' : ($perDevice ? $license->max_devices.', one key each (a key cannot be reused once its device is released)' : 'Up to '.$license->max_devices.' at a time'.($keys->count() > 1 ? ' per key' : '')) }}</td>
                             </tr>
                         </table>
 

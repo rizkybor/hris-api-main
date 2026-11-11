@@ -34,6 +34,7 @@ class LicenseCreateCommand extends Command
         {--website= : Organization: website URL (optional)}
         {--tax-id= : Organization: tax ID / NPWP (optional)}
         {--member-count= : Organization: number of members (optional)}
+        {--key-mode=shared : shared (one key for every device) or per_device (one unique key per device; a used key never works again)}
         {--platform=mac : Platform the key is for: mac, ipad, or both (a Mac and an iPad key together; iPad has no trial)}
         {--plan=professional : Plan: trial, professional, lifetime or organization}
         {--lifetime : Optional with --plan=lifetime (implied); rejected for every other plan}
@@ -75,6 +76,7 @@ class LicenseCreateCommand extends Command
         'tax_id' => 'tax-id',
         'member_count' => 'member-count',
         'platform' => 'platform',
+        'key_mode' => 'key-mode',
         'plan' => 'plan',
         'months' => 'months',
         'days' => 'days',
@@ -110,6 +112,7 @@ class LicenseCreateCommand extends Command
         $category = License::categoryForPlan($input['plan']);
         $validator = Validator::make($input, array_merge(LicenseFieldRules::profile($category, country: $input['country']), [
             'platform' => ['required', Rule::in(License::CREATE_PLATFORMS)],
+            'key_mode' => ['required', Rule::in(License::KEY_MODES)],
             'plan' => ['required', Rule::in(License::PLANS)],
             'months' => ['nullable', 'integer', 'min:1', 'max:1200'],
             'days' => ['nullable', 'integer', 'min:1', 'max:36500'],

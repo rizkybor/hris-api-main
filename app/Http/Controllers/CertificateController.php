@@ -18,6 +18,7 @@ use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Spatie\Permission\Middleware\PermissionMiddleware;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use ZipArchive;
 
 class CertificateController extends Controller implements HasMiddleware
@@ -142,7 +143,7 @@ class CertificateController extends Controller implements HasMiddleware
         }
     }
 
-    private function streamZip(array $certificates, string $batchId): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    private function streamZip(array $certificates, string $batchId): BinaryFileResponse
     {
         $tempDir = storage_path('app/temp');
         if (! is_dir($tempDir)) {
@@ -151,7 +152,7 @@ class CertificateController extends Controller implements HasMiddleware
 
         $zipPath = $tempDir.'/certificates-'.$batchId.'.zip';
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
         foreach ($certificates as $certificate) {

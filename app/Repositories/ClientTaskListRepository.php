@@ -18,7 +18,7 @@ class ClientTaskListRepository implements ClientTaskListRepositoryInterface
     public function getAll(?string $search, ?int $limit, bool $execute): Builder|Collection
     {
         $query = ClientTaskList::query()
-            ->when($search, fn($q) => $q->search($search))
+            ->when($search, fn ($q) => $q->search($search))
             ->orderByDesc('created_at');
 
         if ($limit) {

@@ -2,20 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Helpers\ResponseHelper;
-
-use App\Models\ClientTaskScope;
 use App\Http\Requests\ClientTaskScopeStoreRequest;
 use App\Http\Requests\ClientTaskScopeUpdateRequest;
-use App\Http\Resources\ClientTaskScopeResource;
-use App\Interfaces\ClientTaskScopeRepositoryInterface;
-
-use App\Models\ClientTaskPivot;
 use App\Http\Resources\ClientTaskPivotResource;
-
+use App\Http\Resources\ClientTaskScopeResource;
 use App\Http\Resources\PaginateResource;
+use App\Interfaces\ClientTaskScopeRepositoryInterface;
+use App\Models\ClientTaskPivot;
+use App\Models\ClientTaskScope;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -53,7 +50,7 @@ class ClientTaskScopeController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Client Task Scope Retrieved Successfully', ClientTaskScopeResource::collection($accounts), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -72,7 +69,7 @@ class ClientTaskScopeController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Client Task Scope Retrieved Successfully', PaginateResource::make($clients, ClientTaskScopeResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -96,13 +93,13 @@ class ClientTaskScopeController extends Controller implements HasMiddleware
                 true,
                 'Task Scope Created and Pivot Updated Successfully',
                 [
-                    'task'  => new ClientTaskScopeResource($task),
+                    'task' => new ClientTaskScopeResource($task),
                     'pivot' => new ClientTaskPivotResource($pivot),
                 ],
                 201
             );
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -118,7 +115,7 @@ class ClientTaskScopeController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Client Task Scope Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -132,7 +129,7 @@ class ClientTaskScopeController extends Controller implements HasMiddleware
         try {
             $task = $this->clientsTaskScopeRepository->update($id, $validated);
 
-            if (!empty($validated['pivot_id'])) {
+            if (! empty($validated['pivot_id'])) {
                 $pivot = ClientTaskPivot::findOrFail($validated['pivot_id']);
                 $pivot->scope_client_id = $task->id;
                 $pivot->save();
@@ -142,18 +139,17 @@ class ClientTaskScopeController extends Controller implements HasMiddleware
                 true,
                 'Task Scope Updated Successfully',
                 [
-                    'task'  => new ClientTaskScopeResource($task),
+                    'task' => new ClientTaskScopeResource($task),
                     'pivot' => isset($pivot) ? new ClientTaskPivotResource($pivot) : null,
                 ],
                 200
             );
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Task Scope or Pivot Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
-
 
     /**
      * Remove the specified resource from storage.
@@ -167,7 +163,7 @@ class ClientTaskScopeController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Client Task Scope Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

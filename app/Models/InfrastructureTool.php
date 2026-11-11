@@ -6,12 +6,12 @@ use App\Enums\OperationalCostStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+
 class InfrastructureTool extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -23,7 +23,7 @@ class InfrastructureTool extends Model
     }
 
     protected $fillable = [
-        'tech_stack_component', 'vendor', 'monthly_fee', 'annual_fee', 'expired_date', 'status', 'notes'
+        'tech_stack_component', 'vendor', 'monthly_fee', 'annual_fee', 'expired_date', 'status', 'notes',
     ];
 
     protected $casts = [

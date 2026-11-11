@@ -9,8 +9,8 @@ use App\Models\Attendance;
 use App\Models\EmployeeProfile;
 use App\Models\FixedCost;
 use App\Models\InfrastructureTool;
-use App\Models\MaintenanceContract;
 use App\Models\Invoice;
+use App\Models\MaintenanceContract;
 use App\Models\PaymentReceipt;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
@@ -24,7 +24,6 @@ use App\Services\CompanyCashBookService;
 use App\Services\MaintenanceService;
 use App\Services\ProjectBillingService;
 use App\Services\StaffPerformanceCalculator;
-use Carbon\Carbon;
 
 class ReportRepository implements ReportRepositoryInterface
 {

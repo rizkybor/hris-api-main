@@ -3,8 +3,8 @@
 namespace App\Repositories;
 
 use App\DTOs\ClientAttachmentDto;
-use App\Models\ClientAttachment;
 use App\Interfaces\ClientAttachmentRepositoryInterface;
+use App\Models\ClientAttachment;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -82,8 +82,6 @@ class ClientAttachmentRepository implements ClientAttachmentRepositoryInterface
             ],
         ];
     }
-
-
 
     public function create(
         array $data

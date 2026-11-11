@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\License;
+use App\Models\LicenseKey;
 use App\Models\LicenseProduct;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Carbon;
@@ -34,9 +35,14 @@ class LicenseCertificateService
      */
     public const TIMEZONE = 'Asia/Jakarta';
 
-    public function render(License $license): string
+    /**
+     * The whole license (every key; both licenses of a bundle), or with
+     * $only a certificate for that one key of a "one key per device"
+     * license, e.g. for the member who uses it.
+     */
+    public function render(License $license, ?LicenseKey $only = null): string
     {
-        $pdf = Pdf::loadView('pdf.license-certificate', $this->data($license))
+        $pdf = Pdf::loadView('pdf.license-certificate', $this->data($license, $only))
             ->setPaper('a4', 'portrait')
             ->setOption(['isRemoteEnabled' => false, 'isFontSubsettingEnabled' => true, 'dpi' => 144]);
 
@@ -58,12 +64,36 @@ class LicenseCertificateService
         return $dompdf->output();
     }
 
-    public function filename(License $license): string
+    public function filename(License $license, ?LicenseKey $only = null): string
     {
         $keys = $this->bundleKeys($license);
         $product = $keys->first()->product ?? $license->product;
+        $name = $only ? $only->key : $keys->pluck('key')->implode('_');
 
-        return Str::slug($product?->name ?: 'License', '-').'-License-'.$keys->pluck('key')->implode('_').'.pdf';
+        return Str::slug($product?->name ?: 'License', '-').'-License-'.$name.'.pdf';
+    }
+
+    /**
+     * A key of the license or of its bundle (Mac + iPad), or null.
+     */
+    public function findKey(License $license, int|string|null $keyId): ?LicenseKey
+    {
+        if (! $keyId) {
+            return null;
+        }
+
+        return LicenseKey::query()
+            ->whereKey($keyId)
+            ->whereIn('license_id', $this->bundleKeys($license)->pluck('id'))
+            ->first();
+    }
+
+    /**
+     * LIC-OCCA-MAC-0001-K03: the reference of a one-key certificate.
+     */
+    public static function keyReference(LicenseKey $key): string
+    {
+        return self::reference($key->license).'-K'.str_pad((string) $key->position, 2, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -116,10 +146,14 @@ class LicenseCertificateService
             .'-'.str_pad((string) ($license->sequence ?? $license->id), 4, '0', STR_PAD_LEFT);
     }
 
-    public function data(License $license): array
+    public function data(License $license, ?LicenseKey $only = null): array
     {
         $license->loadMissing('product');
-        $keys = $this->bundleKeys($license);
+        // One key: the certificate covers only the license that holds it.
+        if ($only) {
+            $license = $only->license()->with('product')->first();
+        }
+        $keys = $only ? collect([$license]) : $this->bundleKeys($license);
         $isBundle = $keys->count() > 1;
         // Everything shared (licensee, plan, period) comes from the Mac key
         // of a bundle, so both of its licenses give the same certificate.
@@ -135,9 +169,19 @@ class LicenseCertificateService
             'keys' => $keys,
             'isBundle' => $isBundle,
             'platformsLabel' => $keys->map->platformLabel()->implode(' + '),
+            // "One key per device": every key of each license, for the Device
+            // Keys page (status as of the day the PDF is made).
+            'perDevice' => $license->isPerDevice(),
+            'deviceKeys' => $license->isPerDevice()
+                ? $keys->map(fn (License $member) => ['license' => $member, 'keys' => $member->keys()->get()])->values()
+                : collect(),
+            'keysPerLicense' => $license->isPerDevice() ? $license->keys()->count() : null,
+            // A certificate for one key only (no Device Keys page).
+            'singleKey' => $only,
+            'keysAsOf' => self::date(now()),
             'product' => $product,
             'accent' => self::ACCENT,
-            'reference' => self::certificateReference($keys),
+            'reference' => $only ? self::keyReference($only->setRelation('license', $license)) : self::certificateReference($keys),
             'verifyDomain' => self::VERIFY_DOMAIN,
             'issuedOn' => self::date($issuedAt),
             'startsOn' => self::date($license->starts_at ?? $issuedAt),
@@ -148,7 +192,7 @@ class LicenseCertificateService
             // Organization plan = organization category: show it once.
             'showCategory' => strcasecmp($license->planLabel(), ucfirst($license->category())) !== 0,
             'organizationTypeLabel' => $license->organizationTypeLabel(),
-            'steps' => $this->activationSteps($product, $license, $isBundle),
+            'steps' => $this->activationSteps($product, $license, $isBundle, $only !== null),
             'productIcon' => $this->productIcon($product),
             'companyLogo' => self::embed(resource_path('license-products/jcd-logo.png')),
             // Holographic artwork (php artisan license:certificate-assets),
@@ -207,7 +251,7 @@ class LicenseCertificateService
     /**
      * Three short steps for this product, plus the shared notes.
      */
-    private function activationSteps(?LicenseProduct $product, License $license, bool $isBundle = false): array
+    private function activationSteps(?LicenseProduct $product, License $license, bool $isBundle = false, bool $singleKey = false): array
     {
         $name = $product?->name ?: 'the app';
         // A key only activates on its own platform: Mac (click, Starter
@@ -239,7 +283,11 @@ class LicenseCertificateService
         return [
             'steps' => $steps,
             'notes' => [
-                'To move the license to another device, release it in the app first (or ask us to release it), then activate it on the new device.',
+                match (true) {
+                    $singleKey => 'A released key cannot be used again: to move to another device, ask the licensee for another key.',
+                    $license->isPerDevice() => 'A released key cannot be used again: to move to another device, release the old one, then activate the new device with an available key.',
+                    default => 'To move the license to another device, release it in the app first (or ask us to release it), then activate it on the new device.',
+                },
                 'After activation the app works offline for up to 30 days; connect to the internet now and then so the license can refresh.',
             ],
         ];

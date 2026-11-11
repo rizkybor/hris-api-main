@@ -46,6 +46,9 @@ class LicenseStoreRequest extends FormRequest
         return array_merge(LicenseFieldRules::profile($category, country: $this->input('country')), [
             // mac, ipad, or both (a Mac and an iPad key generated together).
             'platform' => ['required', Rule::in(License::CREATE_PLATFORMS)],
+            // shared: one key for every device (default); per_device: one
+            // unique key per device, a used key never works again.
+            'key_mode' => ['nullable', Rule::in(License::KEY_MODES)],
             'plan' => ['required', Rule::in(License::PLANS)],
             // Set from the plan in prepareForValidation().
             'type' => ['nullable', Rule::in(License::TYPES)],

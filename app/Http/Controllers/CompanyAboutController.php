@@ -21,7 +21,7 @@ class CompanyAboutController extends Controller implements HasMiddleware
         $this->companyAboutRepository = $companyAboutRepository;
     }
 
-   public static function middleware()
+    public static function middleware()
     {
         return [
             new Middleware(PermissionMiddleware::using(['company-about-menu|company-about-create|company-about-edit|company-about-delete']), only: ['index', 'getAllPaginated', 'show']),
@@ -30,8 +30,6 @@ class CompanyAboutController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['company-about-delete']), only: ['destroy']),
         ];
     }
-
-
 
     /**
      * Display a listing of the resource.
@@ -43,7 +41,7 @@ class CompanyAboutController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Company About Retrieved Successfully', CompanyAboutResource::collection($companyAbout), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -75,7 +73,7 @@ class CompanyAboutController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company About Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -109,7 +107,7 @@ class CompanyAboutController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company About Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

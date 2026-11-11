@@ -26,7 +26,7 @@ class FilesCompanyRepository implements FilesCompanyRepositoryInterface
     public function getAll(?string $search, ?int $limit, bool $execute): Builder|Collection
     {
         $query = FilesCompany::query()
-            ->when($search, fn($q) => $q->search($search))
+            ->when($search, fn ($q) => $q->search($search))
             ->orderByDesc('created_at');
 
         if ($limit) {
@@ -39,6 +39,7 @@ class FilesCompanyRepository implements FilesCompanyRepositoryInterface
     public function getAllPaginated(?string $search, int $rowPerPage): LengthAwarePaginator
     {
         $query = $this->getAll($search, null, false);
+
         return $query->paginate($rowPerPage);
     }
 
@@ -50,6 +51,7 @@ class FilesCompanyRepository implements FilesCompanyRepositoryInterface
     public function create(array $data): FilesCompany
     {
         $fileDto = FilesCompanyDto::fromArray($data);
+
         return FilesCompany::create($fileDto->toArray());
     }
 
@@ -58,6 +60,7 @@ class FilesCompanyRepository implements FilesCompanyRepositoryInterface
         $file = $this->getById($id);
         $fileDto = FilesCompanyDto::fromArrayForUpdate($data, $file);
         $file->update($fileDto->toArray());
+
         return $file;
     }
 
@@ -71,6 +74,7 @@ class FilesCompanyRepository implements FilesCompanyRepositoryInterface
         // }
 
         $file->delete();
+
         return $file;
     }
 }

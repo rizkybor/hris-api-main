@@ -215,6 +215,7 @@ class License extends Model
     protected $fillable = [
         'product_id',
         'key',
+        'key_mode',
         'sequence',
         'licensee_name',
         'licensee_email',
@@ -278,6 +279,33 @@ class License extends Model
         return $this->hasMany(LicenseActivation::class);
     }
 
+    /**
+     * How the license's key(s) work: one key shared by up to max_devices
+     * devices, or one unique key per device (license_keys), where a key
+     * that was used and released never works again.
+     */
+    public const KEY_MODE_SHARED = 'shared';
+
+    public const KEY_MODE_PER_DEVICE = 'per_device';
+
+    public const KEY_MODES = [self::KEY_MODE_SHARED, self::KEY_MODE_PER_DEVICE];
+
+    public const KEY_MODE_LABELS = [
+        self::KEY_MODE_SHARED => 'One shared key',
+        self::KEY_MODE_PER_DEVICE => 'One key per device',
+    ];
+
+    /** The per-device keys, in order (key 1 is the license's own key). */
+    public function keys(): HasMany
+    {
+        return $this->hasMany(LicenseKey::class)->orderBy('position');
+    }
+
+    public function isPerDevice(): bool
+    {
+        return $this->key_mode === self::KEY_MODE_PER_DEVICE;
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(LicenseEvent::class);
@@ -328,6 +356,32 @@ class License extends Model
      * random groups make the key hard to guess. Keys are unique across all
      * products.
      */
+    /**
+     * Another key of the same license: same head (prefix + platform/plan
+     * code) and 4-digit license number as $baseKey, new random groups.
+     * Used for the keys of a "one key per device" license.
+     */
+    public static function generateSiblingKey(string $baseKey): string
+    {
+        $head = substr($baseKey, 0, (int) strpos($baseKey, '-'));
+        $tail = substr($baseKey, (int) strrpos($baseKey, '-') + 1);
+        $alphabetLength = strlen(self::KEY_ALPHABET);
+
+        do {
+            $groups = [];
+            for ($g = 0; $g < 3; $g++) {
+                $group = '';
+                for ($i = 0; $i < 4; $i++) {
+                    $group .= self::KEY_ALPHABET[random_int(0, $alphabetLength - 1)];
+                }
+                $groups[] = $group;
+            }
+            $key = $head.'-'.implode('-', $groups).'-'.$tail;
+        } while (self::withTrashed()->where('key', $key)->exists() || LicenseKey::where('key', $key)->exists());
+
+        return $key;
+    }
+
     public static function generateKey(string $prefix, string $platform, string $plan, int $sequence): string
     {
         $alphabetLength = strlen(self::KEY_ALPHABET);
@@ -344,7 +398,7 @@ class License extends Model
                 $groups[] = $group;
             }
             $key = $head.'-'.implode('-', $groups).'-'.$tail;
-        } while (self::withTrashed()->where('key', $key)->exists());
+        } while (self::withTrashed()->where('key', $key)->exists() || LicenseKey::where('key', $key)->exists());
 
         return $key;
     }
@@ -600,6 +654,7 @@ class License extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('key', 'like', '%'.$search.'%')
+                ->orWhereHas('keys', fn ($keys) => $keys->where('key', 'like', '%'.$search.'%'))
                 ->orWhere('licensee_name', 'like', '%'.$search.'%')
                 ->orWhere('licensee_email', 'like', '%'.$search.'%')
                 ->orWhere('contact_name', 'like', '%'.$search.'%')

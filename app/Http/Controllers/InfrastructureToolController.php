@@ -23,7 +23,7 @@ class InfrastructureToolController extends Controller implements HasMiddleware
         $this->infrastructureToolRepository = $infrastructureToolRepository;
     }
 
-   public static function middleware()
+    public static function middleware()
     {
         return [
             new Middleware(PermissionMiddleware::using(['infrastructure-tool-list|infrastructure-tool-create|infrastructure-tool-edit|infrastructure-tool-delete']), only: ['index', 'getAllPaginated', 'show']),
@@ -47,7 +47,7 @@ class InfrastructureToolController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Infrastructure Tools Retrieved Successfully', InfrastructureToolResource::collection($tools), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -66,7 +66,7 @@ class InfrastructureToolController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Infrastructure Tools Retrieved Successfully', PaginateResource::make($tools, InfrastructureToolResource::class), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -98,7 +98,7 @@ class InfrastructureToolController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Infrastructure Tool Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -132,7 +132,7 @@ class InfrastructureToolController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Infrastructure Tool Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

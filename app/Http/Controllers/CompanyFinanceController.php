@@ -7,17 +7,17 @@ use App\Http\Requests\CompanyFinanceStoreRequest;
 use App\Http\Requests\CompanyFinanceStoreUpdateRequest;
 use App\Http\Resources\CompanyFinanceResource;
 use App\Interfaces\CompanyFinanceRepositoryInterface;
+use App\Services\OperationalCostStatistic\OperationalCostStatisticService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
-use App\Services\OperationalCostStatistic\OperationalCostStatisticService;
-
 class CompanyFinanceController extends Controller implements HasMiddleware
 {
     private CompanyFinanceRepositoryInterface $companyFinanceRepository;
+
     protected OperationalCostStatisticService $statisticService;
 
     public function __construct(
@@ -37,7 +37,6 @@ class CompanyFinanceController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['company-finance-delete']), only: ['destroy']),
         ];
     }
-
 
     /**
      * Get aggregated operational cost statistics
@@ -59,13 +58,12 @@ class CompanyFinanceController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(
                 false,
-                'Internal Server Error: ' . $e->getMessage(),
+                'Internal Server Error: '.$e->getMessage(),
                 null,
                 500
             );
         }
     }
-
 
     /**
      * Display a listing of the resource.
@@ -81,7 +79,7 @@ class CompanyFinanceController extends Controller implements HasMiddleware
 
             return ResponseHelper::jsonResponse(true, 'Company Finances Retrieved Successfully', CompanyFinanceResource::collection($finances), 200);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -113,7 +111,7 @@ class CompanyFinanceController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company Finance Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -147,7 +145,7 @@ class CompanyFinanceController extends Controller implements HasMiddleware
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Company Finance Not Found', null, 404);
         } catch (\Throwable $e) {
-            return ResponseHelper::jsonResponse(false, 'Internal Server Error: ' . $e->getMessage(), null, 500);
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
     }
 }

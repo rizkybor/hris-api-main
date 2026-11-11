@@ -39,9 +39,9 @@ class OfficialMemoAttachmentService
     /**
      * @param  array  $tempFiles  downloaded files, for the caller to delete
      * @return array{list: array, pages: array, sheets: array}
-     *   list:   every attachment with its kind and whether it's attached
-     *   pages:  [number, name, page, pages, path, width_mm, height_mm]
-     *   sheets: the pages packed onto PDF pages (see packSheets)
+     *                                                         list:   every attachment with its kind and whether it's attached
+     *                                                         pages:  [number, name, page, pages, path, width_mm, height_mm]
+     *                                                         sheets: the pages packed onto PDF pages (see packSheets)
      */
     public function prepare(DocumentLetter $memo, array &$tempFiles): array
     {

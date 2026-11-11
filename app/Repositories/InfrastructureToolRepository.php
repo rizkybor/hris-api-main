@@ -97,11 +97,10 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
         return $result->toArray();
     }
 
-
     public function create(
         array $data
     ): InfrastructureTool {
-        $dto = InfrastructureToolDTO::fromArray($data);
+        $dto = InfrastructureToolDto::fromArray($data);
         $array = $dto->toArray();
 
         return InfrastructureTool::create($array);
@@ -112,7 +111,7 @@ class InfrastructureToolRepository implements InfrastructureToolRepositoryInterf
         array $data
     ): InfrastructureTool {
         $tool = $this->getById($id);
-        $dto = InfrastructureToolDTO::fromArrayForUpdate($data, $tool);
+        $dto = InfrastructureToolDto::fromArrayForUpdate($data, $tool);
         $tool->update($dto->toArray());
 
         return $tool;
