@@ -68,7 +68,7 @@ interface LicenseRepositoryInterface
 
     public function expiring(int $days, int $limit);
 
-    public function recentEvents(int $limit);
+    public function recentEvents(int $limit, ?int $beforeId = null);
 
     public function getEventsPaginated(
         LicenseProduct $product,

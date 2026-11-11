@@ -69,6 +69,8 @@ class LicenseEvent extends Model
     /** A per-device key tried on a second device while bound to another. */
     public const DENIED_KEY_IN_USE = 'denied_key_in_use';
 
+    public const DENIED_KEY_REPLACED = 'denied_key_replaced';
+
     public const EVENTS = [
         self::CREATED,
         self::UPDATED,
@@ -93,6 +95,7 @@ class LicenseEvent extends Model
         self::DENIED_WRONG_PLATFORM,
         self::DENIED_KEY_USED,
         self::DENIED_KEY_IN_USE,
+        self::DENIED_KEY_REPLACED,
     ];
 
     public const LABELS = [
@@ -119,6 +122,7 @@ class LicenseEvent extends Model
         self::DENIED_WRONG_PLATFORM => 'Denied: wrong platform',
         self::DENIED_KEY_USED => 'Denied: key already used',
         self::DENIED_KEY_IN_USE => 'Denied: key in use on another device',
+        self::DENIED_KEY_REPLACED => 'Denied: old key (replaced after a plan change)',
     ];
 
     /**

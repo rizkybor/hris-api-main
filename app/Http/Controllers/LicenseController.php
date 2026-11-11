@@ -245,10 +245,14 @@ class LicenseController extends Controller implements HasMiddleware
      */
     public function recentEvents(Request $request)
     {
-        $data = $request->validate(['limit' => 'nullable|integer|min:1|max:100']);
+        $data = $request->validate([
+            'limit' => 'nullable|integer|min:1|max:100',
+            // Load on scroll: the events older than this one.
+            'before_id' => 'nullable|integer|min:1',
+        ]);
 
         try {
-            $events = $this->licenseRepository->recentEvents((int) ($data['limit'] ?? 15));
+            $events = $this->licenseRepository->recentEvents((int) ($data['limit'] ?? 15), isset($data['before_id']) ? (int) $data['before_id'] : null);
 
             return ResponseHelper::jsonResponse(true, 'Recent License Events Retrieved Successfully', RecentLicenseEventResource::collection($events), 200);
         } catch (\Throwable $e) {

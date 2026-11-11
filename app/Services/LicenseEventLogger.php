@@ -88,7 +88,7 @@ class LicenseEventLogger
      * {field: {old, new}}. $original holds the raw values before the save,
      * $changes the raw changed values (Model::getChanges()).
      */
-    public function logAdminChanges(License $license, array $original, array $changes): void
+    public function logAdminChanges(License $license, array $original, array $changes, array $planMeta = []): void
     {
         unset($changes['created_at'], $changes['updated_at'], $changes['deleted_at'], $changes['last_activated_at']);
         if (! $changes) {
@@ -112,13 +112,14 @@ class LicenseEventLogger
         }
 
         if (array_key_exists('plan', $changes)) {
-            $this->log($license, LicenseEvent::PLAN_CHANGED, ['meta' => [
+            // A new plan gets a new key: old_key / new_key, devices_signed_out.
+            $this->log($license, LicenseEvent::PLAN_CHANGED, ['meta' => array_merge([
                 'old_plan' => $original['plan'] ?? null,
                 'new_plan' => $changes['plan'],
-            ]]);
+            ], $planMeta)]);
         }
 
-        $covered = ['is_active', 'expires_at', 'plan'];
+        $covered = ['is_active', 'expires_at', 'plan', 'key'];
         if (array_key_exists('expires_at', $changes)) {
             $covered[] = 'starts_at';
         }
