@@ -609,56 +609,54 @@ class PayrollRepository implements PayrollRepositoryInterface
 
     public function getPayrollStatistics(string $payrollId)
     {
-        // Cache key for payroll-specific statistics
-        $cacheKey = CacheConstants::CACHE_KEY_PAYROLL_STATISTICS.$payrollId.'_'.now()->format('Y-m-d-H');
+        // Not cached: this is one indexed aggregate over a single payroll,
+        // and it must follow edits right away -- an hour-long cache kept
+        // showing old totals and status after a corrected salary, a removed
+        // line, "mark as paid" or a regeneration.
+        $payroll = Payroll::findOrFail($payrollId);
+        $monthStart = Carbon::parse($payroll->salary_month)->startOfMonth();
+        $workingDays = $this->calculateWorkingDays($monthStart, $monthStart->copy()->endOfMonth());
 
-        // Cache for 1 hour
-        return cache()->remember($cacheKey, CacheConstants::ONE_HOUR, function () use ($payrollId) {
-            $payroll = Payroll::findOrFail($payrollId);
-            $monthStart = Carbon::parse($payroll->salary_month)->startOfMonth();
-            $workingDays = $this->calculateWorkingDays($monthStart, $monthStart->copy()->endOfMonth());
+        // Get all statistics in optimized queries
+        $detailStats = PayrollDetail::where('payroll_id', $payrollId)
+            ->selectRaw('
+                COUNT(*) as total_employees,
+                SUM(original_salary) as total_original_salary,
+                SUM(final_salary) as total_final_salary,
+                SUM(original_salary - final_salary) as total_deductions,
+                AVG(final_salary) as average_salary,
+                MAX(final_salary) as highest_salary,
+                MIN(final_salary) as lowest_salary,
+                SUM(attended_days) as total_attended_days,
+                SUM(sick_days) as total_sick_days,
+                SUM(absent_days) as total_absent_days,
+                SUM(pph21) as total_pph21,
+                SUM(bpjs_kesehatan_employee + bpjs_jht_employee + bpjs_jp_employee) as total_bpjs_employee,
+                SUM(bpjs_kesehatan_company + bpjs_jht_company + bpjs_jp_company + bpjs_jkk_company + bpjs_jkm_company) as total_bpjs_company
+            ')
+            ->first();
 
-            // Get all statistics in optimized queries
-            $detailStats = PayrollDetail::where('payroll_id', $payrollId)
-                ->selectRaw('
-                    COUNT(*) as total_employees,
-                    SUM(original_salary) as total_original_salary,
-                    SUM(final_salary) as total_final_salary,
-                    SUM(original_salary - final_salary) as total_deductions,
-                    AVG(final_salary) as average_salary,
-                    MAX(final_salary) as highest_salary,
-                    MIN(final_salary) as lowest_salary,
-                    SUM(attended_days) as total_attended_days,
-                    SUM(sick_days) as total_sick_days,
-                    SUM(absent_days) as total_absent_days,
-                    SUM(pph21) as total_pph21,
-                    SUM(bpjs_kesehatan_employee + bpjs_jht_employee + bpjs_jp_employee) as total_bpjs_employee,
-                    SUM(bpjs_kesehatan_company + bpjs_jht_company + bpjs_jp_company + bpjs_jkk_company + bpjs_jkm_company) as total_bpjs_company
-                ')
-                ->first();
-
-            return [
-                'payroll_id' => $payroll->id,
-                'salary_month' => $payroll->salary_month,
-                'status' => $payroll->status,
-                'payment_date' => $payroll->payment_date,
-                'processed_date' => $payroll->created_at->format('Y-m-d'),
-                'total_employees' => $detailStats->total_employees ?? 0,
-                'total_amount' => round($detailStats->total_final_salary ?? 0, 2),
-                'total_original_salary' => round($detailStats->total_original_salary ?? 0, 2),
-                'total_deductions' => round($detailStats->total_deductions ?? 0, 2),
-                'average_salary' => round($detailStats->average_salary ?? 0, 2),
-                'highest_salary' => round($detailStats->highest_salary ?? 0, 2),
-                'lowest_salary' => round($detailStats->lowest_salary ?? 0, 2),
-                'total_attended_days' => $detailStats->total_attended_days ?? 0,
-                'total_sick_days' => $detailStats->total_sick_days ?? 0,
-                'total_absent_days' => $detailStats->total_absent_days ?? 0,
-                'total_pph21' => round($detailStats->total_pph21 ?? 0, 2),
-                'total_bpjs_employee' => round($detailStats->total_bpjs_employee ?? 0, 2),
-                'total_bpjs_company' => round($detailStats->total_bpjs_company ?? 0, 2),
-                'working_days' => $workingDays,
-            ];
-        });
+        return [
+            'payroll_id' => $payroll->id,
+            'salary_month' => $payroll->salary_month,
+            'status' => $payroll->status,
+            'payment_date' => $payroll->payment_date,
+            'processed_date' => $payroll->created_at->format('Y-m-d'),
+            'total_employees' => $detailStats->total_employees ?? 0,
+            'total_amount' => round($detailStats->total_final_salary ?? 0, 2),
+            'total_original_salary' => round($detailStats->total_original_salary ?? 0, 2),
+            'total_deductions' => round($detailStats->total_deductions ?? 0, 2),
+            'average_salary' => round($detailStats->average_salary ?? 0, 2),
+            'highest_salary' => round($detailStats->highest_salary ?? 0, 2),
+            'lowest_salary' => round($detailStats->lowest_salary ?? 0, 2),
+            'total_attended_days' => $detailStats->total_attended_days ?? 0,
+            'total_sick_days' => $detailStats->total_sick_days ?? 0,
+            'total_absent_days' => $detailStats->total_absent_days ?? 0,
+            'total_pph21' => round($detailStats->total_pph21 ?? 0, 2),
+            'total_bpjs_employee' => round($detailStats->total_bpjs_employee ?? 0, 2),
+            'total_bpjs_company' => round($detailStats->total_bpjs_company ?? 0, 2),
+            'working_days' => $workingDays,
+        ];
     }
 
     /**

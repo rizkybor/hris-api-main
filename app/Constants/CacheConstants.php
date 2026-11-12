@@ -33,7 +33,5 @@ class CacheConstants
 
     public const CACHE_KEY_ATTENDANCE_STATISTICS = 'attendance_statistics_';
 
-    public const CACHE_KEY_PAYROLL_STATISTICS = 'payroll_statistics_';
-
     public const CACHE_KEY_EMPLOYEE_TOTAL_COUNT = 'employee_total_count';
 }
