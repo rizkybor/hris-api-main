@@ -33,9 +33,6 @@
             left: 0;
             width: 297mm;
             height: 210mm;
-            background-image: url('{{ $backgroundImagePath }}');
-            background-size: cover;
-            background-position: center;
         }
 
         .page {
@@ -193,7 +190,12 @@
 </head>
 <body>
     <div class="page">
-        <div class="page-background"></div>
+        {{-- An <img>, not a CSS background-image: dompdf re-encodes CSS
+             backgrounds as PNG (a 400 KB JPEG became ~1 MB), while an <img>
+             JPEG is embedded as is. The image is already A4-landscape shaped
+             (CertificateService crops custom backgrounds to fill), so
+             stretching it to the page matches the old background-size: cover. --}}
+        <img class="page-background" src="{{ $backgroundImagePath }}" alt="">
 
         <div class="content-panel">
             <img class="seal" src="{{ public_path('images/jcd-only-color.png') }}">

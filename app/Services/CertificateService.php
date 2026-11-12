@@ -77,7 +77,7 @@ class CertificateService
 
     public function renderAndStore(Certificate $certificate, ?CertificateTemplate $template): string
     {
-        $defaultBackground = public_path('images/certificate-default-bg.png');
+        $defaultBackground = public_path('images/certificate-default-bg.jpg');
 
         // dompdf can't fetch remote images itself (enable_remote is off in
         // config/dompdf.php, deliberately -- turning it on would let a PDF
@@ -86,7 +86,10 @@ class CertificateService
         // down to a temp file first, same as it used to just be a local
         // storage path.
         $backgroundImagePath = $template?->background_path
-            ? $this->downloadToTemp(CloudinaryUrl::image($template->background_path))
+            // A print-sized JPEG cropped to A4 landscape (150 dpi, centred
+            // like background-size: cover) instead of the original upload,
+            // which keeps the certificate PDF small.
+            ? $this->downloadToTemp(str_replace('/image/upload/', '/image/upload/w_1754,h_1240,c_fill,q_80,f_jpg/', CloudinaryUrl::image($template->background_path)))
             : $defaultBackground;
 
         $pdf = Pdf::loadView('pdf.certificate', [
