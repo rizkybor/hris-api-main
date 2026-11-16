@@ -21,7 +21,7 @@ class CompanyCashBookService
      */
     public function ledger(array $filters = []): array
     {
-        $all = CompanyCashTransaction::with(['creator', 'project', 'employee.user'])
+        $all = CompanyCashTransaction::with(['creator', 'project', 'employee.user', 'proofs'])
             ->orderBy('transaction_date')
             ->orderBy('id')
             ->get();
