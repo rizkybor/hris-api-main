@@ -34,6 +34,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone('Asia/Jakarta')
             ->onOneServer();
 
+        // Logins of employees whose contract/probation ended yesterday (or in
+        // the last few days, if a run was missed) are switched off.
+        $schedule->command('employees:expire-access')
+            ->dailyAt('00:15')
+            ->timezone('Asia/Jakarta')
+            ->onOneServer();
+
         $schedule->command('subscriptions:send-due-reminders')
             ->dailyAt('08:00')
             ->timezone('Asia/Jakarta')

@@ -18,10 +18,14 @@ class CertificateGenerateRequest extends FormRequest
             'use_signature' => ['sometimes', 'boolean'],
             'category_code' => ['required', 'string', 'max:50'],
             'program_code' => ['required', 'string', 'max:50'],
+            'orientation' => ['sometimes', 'in:landscape,portrait'],
+            'include_tasks' => ['sometimes', 'boolean'],
+            'use_hologram' => ['sometimes', 'boolean'],
             'certificate_template_id' => ['nullable', 'integer', 'exists:certificate_templates,id'],
 
             'recipients' => ['required', 'array', 'min:1', 'max:500'],
             'recipients.*.name' => ['required', 'string', 'max:255'],
+            'recipients.*.employee_id' => ['nullable', 'integer', 'exists:employee_profiles,id'],
         ];
     }
 

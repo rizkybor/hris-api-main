@@ -25,12 +25,16 @@ class Certificate extends Model
         'certificate_number',
         'title',
         'recipient_name',
+        'employee_id',
         'description',
         'start_date',
         'end_date',
         'signatory_name',
         'signatory_title',
         'use_signature',
+        'orientation',
+        'include_tasks',
+        'use_hologram',
         'certificate_template_id',
         'company_code',
         'category_code',
@@ -47,11 +51,18 @@ class Certificate extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'use_signature' => 'boolean',
+        'include_tasks' => 'boolean',
+        'use_hologram' => 'boolean',
     ];
 
     public function template()
     {
         return $this->belongsTo(CertificateTemplate::class, 'certificate_template_id');
+    }
+
+    public function employee()
+    {
+        return $this->belongsTo(EmployeeProfile::class, 'employee_id');
     }
 
     public function creator()

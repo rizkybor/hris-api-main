@@ -570,6 +570,9 @@ class ReportRepository implements ReportRepositoryInterface
                 'task_completion_rate' => $performance['task_completion_rate'],
                 'overall_score' => $performance['overall_score'],
                 'stars' => $performance['stars'],
+                // Login switched off when the contract/probation ended.
+                'access_ended_on' => $employee->user?->access_ended_on?->toDateString(),
+                'access_end_reason' => $employee->user?->access_end_reason,
             ];
         });
 
@@ -642,6 +645,9 @@ class ReportRepository implements ReportRepositoryInterface
                 'employment_type' => $employee->jobInformation?->employment_type,
                 'team' => $employee->jobInformation?->team?->name,
                 'start_date' => $employee->jobInformation?->start_date,
+                'access_ended_on' => $employee->user?->access_ended_on?->toDateString(),
+                'access_end_reason' => $employee->user?->access_end_reason,
+                'is_active' => (bool) $employee->user?->is_active,
             ],
             'period' => ['start_date' => $startDate, 'end_date' => $endDate],
             'attendance' => $performance['attendance'],
@@ -663,6 +669,19 @@ class ReportRepository implements ReportRepositoryInterface
                 'status' => $latestReview->status,
                 'reviewer_name' => $latestReview->reviewer?->name,
             ] : null,
+            // Closing notes (Manager / Operational Director / Finance Manager).
+            'reviews' => $this->staffRaportReviews($employeeId),
         ];
+    }
+
+    public function staffRaportReviews(int $employeeId): array
+    {
+        return \App\Models\StaffRaportReview::where('employee_id', $employeeId)
+            ->with('reviewer.roles')
+            ->orderBy('updated_at')
+            ->get()
+            ->map->toDisplayArray()
+            ->values()
+            ->all();
     }
 }
