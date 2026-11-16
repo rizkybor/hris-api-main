@@ -63,12 +63,9 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
 
             $isManager = $user->hasRole('manager');
             $isParticipant = $employeeId && $task->project && $task->project->isEmployeeProjectParticipant($employeeId);
-            // A task's assignee isn't required to be on the project's team
-            // roster (assignee_id is only validated against employee_profiles,
-            // not project participation), so without this check someone
-            // assigned to a task outside their own team couldn't comment on
-            // the very task they're doing.
-            $isAssignee = $employeeId && $task->assignee_id === $employeeId;
+            // Assignees aren't required to be on the project's team roster,
+            // so they're allowed separately from participation.
+            $isAssignee = $employeeId && $task->isAssignedTo($employeeId);
 
             if (! $isManager && ! $isParticipant && ! $isAssignee) {
                 return ResponseHelper::jsonResponse(false, 'Only the project leader, managers, the task\'s assignee, or employees assigned to this project\'s teams can comment on its tasks', null, 403);
@@ -87,8 +84,9 @@ class ProjectTaskCommentController extends Controller implements HasMiddleware
                 'user.roles',
                 fn ($roleQ) => $roleQ->whereIn('name', self::ALWAYS_MENTIONABLE_ROLES)
             )->pluck('id');
+            $assigneeIds = $task->assignees()->pluck('employee_profiles.id');
             $invalidMentions = collect($mentionedIds)->reject(
-                fn ($id) => $task->assignee_id === $id || $participantIds->contains($id) || $alwaysMentionableIds->contains($id)
+                fn ($id) => $assigneeIds->contains($id) || $participantIds->contains($id) || $alwaysMentionableIds->contains($id)
             );
             if ($invalidMentions->isNotEmpty()) {
                 return ResponseHelper::jsonResponse(false, 'You can only mention the project leader, the task\'s assignee, employees assigned to this project\'s teams, or a Manager/Finance Manager/Operational Director', null, 422);

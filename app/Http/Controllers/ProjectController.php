@@ -186,6 +186,7 @@ class ProjectController extends Controller implements HasMiddleware
             'projectLeader.jobInformation',
             'teams',
             'tasks.assignee.user',
+            'tasks.assignees.user',
         ])->findOrFail($id);
 
         $tasks = $project->tasks;
