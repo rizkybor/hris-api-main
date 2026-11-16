@@ -45,8 +45,8 @@ class InvoiceStoreRequest extends FormRequest
             // domain) -- not every invoice has one, and it's not part of
             // the VAT/PPN taxable base.
             'icann_fee' => ['nullable', 'numeric', 'min:0'],
-            'bank_name' => ['nullable', 'string', 'max:255'],
-            'bank_account' => ['nullable', 'string', 'max:100'],
+            'bank_name' => ['required', 'string', 'max:255'],
+            'bank_account' => ['required', 'string', 'max:100'],
             'terms' => ['nullable', 'string'],
             // Purely informational heads-up that the client is expected to
             // withhold PPh 23 on payment -- doesn't affect subtotal/total.
