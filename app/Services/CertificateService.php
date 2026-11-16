@@ -4,11 +4,15 @@ namespace App\Services;
 
 use App\Models\Certificate;
 use App\Models\CertificateSetting;
+use App\Enums\TaskStatus;
 use App\Models\CertificateTemplate;
+use App\Models\ProjectTask;
+use App\Models\StaffTaskAssignee;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\Cloudinary\CloudinaryUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
 class CertificateService
@@ -32,7 +36,7 @@ class CertificateService
      */
     public function generateOne(
         array $data,
-        string $recipientName,
+        array $recipient,
         ?CertificateTemplate $template,
         CertificateSetting $settings,
         int $userId,
@@ -51,13 +55,18 @@ class CertificateService
         $certificate = Certificate::create([
             'certificate_number' => $numberData['number'],
             'title' => $data['title'],
-            'recipient_name' => $recipientName,
+            'recipient_name' => $recipient['name'],
+            'employee_id' => $recipient['employee_id'] ?? null,
             'description' => $data['description'] ?? null,
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
             'signatory_name' => $data['signatory_name'],
             'signatory_title' => $data['signatory_title'],
             'use_signature' => $data['use_signature'] ?? false,
+            'orientation' => $data['orientation'] ?? 'landscape',
+            // The task page only makes sense for a recipient picked from the employees.
+            'include_tasks' => ! empty($data['include_tasks']) && ! empty($recipient['employee_id']),
+            'use_hologram' => $data['use_hologram'] ?? false,
             'certificate_template_id' => $template?->id,
             'company_code' => strtoupper($settings->company_code),
             'category_code' => strtoupper($data['category_code']),
@@ -77,7 +86,8 @@ class CertificateService
 
     public function renderAndStore(Certificate $certificate, ?CertificateTemplate $template): string
     {
-        $defaultBackground = public_path('images/certificate-default-bg.jpg');
+        $portrait = $certificate->orientation === 'portrait';
+        $defaultBackground = public_path($portrait ? 'images/certificate-default-bg-portrait.jpg' : 'images/certificate-default-bg.jpg');
 
         // dompdf can't fetch remote images itself (enable_remote is off in
         // config/dompdf.php, deliberately -- turning it on would let a PDF
@@ -86,10 +96,10 @@ class CertificateService
         // down to a temp file first, same as it used to just be a local
         // storage path.
         $backgroundImagePath = $template?->background_path
-            // A print-sized JPEG cropped to A4 landscape (150 dpi, centred
+            // A print-sized JPEG cropped to the A4 page (150 dpi, centred
             // like background-size: cover) instead of the original upload,
             // which keeps the certificate PDF small.
-            ? $this->downloadToTemp(str_replace('/image/upload/', '/image/upload/w_1754,h_1240,c_fill,q_80,f_jpg/', CloudinaryUrl::image($template->background_path)))
+            ? $this->downloadToTemp(str_replace('/image/upload/', '/image/upload/'.($portrait ? 'w_1240,h_1754' : 'w_1754,h_1240').',c_fill,q_80,f_jpg/', CloudinaryUrl::image($template->background_path)))
             : $defaultBackground;
 
         $pdf = Pdf::loadView('pdf.certificate', [
@@ -97,7 +107,14 @@ class CertificateService
             'backgroundImagePath' => $backgroundImagePath,
             'companyName' => 'PT. Jendela Cakra Digital',
             'generatedAt' => now(),
-        ])->setPaper('a4', 'landscape');
+            'portrait' => $portrait,
+            // The built-in background has its own left-aligned layout; an
+            // uploaded one keeps the centred card.
+            'modernLayout' => $backgroundImagePath === $defaultBackground,
+            'tasks' => $certificate->include_tasks && $certificate->employee_id
+                ? $this->completedTasks($certificate->employee_id, $certificate->start_date, $certificate->end_date)
+                : null,
+        ])->setPaper('a4', $portrait ? 'portrait' : 'landscape');
 
         $publicId = $this->cloudinary->uploadFromString(
             $pdf->output(),
@@ -124,6 +141,60 @@ class CertificateService
         $url = CloudinaryUrl::raw($certificate->pdf_path);
 
         return Http::get($url)->throw()->body();
+    }
+
+    /**
+     * The employee's finished tasks (staff tasks they marked done and project
+     * tasks in Done), newest first, within the certificate period when it has
+     * one. Project tasks have no completion timestamp, so their last update
+     * stands in for it.
+     */
+    public function completedTasks(int $employeeId, $start = null, $end = null, int $limit = 200): array
+    {
+        // The period's days are WIB days; timestamps are stored in UTC.
+        $day = fn ($date) => Carbon::parse(Carbon::parse($date)->toDateString(), 'Asia/Jakarta');
+        $from = $start ? $day($start)->startOfDay()->utc() : null;
+        $to = $end ? $day($end)->endOfDay()->utc() : null;
+        $inPeriod = function ($query, string $column) use ($from, $to) {
+            $query->when($from, fn ($q) => $q->where($column, '>=', $from))
+                ->when($to, fn ($q) => $q->where($column, '<=', $to));
+        };
+
+        $staff = StaffTaskAssignee::query()
+            ->where('employee_id', $employeeId)
+            ->where('status', 'done')
+            ->whereNotNull('status_updated_at')
+            ->whereHas('task')
+            ->tap(fn ($q) => $inPeriod($q, 'status_updated_at'))
+            ->with('task:id,title')
+            ->latest('status_updated_at')
+            ->limit($limit)
+            ->get()
+            ->map(fn ($a) => [
+                'title' => $a->task->title,
+                'context' => 'Staff Task',
+                'completed_at' => $a->status_updated_at,
+            ]);
+
+        $project = ProjectTask::query()
+            ->where(fn ($q) => $q->whereIn('id', ProjectTask::assigneeTaskIds($employeeId))->orWhere('assignee_id', $employeeId))
+            ->where('status', TaskStatus::DONE->value)
+            ->tap(fn ($q) => $inPeriod($q, 'updated_at'))
+            ->with('project:id,name')
+            ->latest('updated_at')
+            ->limit($limit)
+            ->get(['id', 'name', 'project_id', 'updated_at'])
+            ->map(fn ($t) => [
+                'title' => $t->name,
+                'context' => $t->project?->name ?? 'Project',
+                'completed_at' => $t->updated_at,
+            ]);
+
+        return $staff->concat($project)
+            ->sortByDesc(fn ($t) => $t['completed_at']->getTimestamp())
+            ->take($limit)
+            ->values()
+            ->all();
     }
 
     private function downloadToTemp(string $url): string

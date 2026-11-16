@@ -72,6 +72,12 @@
             Period: {{ $period_label }} ({{ \Carbon\Carbon::parse($period['start_date'])->translatedFormat('d M Y') }} &ndash; {{ \Carbon\Carbon::parse($period['end_date'])->translatedFormat('d M Y') }})
             &bull; Generated {{ $generated_at->translatedFormat('d M Y H:i') }}
         </p>
+        @if(!empty($employee['access_ended_on']))
+            <p class="subtitle" style="color: #b42318;">
+                Access ended {{ \Carbon\Carbon::parse($employee['access_ended_on'])->translatedFormat('d M Y') }}
+                ({{ $employee['access_end_reason'] === 'probation' ? 'probation period ended' : 'contract ended' }})
+            </p>
+        @endif
 
         <div class="header-row">
             <p class="employee-name">{{ $employee['name'] }}</p>
@@ -212,6 +218,20 @@
                     <p style="margin: 0; font-size: 9.5pt;"><strong>Goals for Next Period:</strong> {{ $performance_review['goals_next_period'] }}</p>
                 @endif
             </div>
+        @endif
+
+        @if(!empty($reviews))
+            <h3 class="section-title">Reviewer Notes</h3>
+            @foreach($reviews as $note)
+                <div style="page-break-inside: avoid; margin-bottom: 4mm; padding: 3mm 4mm; border-left: 2px solid #1f5bd8; background: #f5f7fa;">
+                    <p style="margin: 0 0 1.5mm 0; font-size: 9pt; color: #6b7280;">
+                        <strong style="color: #0f1b2d;">{{ $note['reviewer_name'] ?? '-' }}</strong>
+                        @if($note['reviewer_role']) &bull; {{ ['manager' => 'Manager', 'operational_director' => 'Operational Director', 'finance' => 'Finance Manager'][$note['reviewer_role']] ?? $note['reviewer_role'] }} @endif
+                        @if($note['updated_at']) &bull; {{ \Carbon\Carbon::parse($note['updated_at'])->timezone('Asia/Jakarta')->translatedFormat('d M Y') }} @endif
+                    </p>
+                    <p style="margin: 0; font-size: 9.5pt; white-space: pre-line;">{{ $note['review'] }}</p>
+                </div>
+            @endforeach
         @endif
 
         <div style="page-break-inside: avoid; margin-top: 14mm; text-align: right;">

@@ -24,6 +24,9 @@ class UserResource extends JsonResource
             'show_degree' => (bool) $this->show_degree,
             'email' => $this->email,
             'is_active' => (bool) $this->is_active,
+            // Set when the login was switched off because the contract/probation ended.
+            'access_ended_on' => $this->access_ended_on?->toDateString(),
+            'access_end_reason' => $this->access_end_reason,
             'employee_profile' => new EmployeeProfileResource($this->whenLoaded('employeeProfile')),
             'roles' => $this->whenLoaded('roles', function () {
                 return $this->roles->pluck('name');

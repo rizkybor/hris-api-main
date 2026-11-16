@@ -8,6 +8,7 @@ use App\Http\Resources\CertificateResource;
 use App\Http\Resources\PaginateResource;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
+use App\Models\EmployeeProfile;
 use App\Services\CertificateService;
 use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\DocumentNumberService;
@@ -33,7 +34,7 @@ class CertificateController extends Controller implements HasMiddleware
     {
         return [
             new Middleware(PermissionMiddleware::using(['certificate-menu|certificate-list']), only: ['index', 'show', 'getStatistics', 'previewNumber', 'download']),
-            new Middleware(PermissionMiddleware::using(['certificate-create']), only: ['generate']),
+            new Middleware(PermissionMiddleware::using(['certificate-create']), only: ['generate', 'employeeOptions']),
             new Middleware(PermissionMiddleware::using(['certificate-delete']), only: ['destroy']),
         ];
     }
@@ -53,6 +54,27 @@ class CertificateController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /**
+     * Employees a certificate can be issued to, for the recipient picker.
+     * Includes accounts whose access has ended: a certificate is often
+     * issued right after an internship or contract finishes.
+     */
+    public function employeeOptions()
+    {
+        $employees = EmployeeProfile::with('user:id,name,is_active')
+            ->get(['id', 'user_id'])
+            ->filter(fn ($employee) => $employee->user)
+            ->map(fn ($employee) => [
+                'id' => $employee->id,
+                'name' => $employee->user->name,
+                'is_active' => $employee->user->is_active !== false,
+            ])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+
+        return ResponseHelper::jsonResponse(true, 'Employees Retrieved Successfully', $employees, 200);
     }
 
     public function getStatistics()
@@ -120,7 +142,7 @@ class CertificateController extends Controller implements HasMiddleware
             foreach ($recipients as $recipient) {
                 $certificates[] = $this->certificateService->generateOne(
                     $data,
-                    $recipient['name'],
+                    $recipient,
                     $template,
                     $settings,
                     Auth::id(),

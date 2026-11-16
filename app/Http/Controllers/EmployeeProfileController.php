@@ -35,7 +35,7 @@ class EmployeeProfileController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['employee-list|employee-create|employee-edit|employee-delete']), only: ['index', 'getAllPaginated', 'show', 'getStatistics', 'getContractAlerts']),
+            new Middleware(PermissionMiddleware::using(['employee-list|employee-create|employee-edit|employee-delete']), only: ['index', 'getAllPaginated', 'show', 'getStatistics', 'getContractAlerts', 'raportReviews']),
             new Middleware(PermissionMiddleware::using(['employee-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['employee-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['employee-delete']), only: ['destroy']),
@@ -175,6 +175,19 @@ class EmployeeProfileController extends Controller implements HasMiddleware
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
+    }
+
+    /** Closing notes on this employee's Staff Report (for the Performance tab). */
+    public function raportReviews(string $id): JsonResponse
+    {
+        $reviews = \App\Models\StaffRaportReview::where('employee_id', $id)
+            ->with('reviewer.roles')
+            ->orderBy('updated_at')
+            ->get()
+            ->map->toDisplayArray()
+            ->values();
+
+        return ResponseHelper::jsonResponse(true, 'Reviews Retrieved Successfully', $reviews, 200);
     }
 
     public function deleted(): JsonResponse

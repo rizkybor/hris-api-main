@@ -27,4 +27,6 @@ interface ReportRepositoryInterface
     public function getStaffRaportList(?string $search, ?string $employmentType, ?string $startDate, ?string $endDate, int $page = 1, int $rowPerPage = 15);
 
     public function getStaffRaportDetail(int $employeeId, ?string $startDate, ?string $endDate);
+
+    public function staffRaportReviews(int $employeeId): array;
 }

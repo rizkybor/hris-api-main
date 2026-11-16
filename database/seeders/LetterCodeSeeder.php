@@ -31,6 +31,7 @@ class LetterCodeSeeder extends Seeder
             ['code' => 'SKI', 'name' => 'Surat Keputusan Internal'],
             ['code' => 'SI', 'name' => 'Standing Instruction'],
             ['code' => 'ST', 'name' => 'Surat Tugas'],
+            ['code' => 'SKT', 'name' => 'Surat Keterangan'],
             ['code' => 'MOM', 'name' => 'Minute of Meeting'],
             ['code' => 'BA', 'name' => 'Berita Acara'],
             ['code' => 'BAST', 'name' => 'Berita Acara Serah Terima'],

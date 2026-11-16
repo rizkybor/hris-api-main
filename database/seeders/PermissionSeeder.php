@@ -324,6 +324,8 @@ class PermissionSeeder extends Seeder
             'menu',
             'list',
             'export',
+            // Optional closing note before downloading (Manager / OD / Finance).
+            'review',
         ],
 
         'attendance-setting' => [
