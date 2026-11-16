@@ -42,7 +42,8 @@ class AuthRepository implements AuthRepositoryInterface
         } catch (\Exception $e) {
             DB::rollBack();
 
-            throw new \Exception($e->getMessage(), $e->getCode() ?: 500);
+            // SQLSTATE codes are strings ("HY000"); Exception only takes an int.
+            throw new \Exception($e->getMessage(), is_int($e->getCode()) && $e->getCode() > 0 ? $e->getCode() : 500, $e);
         }
     }
 
@@ -145,7 +146,8 @@ class AuthRepository implements AuthRepositoryInterface
             return $freshUser;
         } catch (\Exception $e) {
             DB::rollBack();
-            throw new \Exception($e->getMessage(), $e->getCode() ?: 500);
+            // SQLSTATE codes are strings ("HY000"); Exception only takes an int.
+            throw new \Exception($e->getMessage(), is_int($e->getCode()) && $e->getCode() > 0 ? $e->getCode() : 500, $e);
         }
     }
 
