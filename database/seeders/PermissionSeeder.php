@@ -33,6 +33,8 @@ class PermissionSeeder extends Seeder
             'create',
             'edit',
             'delete',
+            // Deactivate / reactivate the employee's login (no other change).
+            'account-status',
         ],
 
         'project' => [
