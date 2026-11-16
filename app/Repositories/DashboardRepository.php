@@ -6,6 +6,7 @@ use App\Constants\CacheConstants;
 use App\Interfaces\DashboardRepositoryInterface;
 use App\Models\Attendance;
 use App\Models\Project;
+use App\Models\ProjectTask;
 use App\Models\Team;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -182,7 +183,7 @@ class DashboardRepository implements DashboardRepositoryInterface
             $attendanceRate = $totalDays > 0 ? round(($presentDays / $totalDays) * 100, 1) : 0;
 
             $taskStats = DB::table('project_tasks')
-                ->where('assignee_id', $employeeId)
+                ->whereIn('id', ProjectTask::assigneeTaskIds($employeeId))
                 ->selectRaw("
                     COUNT(CASE WHEN status = 'done' THEN 1 END) as total_done,
                     COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,

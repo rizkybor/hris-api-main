@@ -48,9 +48,43 @@ class ProjectTask extends Model
         return $this->belongsTo(Project::class);
     }
 
+    /** The first (primary) assignee; the full list is assignees(). */
     public function assignee()
     {
         return $this->belongsTo(EmployeeProfile::class, 'assignee_id');
+    }
+
+    public function assignees()
+    {
+        return $this->belongsToMany(EmployeeProfile::class, 'project_task_assignees', 'project_task_id', 'employee_id')
+            ->withTimestamps()
+            ->orderBy('project_task_assignees.id');
+    }
+
+    /** Tasks the employee is one of the assignees of. */
+    public function scopeAssignedTo($query, int $employeeId)
+    {
+        return $query->whereIn($this->getTable().'.id', self::assigneeTaskIds($employeeId));
+    }
+
+    /** Subquery of the ids of the tasks an employee is assigned to. */
+    public static function assigneeTaskIds(int $employeeId)
+    {
+        return \Illuminate\Support\Facades\DB::table('project_task_assignees')
+            ->select('project_task_id')
+            ->where('employee_id', $employeeId);
+    }
+
+    public function isAssignedTo(?int $employeeId): bool
+    {
+        if (! $employeeId) {
+            return false;
+        }
+        if ($this->relationLoaded('assignees')) {
+            return $this->assignees->contains('id', $employeeId);
+        }
+
+        return $this->assignees()->where('employee_profiles.id', $employeeId)->exists();
     }
 
     public function comments()

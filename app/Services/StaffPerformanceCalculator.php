@@ -236,7 +236,7 @@ class StaffPerformanceCalculator
     {
         $cutoff = min($endDate, Carbon::now(self::TZ)->toDateString());
 
-        $project = ProjectTask::where('assignee_id', $employeeId)
+        $project = ProjectTask::assignedTo($employeeId)
             ->whereBetween('due_date', [$startDate, $endDate])
             ->where('status', '!=', 'cancelled')
             ->get(['id', 'status', 'due_date']);

@@ -165,7 +165,7 @@
                     @forelse($doneTasks as $task)
                         <tr>
                             <td>{{ $task->name }}</td>
-                            <td>{{ $task->assignee?->user?->name ?? 'Unassigned' }}</td>
+                            <td>{{ $task->assignees->pluck('user.name')->filter()->join(', ') ?: ($task->assignee?->user?->name ?? 'Unassigned') }}</td>
                             <td>{{ $task->due_date ? \Carbon\Carbon::parse($task->due_date)->translatedFormat('d M Y') : '-' }}</td>
                         </tr>
                     @empty
@@ -191,7 +191,7 @@
                     @forelse($ongoingTasks as $task)
                         <tr>
                             <td>{{ $task->name }}</td>
-                            <td>{{ $task->assignee?->user?->name ?? 'Unassigned' }}</td>
+                            <td>{{ $task->assignees->pluck('user.name')->filter()->join(', ') ?: ($task->assignee?->user?->name ?? 'Unassigned') }}</td>
                             <td>{{ $task->status === 'in_progress' ? 'In Progress' : 'Review' }}</td>
                             <td>{{ $task->due_date ? \Carbon\Carbon::parse($task->due_date)->translatedFormat('d M Y') : '-' }}</td>
                         </tr>
@@ -217,7 +217,7 @@
                     @forelse($pendingTasks as $task)
                         <tr>
                             <td>{{ $task->name }}</td>
-                            <td>{{ $task->assignee?->user?->name ?? 'Unassigned' }}</td>
+                            <td>{{ $task->assignees->pluck('user.name')->filter()->join(', ') ?: ($task->assignee?->user?->name ?? 'Unassigned') }}</td>
                             <td>{{ $task->due_date ? \Carbon\Carbon::parse($task->due_date)->translatedFormat('d M Y') : '-' }}</td>
                         </tr>
                     @empty
@@ -242,7 +242,7 @@
                         @foreach($cancelledTasks as $task)
                             <tr>
                                 <td>{{ $task->name }}</td>
-                                <td>{{ $task->assignee?->user?->name ?? 'Unassigned' }}</td>
+                                <td>{{ $task->assignees->pluck('user.name')->filter()->join(', ') ?: ($task->assignee?->user?->name ?? 'Unassigned') }}</td>
                                 <td>{{ $task->due_date ? \Carbon\Carbon::parse($task->due_date)->translatedFormat('d M Y') : '-' }}</td>
                             </tr>
                         @endforeach
