@@ -140,12 +140,20 @@ class InvoiceController extends Controller implements HasMiddleware
         try {
             $invoice = Invoice::findOrFail($id);
 
+            // An emptied fee/percentage means 0: the columns aren't nullable,
+            // and the totals must use the value actually saved.
+            foreach (['ppn_percentage', 'admin_fee', 'icann_fee'] as $field) {
+                if (array_key_exists($field, $validated) && $validated[$field] === null) {
+                    $validated[$field] = 0;
+                }
+            }
+
             if (isset($validated['items'])) {
                 $totals = $this->calculateTotals(
                     $validated['items'],
-                    $validated['ppn_percentage'] ?? $invoice->ppn_percentage,
-                    $validated['admin_fee'] ?? $invoice->admin_fee,
-                    $validated['icann_fee'] ?? $invoice->icann_fee
+                    array_key_exists('ppn_percentage', $validated) ? $validated['ppn_percentage'] : $invoice->ppn_percentage,
+                    array_key_exists('admin_fee', $validated) ? $validated['admin_fee'] : $invoice->admin_fee,
+                    array_key_exists('icann_fee', $validated) ? $validated['icann_fee'] : $invoice->icann_fee
                 );
                 $validated['subtotal'] = $totals['subtotal'];
                 $validated['ppn_amount'] = $totals['ppnAmount'];
