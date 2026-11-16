@@ -16,6 +16,7 @@ use App\Models\EmployeeProfile;
 use App\Models\JobInformation;
 use App\Models\Team;
 use App\Models\TeamMember;
+use App\Models\User;
 use App\Services\EmployeeCodeGenerator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -258,16 +259,23 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
             if ($employee->user?->isProtected()) {
                 throw new \RuntimeException('The Super Admin account cannot be deleted.');
             }
+            $this->guardRemoval($employee->user);
 
             $employee->delete();
 
             // Access goes with the profile: every open session ends and the
             // account can no longer log in. The User row itself stays (not
             // deleted) so names in history -- invoice/ledger creators,
-            // activity log -- keep showing who did what.
+            // activity log -- keep showing who did what. Its email is set
+            // aside (kept in deleted_email for a restore) so the address can
+            // be used again for a new account.
             if ($user = $employee->user) {
                 $user->tokens()->delete();
-                $user->forceFill(['is_active' => false])->save();
+                $user->forceFill([
+                    'is_active' => false,
+                    'deleted_email' => $user->deleted_email ?? $user->email,
+                    'email' => $user->deleted_email ? $user->email : self::placeholderEmail($user),
+                ])->save();
             }
 
             // Clear statistics cache
@@ -318,6 +326,86 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
             return $employee->fresh(['user.roles', 'jobInformation.team.leader', 'jobInformation.team', 'bankInformation', 'emergencyContacts']);
         });
+    }
+
+    /** A unique stand-in for a deleted employee's email: name+deleted-<id>@domain. */
+    private static function placeholderEmail(User $user): string
+    {
+        [$local, $domain] = array_pad(explode('@', (string) $user->email, 2), 2, 'deleted.local');
+
+        return substr($local, 0, 150)."+deleted-{$user->id}@{$domain}";
+    }
+
+    /** Deleted employees, newest first, for the restore list. */
+    public function getDeleted(): array
+    {
+        return EmployeeProfile::onlyTrashed()
+            ->with(['user', 'jobInformation'])
+            ->orderByDesc('deleted_at')
+            ->get()
+            ->map(function (EmployeeProfile $employee) {
+                $email = $employee->user?->deleted_email ?? $employee->user?->email;
+
+                return [
+                    'id' => $employee->id,
+                    'name' => $employee->user?->name,
+                    'email' => $email,
+                    'job_title' => $employee->jobInformation?->job_title,
+                    'deleted_at' => $employee->deleted_at,
+                    // The address now belongs to another (new) account.
+                    'email_taken' => $email && $this->emailTakenByOther($email, $employee->user?->id),
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * Brings a deleted employee back: the profile, the original email and
+     * the login, so their history is theirs again. Refused when the email
+     * has since been given to another account.
+     */
+    public function restore(string $id): EmployeeProfile
+    {
+        return DB::transaction(function () use ($id) {
+            $employee = EmployeeProfile::onlyTrashed()->with('user')->findOrFail($id);
+            $user = $employee->user;
+            $this->guardRemoval($user);
+
+            if ($user) {
+                $email = $user->deleted_email ?? $user->email;
+                if ($this->emailTakenByOther($email, $user->id)) {
+                    throw new \RuntimeException("The email {$email} is already used by another account. Change that account's email first, or create the employee again.");
+                }
+                $user->forceFill(['email' => $email, 'deleted_email' => null, 'is_active' => true])->save();
+            }
+
+            $employee->restore();
+            $this->clearEmployeeStatisticsCache();
+
+            return $this->getById($employee->id);
+        });
+    }
+
+    /**
+     * Deleting/restoring: Manager/Finance/Operational Director accounts are
+     * Superadmin-only, and nobody removes their own profile.
+     */
+    private function guardRemoval(?User $user): void
+    {
+        if (! $user) {
+            return;
+        }
+        if ($user->is(Auth::user())) {
+            throw new \RuntimeException('You cannot delete your own employee profile.');
+        }
+        if ($user->hasAnyRole(['manager', 'finance', 'operational_director']) && ! Auth::user()?->hasRole('superadmin')) {
+            throw new \RuntimeException('Only Superadmin can delete or restore this account.');
+        }
+    }
+
+    private function emailTakenByOther(string $email, ?int $userId): bool
+    {
+        return User::withTrashed()->where('email', $email)->when($userId, fn ($q) => $q->where('id', '!=', $userId))->exists();
     }
 
     private function createUser(array $data)
