@@ -47,6 +47,10 @@ interface EmployeeProfileRepositoryInterface
 
     public function toggleAccountStatus(string $id): EmployeeProfile;
 
+    public function getDeleted(): array;
+
+    public function restore(string $id): EmployeeProfile;
+
     public function getStatistics();
 
     public function getContractAlerts(int $daysAhead = 30): array;

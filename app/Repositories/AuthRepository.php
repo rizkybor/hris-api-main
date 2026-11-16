@@ -25,7 +25,9 @@ class AuthRepository implements AuthRepositoryInterface
             }
 
             /** @var User $user */
-            $user = Auth::user();
+            // The account that just signed in (the default guard is sanctum,
+            // which could hold a different, token-authenticated user).
+            $user = Auth::guard('web')->user();
 
             if (! $user->is_active) {
                 Auth::guard('web')->logout();

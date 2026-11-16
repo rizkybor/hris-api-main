@@ -39,7 +39,11 @@ class EmployeeProfileController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['employee-create']), only: ['store']),
             new Middleware(PermissionMiddleware::using(['employee-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['employee-delete']), only: ['destroy']),
-            new Middleware(RoleMiddleware::using('superadmin'), only: ['destroy']),
+            // Deleting, listing deleted employees and restoring them:
+            // Superadmin and Manager (with employee-delete). Elevated
+            // accounts stay Superadmin-only (see the repository).
+            new Middleware(PermissionMiddleware::using(['employee-delete']), only: ['deleted', 'restore']),
+            new Middleware(RoleMiddleware::using('superadmin|manager'), only: ['destroy', 'deleted', 'restore']),
             // Turning a login off/on: its own permission, granted per role in
             // Roles & Permissions (by default Superadmin, Manager, HR and
             // Operational Director).
@@ -166,6 +170,32 @@ class EmployeeProfileController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(true, 'Employee Deleted Successfully', null, 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Employee Not Found', null, 404);
+        } catch (\RuntimeException $e) {
+            return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 403);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    public function deleted(): JsonResponse
+    {
+        try {
+            return ResponseHelper::jsonResponse(true, 'Deleted Employees Retrieved Successfully', $this->employeeProfileRepository->getDeleted(), 200);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    public function restore(string $id): JsonResponse
+    {
+        try {
+            $employee = $this->employeeProfileRepository->restore($id);
+
+            return ResponseHelper::jsonResponse(true, 'Employee Restored Successfully', new EmployeeProfileResource($employee), 200);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Deleted Employee Not Found', null, 404);
+        } catch (\RuntimeException $e) {
+            return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 422);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }

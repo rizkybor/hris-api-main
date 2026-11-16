@@ -160,6 +160,8 @@ Route::prefix('v1')
             Route::get('employees/{id}/performance-statistics', [EmployeeProfileController::class, 'getPerformanceStatistics']);
             Route::post('employees/{id}/toggle-account-status', [EmployeeProfileController::class, 'toggleAccountStatus']);
             Route::get('employees/all/paginated', [EmployeeProfileController::class, 'getAllPaginated']);
+            Route::get('employees/deleted', [EmployeeProfileController::class, 'deleted']);
+            Route::post('employees/{id}/restore', [EmployeeProfileController::class, 'restore']);
             Route::apiResource('employees', EmployeeProfileController::class);
 
             Route::get('employees/{employeeId}/files', [EmployeeFileController::class, 'index']);
