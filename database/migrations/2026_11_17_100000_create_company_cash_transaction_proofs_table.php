@@ -14,9 +14,19 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // A first run on MySQL could stop after CREATE TABLE (the default
+        // foreign key name was 65 characters, over MySQL's 64 limit), leaving
+        // an empty table behind without the migration being recorded.
+        if (Schema::hasTable('company_cash_transaction_proofs') && DB::table('company_cash_transaction_proofs')->doesntExist()) {
+            Schema::drop('company_cash_transaction_proofs');
+        }
+
         Schema::create('company_cash_transaction_proofs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('company_cash_transaction_id')->constrained('company_cash_transactions')->cascadeOnDelete();
+            // Explicit short name: the generated one is 65 characters (MySQL max 64).
+            $table->foreignId('company_cash_transaction_id')
+                ->constrained('company_cash_transactions', 'id', 'cash_tx_proofs_transaction_fk')
+                ->cascadeOnDelete();
             $table->string('file');
             $table->string('name')->nullable();
             $table->string('mime')->nullable();
