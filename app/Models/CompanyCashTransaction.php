@@ -73,6 +73,12 @@ class CompanyCashTransaction extends Model
         return $this->category === self::CATEGORY_SPENDING;
     }
 
+    /** Proof files, in upload order. */
+    public function proofs()
+    {
+        return $this->hasMany(CompanyCashTransactionProof::class)->orderBy('id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
