@@ -261,6 +261,15 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
             $employee->delete();
 
+            // Access goes with the profile: every open session ends and the
+            // account can no longer log in. The User row itself stays (not
+            // deleted) so names in history -- invoice/ledger creators,
+            // activity log -- keep showing who did what.
+            if ($user = $employee->user) {
+                $user->tokens()->delete();
+                $user->forceFill(['is_active' => false])->save();
+            }
+
             // Clear statistics cache
             $this->clearEmployeeStatisticsCache();
 
@@ -271,9 +280,10 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
     /**
      * Flips whether this employee's User account can log in at all --
      * distinct from job_information.status, which only affects payroll/
-     * reporting. Manager/Finance/Operational Director accounts can only be
-     * toggled by Superadmin; everyone else can be toggled by any role
-     * gated at the route (see EmployeeProfileController::middleware()).
+     * reporting, so it's a temporary, reversible block. Anyone with the
+     * employee-account-status permission may use it, except that
+     * Manager/Finance/Operational Director accounts can only be toggled by
+     * Superadmin, and nobody can switch off their own account.
      */
     public function toggleAccountStatus(string $id): EmployeeProfile
     {
@@ -287,6 +297,10 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
             if ($user->isProtected()) {
                 throw new \RuntimeException('The Super Admin account cannot be deactivated.');
+            }
+
+            if ($user->is_active && $user->is(Auth::user())) {
+                throw new \RuntimeException('You cannot deactivate your own account.');
             }
 
             $targetIsElevated = $user->hasAnyRole(['manager', 'finance', 'operational_director']);

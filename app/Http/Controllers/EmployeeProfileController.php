@@ -40,7 +40,10 @@ class EmployeeProfileController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['employee-edit']), only: ['update']),
             new Middleware(PermissionMiddleware::using(['employee-delete']), only: ['destroy']),
             new Middleware(RoleMiddleware::using('superadmin'), only: ['destroy']),
-            new Middleware(RoleMiddleware::using('superadmin|manager|finance|operational_director'), only: ['toggleAccountStatus']),
+            // Turning a login off/on: its own permission, granted per role in
+            // Roles & Permissions (by default Superadmin, Manager, HR and
+            // Operational Director).
+            new Middleware(PermissionMiddleware::using(['employee-account-status']), only: ['toggleAccountStatus']),
             new Middleware(PermissionMiddleware::using(['profile-view']), only: ['getMyProfile', 'getPerformanceStatistics', 'downloadIdCard']),
             new Middleware(PermissionMiddleware::using(['team-view']), only: ['getMyTeam', 'getMyTeamMembers', 'getMyTeamProjects']),
         ];
