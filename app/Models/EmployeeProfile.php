@@ -120,7 +120,7 @@ class EmployeeProfile extends Model
 
     public function assignedTasks()
     {
-        return $this->hasMany(ProjectTask::class, 'assignee_id');
+        return $this->belongsToMany(ProjectTask::class, 'project_task_assignees', 'employee_id', 'project_task_id')->withTimestamps();
     }
 
     public function attendances()

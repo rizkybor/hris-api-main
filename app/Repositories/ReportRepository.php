@@ -595,7 +595,7 @@ class ReportRepository implements ReportRepositoryInterface
         $employee = EmployeeProfile::with(['user', 'jobInformation.team'])->findOrFail($employeeId);
         $performance = $this->performanceCalculator->calculate($employeeId, $startDate, $endDate);
 
-        $completedProjectTasks = ProjectTask::where('assignee_id', $employeeId)
+        $completedProjectTasks = ProjectTask::assignedTo($employeeId)
             ->where('status', 'done')
             ->whereBetween('due_date', [$startDate, $endDate])
             ->with('project:id,name')

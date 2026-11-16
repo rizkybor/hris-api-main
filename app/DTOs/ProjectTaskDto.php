@@ -54,7 +54,8 @@ class ProjectTaskDto
             project_id: $data['project_id'] ?? $existingTask->project_id,
             name: $data['name'] ?? $existingTask->name,
             description: $data['description'] ?? $existingTask->description,
-            assignee_id: $data['assignee_id'] ?? $existingTask->assignee_id,
+            // array_key_exists: an explicit null removes the assignee.
+            assignee_id: array_key_exists('assignee_id', $data) ? $data['assignee_id'] : $existingTask->assignee_id,
             priority: $data['priority'] ?? $existingTask->priority,
             status: $data['status'] ?? $existingTask->status,
             due_date: $data['due_date'] ?? ($existingTask->due_date ? $existingTask->due_date->format('Y-m-d') : null),

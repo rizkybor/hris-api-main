@@ -32,7 +32,7 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
         ?int $limit,
         bool $execute
     ): Builder|Collection {
-        $query = ProjectTask::with(['project', 'assignee.user'])
+        $query = ProjectTask::with(['project', 'assignee.user', 'assignees.user'])
             ->where(function ($query) use ($search, $projectId) {
                 if ($search) {
                     $query->search($search);
@@ -73,13 +73,13 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
     public function getById(
         string $id
     ): ProjectTask {
-        return ProjectTask::with(['project', 'assignee.user'])
+        return ProjectTask::with(['project', 'assignee.user', 'assignees.user'])
             ->findOrFail($id);
     }
 
     public function getByProjectId(int $projectId): Collection
     {
-        return ProjectTask::with(['assignee.user'])
+        return ProjectTask::with(['assignee.user', 'assignees.user'])
             ->where('project_id', $projectId)
             ->orderBy('status')
             ->orderBy('position')
@@ -89,7 +89,7 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
     public function getMyTasks(int $employeeId, ?int $limit, bool $includeCompleted = false): Collection
     {
         $query = ProjectTask::with(['project'])
-            ->where('assignee_id', $employeeId)
+            ->assignedTo($employeeId)
             ->when(! $includeCompleted, fn ($q) => $q->whereIn('status', ['todo', 'in_progress', 'review']))
             ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC');
 
@@ -102,11 +102,15 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
 
     public function create(array $data): ProjectTask
     {
+        if (array_key_exists('assignee_ids', $data)) {
+            $data['assignee_id'] = $data['assignee_ids'][0] ?? null;
+        }
         $taskDto = ProjectTaskDto::fromArray($data);
         $taskArray = $taskDto->toArray();
         $taskArray['position'] = $this->positionForPriority($taskArray['project_id'], $taskArray['status'], $taskArray['priority']);
 
         $task = ProjectTask::create($taskArray);
+        $task->assignees()->sync($data['assignee_ids'] ?? array_filter([$taskArray['assignee_id']]));
 
         if (isset($data['image'])) {
             $task->load('project');
@@ -118,12 +122,15 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
             $task->update(['image' => $publicId]);
         }
 
-        return $task;
+        return $task->load(['assignee.user', 'assignees.user']);
     }
 
     public function update(string $id, array $data): ProjectTask
     {
         $task = $this->getById($id);
+        if (array_key_exists('assignee_ids', $data)) {
+            $data['assignee_id'] = $data['assignee_ids'][0] ?? null;
+        }
         $taskDto = ProjectTaskDto::fromArrayForUpdate($data, $task);
         $updateArray = $taskDto->toArray();
 
@@ -143,6 +150,9 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
         }
 
         $task->update($updateArray);
+        if (array_key_exists('assignee_ids', $data)) {
+            $task->assignees()->sync($data['assignee_ids']);
+        }
 
         if (! empty($data['remove_image'])) {
             $this->cloudinary->delete($task->image);
@@ -158,7 +168,7 @@ class ProjectTaskRepository implements ProjectTaskRepositoryInterface
             $task->update(['image' => $publicId]);
         }
 
-        return $task;
+        return $task->load(['assignee.user', 'assignees.user']);
     }
 
     public function delete(string $id): ProjectTask

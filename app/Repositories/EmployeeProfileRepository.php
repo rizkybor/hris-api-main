@@ -657,7 +657,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
 
         // Tasks Completed this month (from project_tasks)
         $tasksCompletedThisMonth = DB::table('project_tasks')
-            ->where('assignee_id', $employeeId)
+            ->whereIn('id', \App\Models\ProjectTask::assigneeTaskIds($employeeId))
             ->where('status', 'done')
             ->whereMonth('updated_at', now()->month)
             ->whereYear('updated_at', now()->year)
@@ -691,7 +691,7 @@ class EmployeeProfileRepository implements EmployeeProfileRepositoryInterface
         // Performance Score (average based on tasks completion rate and attendance)
         // Simple calculation: (task completion rate + attendance rate) / 2
         $totalTasksThisMonth = DB::table('project_tasks')
-            ->where('assignee_id', $employeeId)
+            ->whereIn('id', \App\Models\ProjectTask::assigneeTaskIds($employeeId))
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();

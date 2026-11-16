@@ -39,6 +39,8 @@ class ProjectTaskResource extends JsonResource
             'due_date' => $this->due_date?->format('Y-m-d'),
             'project' => new ProjectResource($this->whenLoaded('project')),
             'assignee' => new EmployeeProfileResource($this->whenLoaded('assignee')),
+            'assignee_ids' => $this->whenLoaded('assignees', fn () => $this->assignees->pluck('id')->values()),
+            'assignees' => EmployeeProfileResource::collection($this->whenLoaded('assignees')),
             'can_comment' => $this->when($request->user(), function () use ($request) {
                 $user = $request->user();
                 if ($user->hasRole('manager')) {
@@ -50,11 +52,9 @@ class ProjectTaskResource extends JsonResource
                     return false;
                 }
 
-                // assignee_id isn't restricted to the project's own team
-                // roster, so the assignee is checked separately from
-                // isEmployeeProjectParticipant -- otherwise someone assigned
-                // to a task outside their team couldn't comment on it.
-                $isAssignee = $this->assignee_id === $employeeId;
+                // Assignees aren't restricted to the project's team roster,
+                // so they're checked separately from participation.
+                $isAssignee = $this->resource->isAssignedTo($employeeId);
                 $isParticipant = $this->project && $this->getParticipantIds($this->project)->contains($employeeId);
 
                 return $isAssignee || $isParticipant;
