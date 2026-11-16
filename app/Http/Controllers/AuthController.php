@@ -44,7 +44,9 @@ class AuthController extends Controller
                 ->event('login_failed')
                 ->log('failed login attempt');
 
-            return ResponseHelper::jsonResponse(false, $e->getMessage(), null, $e->getCode());
+            [$status, $message] = $this->failure($e, 'Login failed. Please try again.');
+
+            return ResponseHelper::jsonResponse(false, $message, null, $status);
         }
     }
 
@@ -141,9 +143,28 @@ class AuthController extends Controller
 
             return ResponseHelper::jsonResponse(true, 'Profile Updated Successfully', new UserResource($user), 200);
         } catch (\Exception $e) {
-            $status = $e->getCode() ?: 500;
+            [$status, $message] = $this->failure($e, 'Could not update the profile. Please try again.');
 
-            return ResponseHelper::jsonResponse(false, $e->getMessage(), null, $status);
+            return ResponseHelper::jsonResponse(false, $message, null, $status);
         }
+    }
+
+    /**
+     * HTTP status and message for a caught exception. Only an HTTP error code
+     * (4xx/5xx) is used as the status -- database errors carry SQLSTATE
+     * strings like "HY000", which made the response itself crash -- and a
+     * server error's own message (DB host, SQL) is never sent to the client.
+     *
+     * @return array{0: int, 1: string}
+     */
+    private function failure(\Throwable $e, string $fallback): array
+    {
+        $code = $e->getCode();
+        if (is_int($code) && $code >= 400 && $code < 500) {
+            return [$code, $e->getMessage()];
+        }
+        report($e);
+
+        return [500, $fallback];
     }
 }
