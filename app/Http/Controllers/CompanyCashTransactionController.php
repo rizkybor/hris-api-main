@@ -9,6 +9,7 @@ use App\Models\CompanyCashTransaction;
 use App\Models\EmployeeProfile;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\Cloudinary\CloudinaryResourceType;
 use App\Services\CompanyCashBookService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -120,17 +121,17 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
             'amount' => ['required', 'numeric', 'min:0.01'],
             'transaction_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
-            'proof' => self::PROOF_RULE,
+            ...self::PROOF_RULES,
         ], [], self::PROOF_ATTRIBUTES);
 
         try {
             $transaction = CompanyCashTransaction::create([
-                ...self::normalizeSpending(collect($validated)->except('proof')->all()),
-                ...$this->storeProof($request),
+                ...self::normalizeSpending(collect($validated)->except(['proof', 'proofs'])->all()),
                 'created_by' => $request->user()->id,
             ]);
+            $transaction->proofs()->createMany($this->uploadProofs($request));
 
-            return ResponseHelper::jsonResponse(true, 'Cash Transaction Recorded Successfully', new CompanyCashTransactionResource($transaction->load(['creator', 'employee.user'])), 201);
+            return ResponseHelper::jsonResponse(true, 'Cash Transaction Recorded Successfully', new CompanyCashTransactionResource($transaction->load(['creator', 'employee.user', 'proofs'])), 201);
         } catch (\Throwable $e) {
             return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
         }
@@ -145,7 +146,10 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
             'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'],
             'transaction_date' => ['sometimes', 'required', 'date'],
             'notes' => ['nullable', 'string'],
-            'proof' => self::PROOF_RULE,
+            ...self::PROOF_RULES,
+            'remove_proof_ids' => ['nullable', 'array'],
+            'remove_proof_ids.*' => ['integer'],
+            // Older clients: drop every proof.
             'remove_proof' => ['nullable', 'boolean'],
         ], [], self::PROOF_ATTRIBUTES);
 
@@ -156,29 +160,32 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
                 return ResponseHelper::jsonResponse(false, 'This entry was recorded from a project\'s cash ledger -- edit it there instead, it will sync here automatically.', null, 422);
             }
 
-            $previousProof = $transaction->proof_file;
-            $proofChange = $request->hasFile('proof')
-                ? $this->storeProof($request)
-                : ($request->boolean('remove_proof') ? ['proof_file' => null, 'proof_name' => null, 'proof_mime' => null] : []);
+            // Proofs to drop: the listed ones (only this transaction's), or all.
+            $removing = $transaction->proofs()
+                ->when(! $request->boolean('remove_proof'), fn ($q) => $q->whereIn('id', $validated['remove_proof_ids'] ?? []))
+                ->get();
+            $kept = $transaction->proofs()->count() - $removing->count();
+            if ($kept + $this->incomingProofCount($request) > self::MAX_PROOFS) {
+                $message = 'A transaction can have at most '.self::MAX_PROOFS.' proof files.';
 
-            $fields = collect($validated)->except(['proof', 'remove_proof'])->all();
+                return ResponseHelper::jsonResponse(false, $message, ['errors' => ['proofs' => [$message]]], 422);
+            }
+
+            $fields = collect($validated)->except(['proof', 'proofs', 'remove_proof', 'remove_proof_ids'])->all();
             // A row that is (or becomes) spending stays a Debit with a person.
             $isSpending = array_key_exists('category', $fields) ? $fields['category'] === CompanyCashTransaction::CATEGORY_SPENDING : $transaction->isSpending();
             if ($isSpending && empty($fields['employee_id'] ?? $transaction->employee_id)) {
                 return ResponseHelper::jsonResponse(false, 'Choose the employee this spending is on behalf of.', ['errors' => ['employee_id' => ['Choose the employee this spending is on behalf of.']]], 422);
             }
 
-            $transaction->update([
-                ...self::normalizeSpending($fields, $isSpending),
-                ...$proofChange,
-            ]);
+            $transaction->update(self::normalizeSpending($fields, $isSpending));
+            $transaction->proofs()->createMany($this->uploadProofs($request));
 
-            // The old file goes once the row no longer points at it.
-            if ($previousProof && array_key_exists('proof_file', $proofChange)) {
-                $this->deleteProofFile($previousProof);
-            }
+            // Removed files go once the rows no longer point at them.
+            $transaction->proofs()->whereIn('id', $removing->pluck('id'))->delete();
+            $removing->each(fn ($proof) => $this->deleteProofFile($proof->file, $proof->mime));
 
-            return ResponseHelper::jsonResponse(true, 'Cash Transaction Updated Successfully', new CompanyCashTransactionResource($transaction->load(['creator', 'employee.user'])), 200);
+            return ResponseHelper::jsonResponse(true, 'Cash Transaction Updated Successfully', new CompanyCashTransactionResource($transaction->load(['creator', 'employee.user', 'proofs'])), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Cash Transaction Not Found', null, 404);
         } catch (\Throwable $e) {
@@ -270,36 +277,56 @@ class CompanyCashTransactionController extends Controller implements HasMiddlewa
         }
     }
 
-    // Optional proof of transaction: a photo/scan or PDF of the receipt.
-    private const PROOF_RULE = ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'];
+    // Optional proofs of transaction: photos/scans or PDFs of the receipt,
+    // up to MAX_PROOFS per transaction. `proofs[]` is the list; a single
+    // `proof` (older clients) is still accepted.
+    private const MAX_PROOFS = 3;
 
-    private const PROOF_ATTRIBUTES = ['proof' => 'Proof of transaction', 'employee_id' => 'On behalf of'];
+    private const PROOF_FILE = ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'];
 
-    /** Uploads the request's proof file, if any, and returns its columns. */
-    private function storeProof(Request $request): array
+    private const PROOF_RULES = [
+        'proof' => ['nullable', ...self::PROOF_FILE],
+        'proofs' => ['nullable', 'array', 'max:'.self::MAX_PROOFS],
+        'proofs.*' => self::PROOF_FILE,
+    ];
+
+    private const PROOF_ATTRIBUTES = ['proof' => 'Proof of transaction', 'proofs' => 'Proofs of transaction', 'proofs.*' => 'Proof of transaction', 'employee_id' => 'On behalf of'];
+
+    /** @return \Illuminate\Http\UploadedFile[] */
+    private function proofFiles(Request $request): array
     {
-        if (! $request->hasFile('proof')) {
-            return [];
-        }
-
-        $file = $request->file('proof');
-        $publicId = $this->cloudinary->uploadAuto(
-            $file,
-            CloudinaryFolders::companyFiles('cash-book'),
-            CloudinaryFolders::filename('cash-proof')
-        );
-
-        return [
-            'proof_file' => $publicId,
-            'proof_name' => $file->getClientOriginalName(),
-            'proof_mime' => $file->getMimeType(),
-        ];
+        return array_values(array_filter([...(array) $request->file('proofs', []), $request->file('proof')]));
     }
 
-    private function deleteProofFile(string $publicId): void
+    private function incomingProofCount(Request $request): int
+    {
+        return count($this->proofFiles($request));
+    }
+
+    /** Uploads the request's proof files and returns their rows. */
+    private function uploadProofs(Request $request): array
+    {
+        return array_map(function ($file) {
+            $publicId = $this->cloudinary->uploadAuto(
+                $file,
+                CloudinaryFolders::companyFiles('cash-book'),
+                CloudinaryFolders::filename('cash-proof')
+            );
+
+            return [
+                'file' => $publicId,
+                'name' => $file->getClientOriginalName(),
+                'mime' => $file->getMimeType(),
+                'size' => $file->getSize(),
+            ];
+        }, $this->proofFiles($request));
+    }
+
+    private function deleteProofFile(string $publicId, ?string $mime = null): void
     {
         try {
-            $this->cloudinary->delete($publicId, str_ends_with(strtolower($publicId), '.pdf') ? 'raw' : 'image');
+            $type = $mime ? CloudinaryResourceType::fromMime($mime) : (str_ends_with(strtolower($publicId), '.pdf') ? 'raw' : 'image');
+            $this->cloudinary->delete($publicId, $type);
         } catch (\Throwable $e) {
             // A leftover file on Cloudinary isn't worth failing the edit over.
         }

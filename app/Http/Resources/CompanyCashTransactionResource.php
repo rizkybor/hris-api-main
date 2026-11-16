@@ -31,12 +31,16 @@ class CompanyCashTransactionResource extends JsonResource
             'amount' => (float) (string) $this->amount,
             'transaction_date' => $this->transaction_date?->toDateString(),
             'notes' => $this->notes,
-            'proof' => $this->proof_file ? [
-                'url' => CloudinaryUrl::auto($this->proof_file, $this->proof_mime),
-                'name' => $this->proof_name,
-                'mime' => $this->proof_mime,
-                'is_image' => str_starts_with((string) $this->proof_mime, 'image/'),
-            ] : null,
+            // Every proof file; `proof` (the first one) stays for older clients.
+            'proofs' => $proofs = $this->proofs->map(fn ($p) => [
+                'id' => $p->id,
+                'url' => CloudinaryUrl::auto($p->file, $p->mime),
+                'name' => $p->name,
+                'mime' => $p->mime,
+                'size' => $p->size,
+                'is_image' => $p->isImage(),
+            ])->values(),
+            'proof' => $proofs->first(),
             // Running balance immediately after this transaction, computed
             // in CompanyCashTransactionController::index() as rows are
             // walked in chronological order -- not a stored column.
