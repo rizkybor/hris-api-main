@@ -67,6 +67,7 @@ class ReportController extends Controller implements HasMiddleware
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
             new Middleware(PermissionMiddleware::using(['staff-raport-menu|staff-raport-list']), only: ['staffRaport', 'staffRaportDetail']),
             new Middleware(PermissionMiddleware::using(['staff-raport-export']), only: ['staffRaportPdf']),
+            new Middleware(PermissionMiddleware::using(['staff-raport-review']), only: ['saveStaffRaportReview']),
             // Deleting from a report deletes the underlying real record
             // (not just "removes it from the report"), so this is
             // deliberately gated tighter than the rest of Reports -- by
@@ -240,7 +241,7 @@ class ReportController extends Controller implements HasMiddleware
     public function staffRaportDetail(Request $request, string $employeeId)
     {
         try {
-            $employee = EmployeeProfile::with('jobInformation')->findOrFail($employeeId);
+            $employee = EmployeeProfile::with(['jobInformation', 'user'])->findOrFail($employeeId);
             [$startDate, $endDate, $periodLabel] = $this->raportPeriod($request, $employee);
 
             $data = $this->reportRepository->getStaffRaportDetail((int) $employeeId, $startDate, $endDate);
@@ -271,6 +272,13 @@ class ReportController extends Controller implements HasMiddleware
         }
 
         return match ($period) {
+            // Whole employment: from the start date to the day the login
+            // ended (contract/probation over), or today if still employed.
+            'tenure' => [
+                $employee->jobInformation?->start_date?->toDateString() ?? '2000-01-01',
+                $employee->user?->access_ended_on?->toDateString() ?? $now->toDateString(),
+                'Tenure',
+            ],
             'week' => [$now->copy()->startOfWeek()->toDateString(), $now->copy()->endOfWeek()->toDateString(), 'This Week'],
             'all' => [
                 $employee->jobInformation?->start_date?->toDateString() ?? '2000-01-01',
@@ -285,7 +293,7 @@ class ReportController extends Controller implements HasMiddleware
     public function staffRaportPdf(Request $request, string $employeeId)
     {
         try {
-            $employee = EmployeeProfile::with('jobInformation')->findOrFail($employeeId);
+            $employee = EmployeeProfile::with(['jobInformation', 'user'])->findOrFail($employeeId);
             [$startDate, $endDate, $periodLabel] = $this->raportPeriod($request, $employee);
             $period = $request->query('period', 'custom');
 
@@ -299,6 +307,33 @@ class ReportController extends Controller implements HasMiddleware
             $filename = str_replace(' ', '-', $data['employee']['name'] ?? 'staff-raport').'-'.$period.'.pdf';
 
             return $pdf->download($filename);
+        } catch (ModelNotFoundException $e) {
+            return ResponseHelper::jsonResponse(false, 'Employee Not Found', null, 404);
+        } catch (\Throwable $e) {
+            return ResponseHelper::jsonResponse(false, 'Internal Server Error: '.$e->getMessage(), null, 500);
+        }
+    }
+
+    /**
+     * The signed-in reviewer's optional closing note on this employee's Staff
+     * Report (one per reviewer; empty removes it). Returns all notes.
+     */
+    public function saveStaffRaportReview(Request $request, string $employeeId)
+    {
+        $validated = $request->validate(['review' => ['nullable', 'string', 'max:5000']]);
+
+        try {
+            $employee = EmployeeProfile::withTrashed()->findOrFail($employeeId);
+            $text = trim((string) ($validated['review'] ?? ''));
+            $match = ['employee_id' => $employee->id, 'reviewer_id' => $request->user()->id];
+
+            if ($text === '') {
+                \App\Models\StaffRaportReview::where($match)->delete();
+            } else {
+                \App\Models\StaffRaportReview::updateOrCreate($match, ['review' => $text]);
+            }
+
+            return ResponseHelper::jsonResponse(true, 'Review Saved Successfully', $this->reportRepository->staffRaportReviews($employee->id), 200);
         } catch (ModelNotFoundException $e) {
             return ResponseHelper::jsonResponse(false, 'Employee Not Found', null, 404);
         } catch (\Throwable $e) {

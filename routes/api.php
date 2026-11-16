@@ -161,6 +161,7 @@ Route::prefix('v1')
             Route::post('employees/{id}/toggle-account-status', [EmployeeProfileController::class, 'toggleAccountStatus']);
             Route::get('employees/all/paginated', [EmployeeProfileController::class, 'getAllPaginated']);
             Route::get('employees/deleted', [EmployeeProfileController::class, 'deleted']);
+            Route::get('employees/{id}/raport-reviews', [EmployeeProfileController::class, 'raportReviews']);
             Route::post('employees/{id}/restore', [EmployeeProfileController::class, 'restore']);
             Route::apiResource('employees', EmployeeProfileController::class);
 
@@ -455,6 +456,7 @@ Route::prefix('v1')
             Route::get('reports/staff-raport', [ReportController::class, 'staffRaport']);
             Route::get('reports/staff-raport/{employeeId}/pdf', [ReportController::class, 'staffRaportPdf']);
             Route::get('reports/staff-raport/{employeeId}', [ReportController::class, 'staffRaportDetail']);
+            Route::put('reports/staff-raport/{employeeId}/review', [ReportController::class, 'saveStaffRaportReview']);
             Route::get('reports/export', [ReportController::class, 'export']);
             Route::post('reports/delete-row', [ReportController::class, 'deleteRow']);
             Route::post('reports/delete-range', [ReportController::class, 'deleteByRange']);
@@ -635,6 +637,7 @@ Route::prefix('v1')
             Route::put('certificate-setting', [CertificateSettingController::class, 'update']);
             Route::apiResource('certificate-templates', CertificateTemplateController::class)->only(['index', 'store', 'destroy']);
             Route::get('certificates/statistics', [CertificateController::class, 'getStatistics']);
+            Route::get('certificates/employee-options', [CertificateController::class, 'employeeOptions']);
             Route::post('certificates/preview-number', [CertificateController::class, 'previewNumber']);
             // PDF rendering (and ZIP bundling for bulk requests up to 500
             // recipients) is CPU/IO-heavy enough to be a DoS vector if it

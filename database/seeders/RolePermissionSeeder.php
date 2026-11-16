@@ -144,6 +144,7 @@ class RolePermissionSeeder extends Seeder
                 $this->permissionsAllExcept(array_merge($employeeSpecific, $officialMemoApproveOnly, $meetingNotePermissions, $nonSuperAdminWidgets, [
                     'payslip-view',
                     'task-list',
+                    'staff-raport-review', // closing notes: Manager / OD / Finance only
                     'team-menu',
                     'attendance-menu',
                     'attendance-edit',
@@ -504,6 +505,7 @@ class RolePermissionSeeder extends Seeder
                     'staff-raport-menu',
                     'staff-raport-list',
                     'staff-raport-export',
+                    'staff-raport-review',
                     'certificate-menu',
                     'certificate-list',
                     'certificate-create',
