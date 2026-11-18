@@ -3554,3 +3554,31 @@ test('a non-https APP_URL is reported when making a link', function () {
     $this->postJson("/api/v1/license-manager/products/occa/releases/$id/install-links", [])->assertCreated()
         ->assertJsonPath('data.app_url_https', false);
 });
+
+test('a term license stops working once it expires, on every app call, until the admin extends it', function (string $plan) {
+    $license = License::factory()->plan($plan)->create([
+        'type' => License::TYPE_TERM,
+        'starts_at' => now()->subMonth(),
+        'expires_at' => now()->addDays(2)->startOfSecond(),
+    ]);
+
+    // Before the end: activation works and the token carries the end date; offline use never reaches past it.
+    $activated = occaActivate($this, $license, 'device-1')->assertOk();
+    $payload = app(LicenseTokenService::class)->verify($activated->json('token'));
+    expect($payload['plan'])->toBe($plan)
+        ->and($payload['expires_at'])->toBe($license->expires_at->utc()->format('Y-m-d\TH:i:s\Z'))
+        ->and($payload['offline_until'])->toBeLessThanOrEqual($license->expires_at->getTimestamp());
+
+    // After the end: refresh, restore and a new activation all answer expired.
+    $this->travel(3)->days();
+    $this->postJson('/api/occa/license/refresh', ['key' => $license->key, 'device_id' => 'device-1'])
+        ->assertStatus(403)->assertJsonPath('error', 'expired');
+    $this->postJson('/api/licenses/occa/restore', ['device_id' => 'device-1', 'platform' => 'macOS'])
+        ->assertStatus(403)->assertJsonPath('error', 'expired');
+    occaActivate($this, $license, 'device-2')->assertStatus(403)->assertJsonPath('error', 'expired');
+    expect($license->events()->where('event', LicenseEvent::DENIED_EXPIRED)->count())->toBeGreaterThan(0);
+
+    // The admin extends it: the same device works again.
+    $license->update(['expires_at' => now()->addMonth()]);
+    $this->postJson('/api/occa/license/refresh', ['key' => $license->key, 'device_id' => 'device-1'])->assertOk();
+})->with([License::PLAN_TRIAL, License::PLAN_PROFESSIONAL, License::PLAN_ORGANIZATION]);
