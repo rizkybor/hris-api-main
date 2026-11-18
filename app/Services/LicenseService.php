@@ -200,6 +200,165 @@ class LicenseService
     }
 
     /**
+     * Give an app that lost its token (deleted and installed again, data
+     * cleared) the token of the activation this device already has, found
+     * by device_id alone. Never takes a seat: a device without an
+     * activation on a license of the product answers not_activated.
+     * Denials are not logged (the app asks at every launch without a token).
+     */
+    public function restore(string $productCode, array $device): array
+    {
+        $product = $this->usableProduct($productCode);
+        $deviceId = $device['device_id'];
+        $platform = License::platformFromDevice($device['platform'] ?? null);
+        if ($platform === null) {
+            throw LicenseException::unknownPlatform();
+        }
+
+        // Newest first, the device's own platform before the other: the
+        // first usable one wins, else the first one's error is the answer.
+        $activations = LicenseActivation::query()
+            ->where('device_id', $deviceId)
+            ->whereHas('license', fn ($query) => $query->forProduct($product))
+            ->with(['license', 'licenseKey'])
+            ->orderByDesc('last_seen_at')
+            ->orderByDesc('id')
+            ->get()
+            ->sortBy(fn (LicenseActivation $activation) => $activation->license->platform === $platform ? 0 : 1)
+            ->values();
+
+        $error = null;
+        foreach ($activations as $activation) {
+            $license = $activation->license;
+            $license->setRelation('product', $product);
+            try {
+                $this->assertRestorable($license, $activation, $platform);
+            } catch (LicenseException $e) {
+                $error ??= $e;
+
+                continue;
+            }
+
+            $previousVersion = $activation->app_version;
+            $activation->update(array_merge(['last_seen_at' => now()], $this->deviceDetails($device)));
+            $this->eventLogger->logDevice($license, LicenseEvent::DEVICE_RESTORED, $activation);
+            $this->logAppUpdate($license, $activation, $previousVersion);
+
+            return $this->response($license, $deviceId, $activation->licenseKey?->key ?? $license->key);
+        }
+
+        throw $error ?? LicenseException::noActivation();
+    }
+
+    /**
+     * The checks of refresh, for an activation found by device id.
+     */
+    private function assertRestorable(License $license, LicenseActivation $activation, string $platform): void
+    {
+        if (! $license->is_active) {
+            throw LicenseException::inactive();
+        }
+        if ($license->isExpired()) {
+            throw LicenseException::expired();
+        }
+        if ($license->platform !== $platform) {
+            throw LicenseException::wrongPlatform($license->platform);
+        }
+        if ($activation->licenseKey?->isUsed()) {
+            throw LicenseException::keyUsed();
+        }
+    }
+
+    /**
+     * Move a device's activation from its old device id to a new one (the
+     * app changed how it identifies the device). The seat moves along and,
+     * for one key per device, so does the key's binding: nothing is
+     * released and no key is used up. Calling it again after a lost answer
+     * answers for the new id.
+     */
+    public function rebind(string $productCode, string $key, string $oldDeviceId, array $device): array
+    {
+        $product = $this->usableProduct($productCode);
+        $newDeviceId = $device['device_id'];
+
+        try {
+            [$license, $activation, $moved, $previousVersion] = DB::transaction(
+                fn () => $this->rebindInTransaction($product, $key, $oldDeviceId, $newDeviceId, $device)
+            );
+        } catch (LicenseException $e) {
+            $this->logDenial($e, $product, $key, ['device_id' => $oldDeviceId, 'platform' => $device['platform'] ?? null]);
+            throw $e;
+        }
+
+        if ($moved) {
+            $this->eventLogger->logDevice($license, LicenseEvent::DEVICE_REBOUND, $activation, ['old_device_id' => $oldDeviceId]);
+        } else {
+            $this->eventLogger->logRefresh($license, $activation);
+        }
+        $this->logAppUpdate($license, $activation, $previousVersion);
+
+        return $this->response($license, $newDeviceId, $activation->licenseKey?->key ?? $license->key);
+    }
+
+    /**
+     * @return array{0: License, 1: LicenseActivation, 2: bool, 3: ?string}
+     */
+    private function rebindInTransaction(LicenseProduct $product, string $key, string $oldDeviceId, string $newDeviceId, array $device): array
+    {
+        [$license, $keyRow] = $this->findUsable($product, $key, lock: true);
+        $this->assertPlatform($license, $device['platform'] ?? null, required: true);
+        $now = now();
+
+        // An activation holds the key when it is the license's shared key or
+        // the per-device key bound to that activation.
+        $holdsKey = fn (?LicenseActivation $activation) => $activation !== null
+            && ! ($keyRow && $activation->license_key_id && $activation->license_key_id !== $keyRow->id);
+        $touch = function (LicenseActivation $activation) use ($now, $device) {
+            $previousVersion = $activation->app_version;
+            $activation->update(array_merge(['last_seen_at' => $now], $this->deviceDetails($device)));
+
+            return $previousVersion;
+        };
+
+        $old = $license->activations()->where('device_id', $oldDeviceId)->first();
+        $current = $oldDeviceId === $newDeviceId ? $old : $license->activations()->where('device_id', $newDeviceId)->first();
+
+        if (! $holdsKey($old)) {
+            // Already moved (a retry after a lost answer), or nothing to move.
+            if ($holdsKey($current)) {
+                return [$license, $current, false, $touch($current)];
+            }
+            throw $keyRow?->isUsed() ? LicenseException::keyUsed() : LicenseException::notActivated();
+        }
+
+        if ($oldDeviceId === $newDeviceId) {
+            return [$license, $old, false, $touch($old)];
+        }
+
+        if ($current) {
+            // The new id is already on this license: answer for it. A shared
+            // seat of the old id is freed; a per-device key stays bound to
+            // the old id (an admin can release it).
+            if (! $old->license_key_id) {
+                $old->delete();
+            }
+
+            return [$license, $current, false, $touch($current)];
+        }
+
+        $previousVersion = $old->app_version;
+        $old->update(array_merge(['device_id' => $newDeviceId, 'last_seen_at' => $now], $this->deviceDetails($device)));
+        $old->licenseKey?->forceFill(['device_id' => $newDeviceId, 'device_name' => $old->device_name])->save();
+
+        activity('License Manager')
+            ->performedOn($license)
+            ->withProperties(['old_device_id' => $oldDeviceId, 'device_id' => $newDeviceId])
+            ->log('Device id changed');
+
+        return [$license, $old, true, $previousVersion];
+    }
+
+    /**
      * Free this device's slot. Idempotent: unknown keys/devices are fine.
      */
     public function deactivate(string $productCode, string $key, string $deviceId): void

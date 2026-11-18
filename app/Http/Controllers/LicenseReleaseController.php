@@ -6,8 +6,10 @@ use App\Helpers\ResponseHelper;
 use App\Http\Resources\LicenseReleaseResource;
 use App\Models\License;
 use App\Models\LicenseActivation;
+use App\Models\LicenseInstallLink;
 use App\Models\LicenseProduct;
 use App\Models\LicenseRelease;
+use App\Services\IpaInspector;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -22,8 +24,10 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
  * new features, improvements and bug fixes. Own permission module
  * license-release-*: reading needs -menu, -list or -view, adding -create,
  * editing (incl. publishing and uploading the installer) -edit, deleting
- * -delete, downloading the installer -download. Every version keeps its installer (OCCA: the Mac .dmg)
- * on the private disk; a Mac version can only be published with it.
+ * -delete, downloading the installer -download. Every version keeps its installers on the private
+ * disk: the Mac .dmg (file_*) and the iPad .ipa (ipa_*). A Mac version is
+ * published only with the .dmg, an iPad version only with the .ipa, a
+ * shared version with both.
  */
 class LicenseReleaseController extends Controller implements HasMiddleware
 {
@@ -32,9 +36,9 @@ class LicenseReleaseController extends Controller implements HasMiddleware
         return [
             new Middleware(PermissionMiddleware::using(['license-release-menu|license-release-list|license-release-view']), only: ['index', 'show']),
             new Middleware(PermissionMiddleware::using(['license-release-create']), only: ['store']),
-            new Middleware(PermissionMiddleware::using(['license-release-edit']), only: ['update', 'uploadFile', 'deleteFile']),
+            new Middleware(PermissionMiddleware::using(['license-release-edit']), only: ['update', 'uploadFile', 'deleteFile', 'uploadIpa', 'deleteIpa']),
             new Middleware(PermissionMiddleware::using(['license-release-delete']), only: ['destroy']),
-            new Middleware(PermissionMiddleware::using(['license-release-download']), only: ['downloadFile']),
+            new Middleware(PermissionMiddleware::using(['license-release-download']), only: ['downloadFile', 'downloadIpa']),
         ];
     }
 
@@ -207,12 +211,136 @@ class LicenseReleaseController extends Controller implements HasMiddleware
     }
 
     /**
-     * A Mac (or Mac + iPad) version is published only with its installer.
+     * Upload (or replace) the iPad installer of a version: multipart "file"
+     * (.ipa, up to 2 GB). The app's Info.plist must carry the product's
+     * bundle id (config licensing.ios_bundle_ids) and this version as
+     * CFBundleShortVersionString; a different build number, a missing,
+     * expired or non-Ad Hoc provisioning profile are warnings.
+     */
+    public function uploadIpa(Request $request, string $product, string $release, IpaInspector $inspector)
+    {
+        [$model, $item] = $this->find($product, $release);
+        if (! $item) {
+            return $this->notFound();
+        }
+        $request->validate([
+            'file' => ['required', 'file', 'extensions:'.implode(',', LicenseRelease::IPA_EXTENSIONS), 'max:'.LicenseRelease::FILE_MAX_KB],
+        ], [
+            'file.extensions' => 'Upload the iPad installer as an .ipa file.',
+            'file.max' => 'The installer may be at most 2 GB.',
+        ]);
+
+        $file = $request->file('file');
+        try {
+            $meta = $inspector->inspect($file->getRealPath());
+        } catch (\InvalidArgumentException $e) {
+            throw ValidationException::withMessages(['file' => $e->getMessage()]);
+        }
+        $meta['warnings'] = $this->ipaWarnings($model, $item, $meta);
+
+        $name = Str::of($model->code)->slug('-')->limit(80, '')->whenEmpty(fn () => Str::of('app'))
+            .'-'.$item->version.'.ipa';
+        $directory = "license-releases/{$model->code}/{$item->version}";
+        $sha256 = hash_file('sha256', $file->getRealPath());
+        $path = $file->storeAs($directory, $name, LicenseRelease::FILE_DISK);
+
+        if ($item->ipa_path && $item->ipa_path !== $path) {
+            Storage::disk(LicenseRelease::FILE_DISK)->delete($item->ipa_path);
+        }
+        $item->update([
+            'ipa_path' => $path,
+            'ipa_name' => $name,
+            'ipa_size' => $file->getSize(),
+            'ipa_sha256' => $sha256,
+            'ipa_meta' => $meta,
+            'ipa_uploaded_at' => now(),
+        ]);
+        $this->withCoverage($model, collect([$item]));
+
+        return ResponseHelper::jsonResponse(true, $meta['warnings'] ? 'iPad Installer Uploaded With Warnings' : 'iPad Installer Uploaded Successfully', new LicenseReleaseResource($item), 200);
+    }
+
+    public function downloadIpa(string $product, string $release)
+    {
+        [, $item] = $this->find($product, $release);
+        if (! $item || ! $item->hasIpa() || ! Storage::disk(LicenseRelease::FILE_DISK)->exists($item->ipa_path)) {
+            return $this->notFound();
+        }
+
+        return Storage::disk(LicenseRelease::FILE_DISK)->download($item->ipa_path, $item->ipa_name);
+    }
+
+    /**
+     * Remove the iPad installer of a draft (a published iPad version keeps
+     * it). Install links of the version stop working.
+     */
+    public function deleteIpa(string $product, string $release)
+    {
+        [$model, $item] = $this->find($product, $release);
+        if (! $item) {
+            return $this->notFound();
+        }
+        if ($item->isPublished() && $item->needsIpa()) {
+            throw ValidationException::withMessages(['file' => 'A published version keeps its iPad installer. Upload a new file to replace it.']);
+        }
+        if ($item->ipa_path) {
+            Storage::disk(LicenseRelease::FILE_DISK)->delete($item->ipa_path);
+        }
+        $item->update(['ipa_path' => null, 'ipa_name' => null, 'ipa_size' => null, 'ipa_sha256' => null, 'ipa_meta' => null, 'ipa_uploaded_at' => null]);
+        $this->withCoverage($model, collect([$item]));
+
+        return ResponseHelper::jsonResponse(true, 'iPad Installer Removed Successfully', new LicenseReleaseResource($item), 200);
+    }
+
+    /**
+     * Refuses an .ipa of another app or another version; returns the
+     * warnings (build number, provisioning profile).
+     *
+     * @return string[]
+     */
+    private function ipaWarnings(LicenseProduct $product, LicenseRelease $release, array $meta): array
+    {
+        $expectedBundle = config("licensing.ios_bundle_ids.{$product->code}");
+        if ($expectedBundle && $meta['bundle_id'] !== $expectedBundle) {
+            throw ValidationException::withMessages(['file' => "This .ipa is {$meta['bundle_id']}, not {$product->name} ({$expectedBundle})."]);
+        }
+        if ($meta['short_version'] !== $release->version) {
+            throw ValidationException::withMessages(['file' => 'This .ipa is version '.($meta['short_version'] ?? '?').", not {$release->version}."]);
+        }
+
+        $warnings = [];
+        if ($release->build !== null && (string) $release->build !== (string) $meta['build']) {
+            $warnings[] = "The .ipa has build {$meta['build']}; this version lists build {$release->build}.";
+        }
+        $profile = $meta['profile'];
+        if ($profile === null) {
+            $warnings[] = 'The .ipa has no provisioning profile; it cannot be installed over the air.';
+        } else {
+            if ($profile['type'] !== IpaInspector::PROFILE_AD_HOC) {
+                $warnings[] = "The provisioning profile is {$profile['type_label']}, not Ad Hoc.";
+            }
+            if ($profile['expired']) {
+                $warnings[] = 'The provisioning profile has expired; iPads cannot install or open this build.';
+            }
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * A Mac version is published only with its .dmg, an iPad version only
+     * with its .ipa, a shared version with both.
      */
     private function assertPublishable(LicenseRelease $release): void
     {
-        if ($release->status === LicenseRelease::STATUS_PUBLISHED && $release->needsFile() && ! $release->hasFile()) {
+        if ($release->status !== LicenseRelease::STATUS_PUBLISHED) {
+            return;
+        }
+        if ($release->needsFile() && ! $release->hasFile()) {
             throw ValidationException::withMessages(['status' => 'Upload the Mac installer (.dmg) before publishing this version.']);
+        }
+        if ($release->needsIpa() && ! $release->hasIpa()) {
+            throw ValidationException::withMessages(['status' => 'Upload the iPad installer (.ipa) before publishing this version.']);
         }
     }
 
@@ -298,6 +426,9 @@ class LicenseReleaseController extends Controller implements HasMiddleware
                 ->whereHas('license', fn ($q) => $q->forProduct($product))
                 ->where('app_version', $release->version)
                 ->count();
+            // iPad install links: still usable / already used.
+            $release->install_links_active = $release->installLinks()->usable()->count();
+            $release->install_links_used = $release->installLinks()->where('status', LicenseInstallLink::STATUS_USED)->count();
         }
     }
 

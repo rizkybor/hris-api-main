@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -50,6 +51,12 @@ class LicenseRelease extends Model
      */
     public const FILE_EXTENSIONS = ['dmg', 'zip', 'pkg'];
 
+    /**
+     * The iPad installer: an Ad Hoc signed .ipa, installed over the air
+     * through single-use install links (LicenseInstallLink).
+     */
+    public const IPA_EXTENSIONS = ['ipa'];
+
     public const KIND_MAJOR = 'major';
 
     public const KIND_MINOR = 'minor';
@@ -94,6 +101,12 @@ class LicenseRelease extends Model
         'file_size',
         'file_sha256',
         'file_uploaded_at',
+        'ipa_path',
+        'ipa_name',
+        'ipa_size',
+        'ipa_sha256',
+        'ipa_meta',
+        'ipa_uploaded_at',
         'changes',
         'notes',
     ];
@@ -107,6 +120,9 @@ class LicenseRelease extends Model
         'is_critical' => 'boolean',
         'file_size' => 'integer',
         'file_uploaded_at' => 'datetime',
+        'ipa_size' => 'integer',
+        'ipa_meta' => 'array',
+        'ipa_uploaded_at' => 'datetime',
         'changes' => 'array',
     ];
 
@@ -123,6 +139,11 @@ class LicenseRelease extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(LicenseProduct::class, 'product_id');
+    }
+
+    public function installLinks(): HasMany
+    {
+        return $this->hasMany(LicenseInstallLink::class, 'release_id');
     }
 
     /**
@@ -184,12 +205,25 @@ class LicenseRelease extends Model
     }
 
     /**
-     * A Mac (or shared) version needs its installer before it is published;
-     * an iPad-only version is installed through Apple, not a file.
+     * A Mac (or shared) version needs its Mac installer before it is published.
      */
     public function needsFile(): bool
     {
         return $this->platforms !== License::PLATFORM_IPAD;
+    }
+
+    public function hasIpa(): bool
+    {
+        return filled($this->ipa_path);
+    }
+
+    /**
+     * An iPad (or shared) version needs its iPad installer (.ipa) before
+     * it is published.
+     */
+    public function needsIpa(): bool
+    {
+        return $this->platforms !== License::PLATFORM_MAC;
     }
 
     public function kind(): string
