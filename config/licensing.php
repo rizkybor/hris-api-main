@@ -31,4 +31,27 @@ return [
     // resources/license-products/ (php artisan license:certificate-assets).
     'certificate_hologram' => env('LICENSE_CERTIFICATE_HOLOGRAM', 'c'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | iPad installers (.ipa) and install links
+    |--------------------------------------------------------------------------
+    |
+    | The iOS / iPadOS bundle identifier of each product, by product code:
+    | an uploaded .ipa must carry it (CFBundleIdentifier). Products not
+    | listed here are not checked.
+    |
+    | Install links are single use; they expire after install_link_days
+    | (default) and at most install_link_max_days. iOS only installs over
+    | https, so APP_URL must be an https URL with a valid certificate.
+    |
+    */
+
+    'ios_bundle_ids' => [
+        'occa' => 'id.cakrapencil.app',
+    ],
+
+    'install_link_days' => 7,
+
+    'install_link_max_days' => 30,
+
 ];

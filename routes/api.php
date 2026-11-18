@@ -47,6 +47,8 @@ use App\Http\Controllers\LetterCodeController;
 use App\Http\Controllers\LetterController;
 use App\Http\Controllers\LicenseCertificateController;
 use App\Http\Controllers\LicenseController;
+use App\Http\Controllers\LicenseInstallController;
+use App\Http\Controllers\LicenseInstallLinkController;
 use App\Http\Controllers\LicenseProductController;
 use App\Http\Controllers\LicensePublicController;
 use App\Http\Controllers\LicenseReleaseController;
@@ -100,11 +102,27 @@ Route::prefix('licenses/{product}')
         Route::post('activate', [LicensePublicController::class, 'activate']);
         Route::post('refresh', [LicensePublicController::class, 'refresh']);
         Route::post('deactivate', [LicensePublicController::class, 'deactivate']);
+        // After a reinstall: the existing activation of this device id (never a new seat).
+        Route::post('restore', [LicensePublicController::class, 'restore']);
+        // Move an activation to the device's new id (seat and per-device key move along).
+        Route::post('rebind', [LicensePublicController::class, 'rebind']);
         // Version list and update check (no device or key needed for the list).
         Route::get('releases', [LicensePublicController::class, 'releases']);
         Route::get('releases/latest', [LicensePublicController::class, 'latestRelease']);
         // The installer of a published version, for a license key that covers it.
         Route::get('releases/{version}/download', [LicensePublicController::class, 'download'])->where('version', '[0-9]+\.[0-9]+\.[0-9]+');
+    });
+
+// Over-the-air iPad install through a single-use link (no login, the token
+// is the credential): an HTML page with the Install button, the iOS OTA
+// manifest and the .ipa. The link is used once the .ipa streamed completely.
+Route::prefix('licenses/{product}/install/{token}')
+    ->where(['product' => '[a-z0-9]+(?:-[a-z0-9]+)*', 'token' => '[A-Za-z0-9]{20,80}'])
+    ->middleware('throttle:30,1')
+    ->group(function () {
+        Route::get('/', [LicenseInstallController::class, 'page']);
+        Route::get('manifest.plist', [LicenseInstallController::class, 'manifest']);
+        Route::get('app.ipa', [LicenseInstallController::class, 'ipa']);
     });
 
 // The path the OCCA app already uses: alias for product "occa".
@@ -114,6 +132,8 @@ Route::prefix('occa/license')
         Route::post('activate', [LicensePublicController::class, 'activate'])->defaults('product', 'occa');
         Route::post('refresh', [LicensePublicController::class, 'refresh'])->defaults('product', 'occa');
         Route::post('deactivate', [LicensePublicController::class, 'deactivate'])->defaults('product', 'occa');
+        Route::post('restore', [LicensePublicController::class, 'restore'])->defaults('product', 'occa');
+        Route::post('rebind', [LicensePublicController::class, 'rebind'])->defaults('product', 'occa');
     });
 
 Route::prefix('v1')
@@ -331,6 +351,13 @@ Route::prefix('v1')
                     Route::get('products/{product}/releases/{release}/file', [LicenseReleaseController::class, 'downloadFile'])->whereNumber('release');
                     Route::post('products/{product}/releases/{release}/file', [LicenseReleaseController::class, 'uploadFile'])->whereNumber('release');
                     Route::delete('products/{product}/releases/{release}/file', [LicenseReleaseController::class, 'deleteFile'])->whereNumber('release');
+                    // iPad installer (.ipa) and its single-use install links.
+                    Route::get('products/{product}/releases/{release}/ipa', [LicenseReleaseController::class, 'downloadIpa'])->whereNumber('release');
+                    Route::post('products/{product}/releases/{release}/ipa', [LicenseReleaseController::class, 'uploadIpa'])->whereNumber('release');
+                    Route::delete('products/{product}/releases/{release}/ipa', [LicenseReleaseController::class, 'deleteIpa'])->whereNumber('release');
+                    Route::get('products/{product}/releases/{release}/install-links', [LicenseInstallLinkController::class, 'index'])->whereNumber('release');
+                    Route::post('products/{product}/releases/{release}/install-links', [LicenseInstallLinkController::class, 'store'])->whereNumber('release');
+                    Route::post('products/{product}/releases/{release}/install-links/{link}/revoke', [LicenseInstallLinkController::class, 'revoke'])->whereNumber(['release', 'link']);
                     Route::prefix('products/{product}/licenses')->group(function () {
                         Route::get('all/paginated', [LicenseController::class, 'getAllPaginated']);
                         Route::get('summary', [LicenseController::class, 'summary']);

@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\LicenseRelease;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Carbon;
 
 /**
  * @mixin LicenseRelease
@@ -39,6 +40,24 @@ class LicenseReleaseResource extends JsonResource
                 'uploaded_at' => $this->file_uploaded_at,
             ] : null,
             'needs_file' => $this->needsFile(),
+            // The iPad installer (download: GET …/releases/{id}/ipa) with what
+            // was read from it on upload: bundle id, version, build and the
+            // provisioning profile (type, expiry, provisioned iPads).
+            'ipa' => $this->hasIpa() ? [
+                'name' => $this->ipa_name,
+                'size' => $this->ipa_size,
+                'sha256' => $this->ipa_sha256,
+                'uploaded_at' => $this->ipa_uploaded_at,
+                'bundle_id' => $this->ipa_meta['bundle_id'] ?? null,
+                'short_version' => $this->ipa_meta['short_version'] ?? null,
+                'build' => $this->ipa_meta['build'] ?? null,
+                'minimum_os' => $this->ipa_meta['minimum_os'] ?? null,
+                'profile' => $this->profile(),
+                'warnings' => $this->ipa_meta['warnings'] ?? [],
+            ] : null,
+            'needs_ipa' => $this->needsIpa(),
+            'install_links_active' => $this->install_links_active ?? null,
+            'install_links_used' => $this->install_links_used ?? null,
             'changes' => array_values($this->resource->getAttribute('changes') ?? []),
             'change_counts' => $this->changeCounts(),
             'notes' => $this->notes,
@@ -50,5 +69,19 @@ class LicenseReleaseResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+
+    /**
+     * The stored profile, with "expired" recomputed (it was stored at upload).
+     */
+    private function profile(): ?array
+    {
+        $profile = $this->ipa_meta['profile'] ?? null;
+        if (! is_array($profile)) {
+            return null;
+        }
+        $profile['expired'] = ! empty($profile['expires_at']) && Carbon::parse($profile['expires_at'])->isPast();
+
+        return $profile;
     }
 }

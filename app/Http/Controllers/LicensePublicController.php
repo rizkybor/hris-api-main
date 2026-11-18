@@ -15,8 +15,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 /**
- * Public, unauthenticated endpoints an app calls to activate, refresh and
- * deactivate a license key on a device: /api/licenses/{product}/... with
+ * Public, unauthenticated endpoints an app calls to activate, refresh,
+ * restore, rebind and deactivate a license key on a device: /api/licenses/{product}/... with
  * the product code, and /api/occa/license/... as the OCCA alias (the path
  * compiled into the OCCA app). Errors use the
  * {"error": code, "message": text} shape the app understands rather than
@@ -111,6 +111,36 @@ class LicensePublicController extends Controller
 
             return ['ok' => true];
         });
+    }
+
+    /**
+     * After a reinstall: the token of the activation this device id already
+     * has (no key needed, never a new seat).
+     */
+    public function restore(Request $request, string $product): JsonResponse
+    {
+        return $this->handle($request, [
+            'device_id' => ['required', 'string', 'max:255'],
+            'device_name' => ['nullable', 'string', 'max:255'],
+            'platform' => ['required', 'string', 'max:50'],
+            'app_version' => ['nullable', 'string', 'max:50'],
+        ], fn (array $data) => $this->licenseService->restore($product, $data));
+    }
+
+    /**
+     * Move this device's activation (seat and per-device key) from its old
+     * device id to a new one.
+     */
+    public function rebind(Request $request, string $product): JsonResponse
+    {
+        return $this->handle($request, [
+            'key' => ['required', 'string', 'max:64'],
+            'old_device_id' => ['required', 'string', 'max:255'],
+            'device_id' => ['required', 'string', 'max:255'],
+            'device_name' => ['nullable', 'string', 'max:255'],
+            'platform' => ['required', 'string', 'max:50'],
+            'app_version' => ['nullable', 'string', 'max:50'],
+        ], fn (array $data) => $this->licenseService->rebind($product, $data['key'], $data['old_device_id'], $data));
     }
 
     private function keyAndDeviceRules(): array

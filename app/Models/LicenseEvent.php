@@ -41,6 +41,15 @@ class LicenseEvent extends Model
     /** The certificate opened from a shared link. */
     public const CERTIFICATE_LINK_OPENED = 'certificate_link_opened';
 
+    /** A single-use iPad install link made for this license (meta: version, link_id, expires_at). */
+    public const INSTALL_LINK_CREATED = 'install_link_created';
+
+    /** An iPad install link of this license revoked (meta: version, link_id). */
+    public const INSTALL_LINK_REVOKED = 'install_link_revoked';
+
+    /** The .ipa downloaded completely through a link of this license: the link is used. */
+    public const INSTALL_LINK_USED = 'install_link_used';
+
     // App events (public API).
     public const DEVICE_ACTIVATED = 'device_activated';
 
@@ -52,6 +61,12 @@ class LicenseEvent extends Model
     public const APP_UPDATED = 'app_updated';
 
     public const DEVICE_RELEASED = 'device_released';
+
+    /** An app without a token got its existing activation back (reinstall), no new seat. */
+    public const DEVICE_RESTORED = 'device_restored';
+
+    /** An activation moved to the device's new id (meta: old_device_id); seat and key move along. */
+    public const DEVICE_REBOUND = 'device_rebound';
 
     // Denied attempts (activate / refresh on an existing key).
     public const DENIED_DEVICE_LIMIT = 'denied_device_limit';
@@ -84,11 +99,16 @@ class LicenseEvent extends Model
         self::CERTIFICATE_EMAILED,
         self::CERTIFICATE_SHARED_WHATSAPP,
         self::CERTIFICATE_LINK_OPENED,
+        self::INSTALL_LINK_CREATED,
+        self::INSTALL_LINK_REVOKED,
+        self::INSTALL_LINK_USED,
         self::DEVICE_ACTIVATED,
         self::DEVICE_REACTIVATED,
         self::REFRESHED,
         self::APP_UPDATED,
         self::DEVICE_RELEASED,
+        self::DEVICE_RESTORED,
+        self::DEVICE_REBOUND,
         self::DENIED_DEVICE_LIMIT,
         self::DENIED_INACTIVE,
         self::DENIED_EXPIRED,
@@ -111,11 +131,16 @@ class LicenseEvent extends Model
         self::CERTIFICATE_EMAILED => 'Certificate sent by email',
         self::CERTIFICATE_SHARED_WHATSAPP => 'Certificate shared via WhatsApp',
         self::CERTIFICATE_LINK_OPENED => 'Certificate opened from a shared link',
+        self::INSTALL_LINK_CREATED => 'iPad install link created',
+        self::INSTALL_LINK_REVOKED => 'iPad install link revoked',
+        self::INSTALL_LINK_USED => 'iPad app installed from a link',
         self::DEVICE_ACTIVATED => 'Device activated',
         self::DEVICE_REACTIVATED => 'Device re-activated',
         self::REFRESHED => 'License refreshed',
         self::APP_UPDATED => 'App updated',
         self::DEVICE_RELEASED => 'Device released from the app',
+        self::DEVICE_RESTORED => 'License restored on the device (reinstall)',
+        self::DEVICE_REBOUND => 'Device moved to a new device ID',
         self::DENIED_DEVICE_LIMIT => 'Denied: device limit reached',
         self::DENIED_INACTIVE => 'Denied: license switched off',
         self::DENIED_EXPIRED => 'Denied: license expired',
