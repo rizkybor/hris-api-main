@@ -214,9 +214,11 @@ All requests are JSON `POST`s:
 POST /api/licenses/{product}/activate
 POST /api/licenses/{product}/refresh
 POST /api/licenses/{product}/deactivate
+POST /api/licenses/{product}/restore
+POST /api/licenses/{product}/rebind
 ```
 
-`/api/occa/license/activate|refresh|deactivate` stays as an alias for
+`/api/occa/license/activate|refresh|deactivate|restore|rebind` stays as an alias for
 `{product} = occa` (the path compiled into the OCCA app).
 
 Errors are always:
@@ -280,6 +282,85 @@ activated with is checked. Always updates `last_seen_at`. `app_version` is
 optional; a version different from the one stored for the device is saved
 and logged as `app_updated` (`meta`: from, to). Same response shape.
 
+### restore
+
+```json
+{
+  "device_id": "5B0E7C1A-3F55-4C8B-9E1D-2A6F0D9B7C44",
+  "platform": "macOS",
+  "app_version": "1.1.0",
+  "device_name": "Rizky's MacBook Pro"
+}
+```
+
+For an app that has no token any more (deleted and installed again, its
+data cleared) but runs on a device that is still activated. No key is
+sent: the server looks for an activation of this `device_id` on a license
+of the product. When one is on, not expired, for this platform and its
+per-device key is not `used`, the answer is the same as `refresh` (token
+plus `license`, with the device's own key) and `device_restored` is
+logged (plus `app_updated` for a new version). `platform` is required,
+`app_version` and `device_name` optional (stored when sent).
+
+It **never takes a seat**: a device without an activation answers
+`404 not_activated` ("This device has no license activation to
+restore."). Otherwise the errors of refresh: `invalid_request`,
+`invalid_product`, `product_inactive`, `inactive`, `expired`,
+`wrong_platform`, `key_used`. A key replaced after a plan change and a
+released device (from the app or by the admin) have no activation, so they
+answer `not_activated`. With several activations on one device id, the
+newest usable one of the device's platform wins; otherwise the error of
+the first one is returned. Denied restores are not logged (the app asks at
+every launch while it has no token).
+
+### rebind
+
+```json
+{
+  "key": "OC32-7KQM-2XRT-9HZP-0001",
+  "old_device_id": "5B0E7C1A-3F55-4C8B-9E1D-2A6F0D9B7C44",
+  "device_id": "0F6C2B9D-7E41-5A3C-8D12-6B9E4F0A1C77",
+  "platform": "macOS",
+  "app_version": "1.1.0",
+  "device_name": "Rizky's MacBook Pro"
+}
+```
+
+Moves this device's activation from `old_device_id` to `device_id` in one
+call, for an app that changed how it identifies the device (OCCA 1.1 on the
+Mac: from a random id to one derived from the hardware). The seat moves
+along, and for a `per_device` license the key's binding too: nothing is
+released, no key becomes `used`, so it is safe for both key modes. Same
+checks as activate (`invalid_key`, `inactive`, `expired`, `wrong_platform`,
+`key_replaced`, `key_used`; `platform` required); the old id must hold the
+key (the shared key, or the per-device key bound to it), else
+`not_activated`. The answer is a token for the new id (same shape as
+refresh); `device_rebound` is logged with `meta.old_device_id`.
+
+- A retry after a lost answer (old id gone, new id holds the key) answers
+  for the new id and moves nothing.
+- If the new id is already activated on the license, the answer is for the
+  new id; the old id's shared seat is freed, a per-device key stays bound
+  to the old id (an admin can release it).
+
+### Stable device ids (apps)
+
+`restore` only helps when the app sends the same `device_id` after a
+reinstall. OCCA:
+
+- **Mac:** the id is derived from the hardware UUID (IOKit
+  `IOPlatformUUID`): SHA-256 of `occa-device:` + the UUID, formatted as a
+  UUID string, so the raw hardware id never leaves the Mac. It survives
+  deleting the app and its data. A Mac activated with the old random id
+  moves itself to the new id with `rebind` once online; until then it keeps
+  the old id.
+- **iPad:** a random id in the Keychain (`AfterFirstUnlock`, not
+  `ThisDeviceOnly`), which survives deleting the app. Erasing the iPad
+  loses it (unless an iCloud / encrypted backup of the same iPad is
+  restored); the key then has to be activated again as a new device.
+- After "Release this device" the server has no activation, so `restore`
+  does not bring the license back.
+
 ### releases (version list)
 
 ```
@@ -333,7 +414,7 @@ key or device, and also when the product is switched off.
 | 403  | `key_used`         | `per_device`: the key's device was released; the key is dead |
 | 409  | `key_in_use`       | `per_device`: the key is activated on another device       |
 | 403  | `key_replaced`     | The key was replaced by a new one after a plan change      |
-| 404  | `not_activated`    | `refresh` for a device that has no activation              |
+| 404  | `not_activated`    | `refresh` / `rebind` for a device that has no activation; `restore` for a device id without an activation on the product |
 | 500  | `server_error`     | Unexpected failure (e.g. signing key missing)              |
 
 Checks run in this order: product (`invalid_product`, `product_inactive`),
@@ -614,7 +695,11 @@ A logging failure is reported and swallowed, never breaking the request.
 | `refreshed`                 | Refresh; at most once per device per 24 h (`last_seen_at` always updates) |
 | `app_updated`               | A device reported another app version on activate / refresh (`meta`: from, to) |
 | `device_released`           | Deactivate from the app                                           |
-| `denied_device_limit` / `denied_inactive` / `denied_expired` / `denied_wrong_platform` / `denied_key_used` / `denied_key_in_use` / `denied_key_replaced` | Denied activate / refresh on an existing key of the product |
+| `device_restored`           | `restore`: the app got its existing activation back after a reinstall (no new seat) |
+| `device_rebound`            | `rebind`: the activation moved to the device's new id (`meta`: old_device_id) |
+| `install_link_created` / `install_link_revoked` | Admin made / revoked an iPad install link for this license (`meta`: version, link_id, expires_at, device_name) |
+| `install_link_used`         | The `.ipa` of a link for this license streamed completely (`platform` iPadOS, `app_version` = the version; `meta`: link_id, bytes, user_agent) |
+| `denied_device_limit` / `denied_inactive` / `denied_expired` / `denied_wrong_platform` / `denied_key_used` / `denied_key_in_use` / `denied_key_replaced` | Denied activate / refresh / rebind on an existing key of the product (`restore` logs no denials) |
 
 Admin events carry the admin's `user_id` and IP; app events carry the device
 and IP. `GET …/licenses/{id}/events`: paginated (`per_page`, default 15),
@@ -642,9 +727,11 @@ major (newest published release, 1 before the first); a paid upgrade raises
 it (edit the license). Every other plan has null = every version while it
 runs. The value is in the signed token, so the app enforces it offline.
 
-Each version also keeps its installer (OCCA: the Mac `.dmg`) on the private
-`local` disk under `license-releases/{product}/{version}/`, with its size and
-SHA-256; a Mac or shared version can only be published with it. Files stay
+Each version also keeps its installers on the private `local` disk under
+`license-releases/{product}/{version}/`, with size and SHA-256: the Mac
+`.dmg` (`file_*`) and the iPad `.ipa` (`ipa_*`, see "iPad installers"
+below). A Mac version is published only with its `.dmg`, an iPad version
+only with its `.ipa`, a shared (`both`) version only with both. Files stay
 when a version is deleted (soft delete). The server must accept large uploads
 (PHP `upload_max_filesize` / `post_max_size`, nginx `client_max_body_size`;
 up to 2 GB).
@@ -667,12 +754,138 @@ Admin:
 | POST   | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Upload / replace the installer (multipart `file`: .dmg, .zip, .pkg) |
 | GET    | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Download the installer |
 | DELETE | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Remove it (drafts only) |
+| POST   | `/api/v1/license-manager/products/{product}/releases/{id}/ipa` | Upload / replace the iPad installer (multipart `file`: .ipa) |
+| GET    | `/api/v1/license-manager/products/{product}/releases/{id}/ipa` | Download it (`license-release-download`) |
+| DELETE | `/api/v1/license-manager/products/{product}/releases/{id}/ipa` | Remove it (drafts, or versions that do not need it) |
+| GET    | `/api/v1/license-manager/products/{product}/releases/{id}/install-links` | `{app_url_https, default_days, max_days, links: [...]}` (`-menu` / `-list` / `-view`) |
+| POST   | `/api/v1/license-manager/products/{product}/releases/{id}/install-links` | New single-use install link (`-edit`) |
+| POST   | `/api/v1/license-manager/products/{product}/releases/{id}/install-links/{link}/revoke` | Revoke it (`-edit`) |
 
 Each release also has `kind`, `kind_label`, `change_counts`,
 `licenses_covered` (running licenses that get it), `licenses_needing_upgrade`
 (Lifetime licenses of an older major) and `devices_on_version` (devices whose
 app last reported this version). `versions_in_use` is the log of app versions
-the activated devices report.
+the activated devices report. A release also has `ipa` (below), `needs_ipa`,
+`install_links_active` and `install_links_used`.
+
+### iPad installers (.ipa)
+
+An Ad Hoc signed `.ipa` (OCCA: `Tools/make-ipa.sh`), up to 2 GB, uploaded
+with `license-release-edit`. On upload `App\Services\IpaInspector` reads the
+zip without unpacking it:
+
+- `Payload/<App>.app/Info.plist` (binary or XML plist, `App\Support\Plist`):
+  `CFBundleIdentifier`, `CFBundleShortVersionString`, `CFBundleVersion`,
+  `MinimumOSVersion`. **Refused (422 on `file`)**: not an app archive, a
+  bundle id other than the product's (`config('licensing.ios_bundle_ids')`,
+  OCCA `id.cakrapencil.app`; products not listed there are not checked), a
+  short version other than the release's version.
+- `embedded.mobileprovision`: the XML between `<?xml` and `</plist>` inside
+  the CMS envelope (the signature is not verified; iPadOS does that).
+  Profile `type`: `ad_hoc` (devices listed, no `get-task-allow`),
+  `development`, `enterprise` (`ProvisionsAllDevices`) or `app_store`.
+- **Warnings** (stored, upload accepted): build differs from the release's
+  `build`; no profile; profile not Ad Hoc; profile expired.
+
+`ipa` in the release resource: `{name, size, sha256, uploaded_at, bundle_id,
+short_version, build, minimum_os, profile: {name, type, type_label, team_id,
+team_name, app_id, created_at, expires_at, expired, device_count, devices:
+[UDIDs]} | null, warnings: []}`. `expired` is recomputed on every read.
+
+### Install links (single-use OTA install)
+
+Table `license_install_links`: `release_id`, `license_id` (optional, an iPad
+license), `device_name`, `note`, `token_hash` (SHA-256, unique; lookup),
+`token_encrypted` (APP_KEY; lets the back office show an active link again),
+`created_by`, `expires_at`, `status` (`active` / `used` / `revoked`;
+`expired` is computed on read from `expires_at`, no scheduler needed),
+`used_at`, `used_ip`, `used_user_agent`, `revoked_at`, `revoked_by`,
+`page_opened_at`, `manifest_fetched_at`, `download_attempts`,
+`download_lease_id`, `download_lease_until`.
+
+Admin (permissions reuse the version module, no new permission): listing
+needs `license-release-menu` / `-list` / `-view`; creating and revoking need
+`license-release-edit` (the permission that uploads the installer).
+
+- **Create** body: `license_id` (optional; must be an iPad license of the
+  product that is on, not expired and covers the version, else 422 on
+  `license_id`), `device_name` (≤ 100), `note` (≤ 500), `expires_in_days`
+  (1–30, default 7; `licensing.install_link_days` / `_max_days`). The
+  version needs an `.ipa` (422 on `release`). Answer: the link resource plus
+  `url`, `manifest_url` and `app_url_https`.
+- **Link resource**: `id, release_id, version, status, status_label, url`
+  (only while active), `expires_at, license {id, key, licensee_name,
+  platform} | null, device_name, note, created_by {id, name}, created_at,
+  page_opened_at, manifest_fetched_at, download_attempts, used_at, used_ip,
+  used_user_agent, revoked_at, revoked_by`.
+- **Revoke**: an active link becomes `revoked`; a used link is a 422; an
+  expired link stays `expired` (200, no change).
+- Logged: `install_link_created` / `install_link_revoked` /
+  `install_link_used` in the license's events when the link has a license;
+  every create / revoke / use also goes to the activity log (`License
+  Manager`).
+
+Public (no login, the token is the credential; `throttle:30,1`; token
+`[A-Za-z0-9]{20,80}`, 40 characters today):
+
+| Method | Path | |
+|--------|------|-|
+| GET | `/api/licenses/{product}/install/{token}` | Mobile HTML page: icon, version, "Install OCCA" → `itms-services://?action=download-manifest&url=<manifest URL>`, short steps; English / Indonesian (`?lang=en|id`, else `Accept-Language`). Used / expired / revoked: 410 with a message; unknown: 404 |
+| GET | `/api/licenses/{product}/install/{token}/manifest.plist` | OTA manifest, `text/xml`: `items[0].assets[0]` `{kind: software-package, url: …/app.ipa}`, `metadata` `{bundle-identifier, bundle-version (short version), kind: software, title (product name)}`. May be fetched any number of times while active |
+| GET | `/api/licenses/{product}/install/{token}/app.ipa` | The `.ipa`, `application/octet-stream`, `Content-Length`, `Accept-Ranges: none`, `X-Accel-Buffering: no`. Single use (below) |
+
+Used, expired and revoked links answer **410** (plain text) on the manifest
+and the `.ipa`.
+
+**When a link counts as used.** The `.ipa` request first takes a download
+lease with one atomic `UPDATE … WHERE status = active AND not expired AND
+(no lease OR lease ran out)`; a second parallel download gets **409** ("being
+downloaded right now"). The file then streams in 1 MB chunks
+(`ignore_user_abort`, lease renewed every 10 s). Only when every byte was
+written and `connection_aborted()` is false does the link become `used`
+(again guarded by the lease id, so it happens once).
+
+- Interrupted download (client gone, PHP notices on write): the lease is
+  released at once; the link stays active and iPadOS' "Retry" (or tapping
+  Install again) works.
+- A download that died without PHP noticing: the lease runs out after 60 s,
+  then a retry works.
+- `HEAD` answers the headers only and never uses the link.
+- **Range requests are not supported**: the whole file is always sent
+  (`Accept-Ranges: none`), so "complete" is unambiguous; a client that asks
+  for a range gets the full file (200).
+- "Complete" means handed to the web server. Behind nginx the
+  `X-Accel-Buffering: no` header turns response buffering off, so this is
+  close to "received by the iPad"; the last socket buffer can still be lost,
+  in which case the link is used although the install failed: make a new link.
+- A link used on an iPad that is not in the profile still counts as used
+  (iPadOS downloads, then refuses to install): make a new link after
+  rebuilding with that iPad's UDID.
+
+**Requirements.** iOS installs only over **https with a valid, trusted
+certificate** (no self-signed); every URL is built from `config('app.url')`,
+so `APP_URL` must be the public `https://` URL of this API. The admin list
+and create answers carry `app_url_https` and the back office warns when it is
+false.
+
+## Deploying iPad installs
+
+1. `php artisan migrate --path=database/migrations/2026_11_19_000001_add_ipa_installer_to_license_releases.php`
+   and `…/2026_11_19_000002_create_license_install_links_table.php` (or a
+   plain `php artisan migrate`). No seeder: permissions are unchanged.
+2. `APP_URL` must be `https://…` with a valid certificate (iOS refuses
+   anything else). Changing `APP_KEY` makes stored tokens undecryptable:
+   active links keep working (hash lookup) but the back office cannot show
+   their URL again.
+3. Upload limits for `.ipa` files (like the `.dmg`): PHP `upload_max_filesize`
+   and `post_max_size` (e.g. `2G`), nginx `client_max_body_size 2G;`, and
+   enough `max_execution_time` / `fastcgi_read_timeout` for the upload and
+   the streamed download (the download itself calls `set_time_limit(0)`).
+4. nginx: keep the default that honours `X-Accel-Buffering` (do not set
+   `fastcgi_ignore_headers X-Accel-Buffering`).
+5. `php artisan config:clear` / `config:cache` (new keys in
+   `config/licensing.php`: `ios_bundle_ids`, `install_link_days`,
+   `install_link_max_days`).
 
 ## Migrations
 
@@ -699,3 +912,5 @@ the activated devices report.
 | `2026_11_10_000012_import_occa_release_history` | OCCA 1.0.0 (draft) from `resources/license-products/releases/occa.json` |
 | `2026_11_10_000013_add_installer_file_to_license_releases` | Installer file per version (path, name, size, SHA-256) |
 | `2026_11_10_000014_add_license_release_permissions` | `license-release-*` permissions, copied from `license-manager-*` on existing roles |
+| `2026_11_19_000001_add_ipa_installer_to_license_releases` | iPad installer per version (`ipa_path`, name, size, SHA-256, `ipa_meta`, uploaded_at) |
+| `2026_11_19_000002_create_license_install_links_table` | Single-use iPad install links |

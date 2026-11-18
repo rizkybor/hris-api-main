@@ -5,12 +5,16 @@ use App\Mail\LicenseCertificateMail;
 use App\Models\License;
 use App\Models\LicenseActivation;
 use App\Models\LicenseEvent;
+use App\Models\LicenseInstallLink;
 use App\Models\LicenseProduct;
+use App\Models\LicenseRelease;
 use App\Models\LicenseRetiredKey;
 use App\Models\User;
+use App\Services\IpaInspector;
 use App\Services\LicenseCertificateService;
 use App\Services\LicenseTokenService;
 use App\Support\IndonesianRegions;
+use App\Support\Plist;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -67,6 +71,8 @@ const LICENSE_TEST_MIGRATIONS = [
     'database/migrations/2026_11_10_000014_add_license_release_permissions.php',
     'database/migrations/2026_11_11_000001_create_license_keys_table.php',
     'database/migrations/2026_11_11_000002_create_license_retired_keys_table.php',
+    'database/migrations/2026_11_19_000001_add_ipa_installer_to_license_releases.php',
+    'database/migrations/2026_11_19_000002_create_license_install_links_table.php',
 ];
 
 const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
@@ -2376,9 +2382,10 @@ test('admin can add, publish, edit and delete versions', function () {
     Sanctum::actingAs($this->admin);
     $base = '/api/v1/license-manager/products/occa/releases';
 
-    // A Mac version needs its installer before it can be published.
+    // A Mac version needs its .dmg, an iPad version its .ipa before it can be published.
     $this->postJson($base, occaRelease())->assertStatus(422)->assertJsonValidationErrors('status');
-    $this->postJson($base, occaRelease(['version' => '1.0.5', 'platforms' => 'ipad']))->assertCreated();
+    $this->postJson($base, occaRelease(['version' => '1.0.5', 'platforms' => 'ipad']))->assertStatus(422)->assertJsonValidationErrors('status');
+    LicenseProduct::findByCode('occa')->releases()->create(occaRelease(['version' => '1.0.5', 'platforms' => 'ipad', 'ipa_path' => 'license-releases/occa/1.0.5/occa-1.0.5.ipa', 'ipa_name' => 'occa-1.0.5.ipa']));
 
     $created = $this->postJson($base, occaRelease(['status' => 'draft']))->assertCreated()
         ->assertJsonPath('data.version', '1.1.0')
@@ -2503,7 +2510,7 @@ test('every version keeps its installer, downloadable in the back office and wit
     Storage::fake('local');
     Sanctum::actingAs($this->admin);
     $base = '/api/v1/license-manager/products/occa/releases';
-    $id = $this->postJson($base, occaRelease(['status' => 'draft']))->assertCreated()->json('data.id');
+    $id = $this->postJson($base, occaRelease(['status' => 'draft', 'platforms' => 'mac']))->assertCreated()->json('data.id');
 
     $this->post("$base/$id/file", ['file' => UploadedFile::fake()->create('notes.txt', 10)], ['Accept' => 'application/json'])
         ->assertStatus(422)->assertJsonValidationErrors('file');
@@ -2989,4 +2996,561 @@ test('the detail of a Mac + iPad license carries the iPad keys with their device
         ->and($sibling['keys'][1])->toMatchArray(['position' => 2, 'status' => 'in_use', 'device_name' => 'Studio iPad', 'license_id' => $ipad->id])
         ->and($sibling['activations'])->toHaveCount(1)
         ->and($sibling['activations'][0])->toMatchArray(['device_name' => 'Studio iPad', 'license_id' => $ipad->id]);
+});
+
+// ---------------------------------------------------------------------
+// Restore (reinstall) and rebind (new device id)
+// ---------------------------------------------------------------------
+
+function occaRestore($test, string $deviceId = 'device-1', array $extra = [])
+{
+    return $test->postJson('/api/licenses/occa/restore', array_merge([
+        'device_id' => $deviceId,
+        'platform' => 'macOS',
+        'app_version' => '1.4.0',
+    ], $extra));
+}
+
+test('restore gives an activated device its token back without a new seat', function () {
+    $license = License::factory()->create(['max_devices' => 2, 'licensee_name' => 'Jane Orienteer']);
+    occaActivate($this, $license, 'device-1')->assertOk();
+
+    $response = occaRestore($this, 'device-1', ['app_version' => '1.5.0', 'device_name' => 'Studio Mac'])->assertOk()
+        ->assertJsonPath('license.key', $license->key)
+        ->assertJsonPath('license.product', 'occa')
+        ->assertJsonPath('license.licensee', 'Jane Orienteer')
+        ->assertJsonPath('license.key_mode', 'shared')
+        ->assertJsonPath('license.devices_used', 1);
+
+    $payload = app(LicenseTokenService::class)->verify($response->json('token'));
+    expect($payload['device_id'])->toBe('device-1')->and($payload['key'])->toBe($license->key);
+    expect($license->activations()->count())->toBe(1);
+    $this->assertDatabaseHas('license_activations', ['device_id' => 'device-1', 'device_name' => 'Studio Mac', 'app_version' => '1.5.0']);
+
+    $restored = occaEvents($license, LicenseEvent::DEVICE_RESTORED)->sole();
+    expect($restored->device_id)->toBe('device-1')->and($restored->label())->toBe('License restored on the device (reinstall)');
+    expect(occaEvents($license, LicenseEvent::APP_UPDATED)->sole()->meta)->toBe(['from' => '1.4.0', 'to' => '1.5.0']);
+    // The same answer on the OCCA alias.
+    $this->postJson('/api/occa/license/restore', ['device_id' => 'device-1', 'platform' => 'macOS'])->assertOk();
+});
+
+test('restore never takes a seat for an unknown device', function () {
+    $license = License::factory()->create(['max_devices' => 2]);
+    occaActivate($this, $license, 'device-1')->assertOk();
+
+    occaRestore($this, 'device-2')->assertStatus(404)
+        ->assertExactJson(['error' => 'not_activated', 'message' => 'This device has no license activation to restore.']);
+    expect($license->activations()->count())->toBe(1)
+        ->and(LicenseEvent::where('event', 'like', 'denied_%')->count())->toBe(0);
+});
+
+test('restore validates its fields', function () {
+    $this->postJson('/api/licenses/occa/restore', ['platform' => 'macOS'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
+    $this->postJson('/api/licenses/occa/restore', ['device_id' => 'device-1'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
+    occaRestore($this, 'device-1', ['platform' => 'Windows'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
+    $this->postJson('/api/licenses/nope/restore', ['device_id' => 'device-1', 'platform' => 'macOS'])->assertStatus(404)->assertJsonPath('error', 'invalid_product');
+});
+
+test('restore answers inactive, expired and wrong_platform like refresh', function () {
+    $off = License::factory()->create();
+    occaActivate($this, $off, 'off-mac')->assertOk();
+    $off->update(['is_active' => false]);
+    occaRestore($this, 'off-mac')->assertStatus(403)->assertJsonPath('error', 'inactive');
+
+    $old = License::factory()->create();
+    occaActivate($this, $old, 'old-mac')->assertOk();
+    $old->update(['expires_at' => now()->subDay()]);
+    occaRestore($this, 'old-mac')->assertStatus(403)->assertJsonPath('error', 'expired');
+
+    $mac = License::factory()->create();
+    occaActivate($this, $mac, 'some-device')->assertOk();
+    occaRestore($this, 'some-device', ['platform' => 'iPadOS'])->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+
+    $product = LicenseProduct::findByCode('occa');
+    $product->update(['is_active' => false]);
+    occaRestore($this, 'some-device')->assertStatus(403)->assertJsonPath('error', 'product_inactive');
+});
+
+test('restore prefers a usable activation over a dead one on the same device', function () {
+    $expired = License::factory()->create();
+    occaActivate($this, $expired, 'shared-mac')->assertOk();
+    $expired->update(['expires_at' => now()->subDay()]);
+    $good = License::factory()->create();
+    occaActivate($this, $good, 'shared-mac')->assertOk();
+    LicenseActivation::where('license_id', $good->id)->update(['last_seen_at' => now()->subYear()]);
+
+    occaRestore($this, 'shared-mac')->assertOk()->assertJsonPath('license.key', $good->key);
+});
+
+test('after a release from the app, by an admin or a plan change, restore finds nothing', function () {
+    $license = License::factory()->create(['max_devices' => 3]);
+    occaActivate($this, $license, 'A')->assertOk();
+    occaActivate($this, $license, 'B')->assertOk();
+
+    $this->postJson('/api/occa/license/deactivate', ['key' => $license->key, 'device_id' => 'A'])->assertOk();
+    occaRestore($this, 'A')->assertStatus(404)->assertJsonPath('error', 'not_activated');
+
+    Sanctum::actingAs($this->admin);
+    $activation = $license->activations()->where('device_id', 'B')->first();
+    $this->deleteJson(lmLicenses()."/{$license->id}/activations/{$activation->id}")->assertOk();
+    occaRestore($this, 'B')->assertStatus(404)->assertJsonPath('error', 'not_activated');
+    expect($license->activations()->count())->toBe(0);
+
+    $perDevice = perDeviceLicense($this, 2);
+    $this->postJson('/api/occa/license/activate', ['key' => $perDevice->key, 'device_id' => 'C', 'platform' => 'macOS'])->assertOk();
+    $this->putJson(lmLicenses()."/{$perDevice->id}", ['plan' => 'lifetime', 'type' => 'lifetime'])->assertOk();
+    occaRestore($this, 'C')->assertStatus(404)->assertJsonPath('error', 'not_activated');
+});
+
+test('restore of a per-device license gives the device its own key', function () {
+    $license = perDeviceLicense($this, 3);
+    $k2 = $license->keys->firstWhere('position', 2);
+    $this->postJson('/api/occa/license/activate', ['key' => $k2->key, 'device_id' => 'B', 'platform' => 'macOS'])->assertOk();
+
+    $response = occaRestore($this, 'B')->assertOk()
+        ->assertJsonPath('license.key', $k2->key)
+        ->assertJsonPath('license.key_mode', 'per_device')
+        ->assertJsonPath('license.key_position', 2)
+        ->assertJsonPath('license.keys_total', 3);
+    expect(app(LicenseTokenService::class)->verify($response->json('token'))['key'])->toBe($k2->key);
+    expect($license->keys()->where('position', 2)->value('status'))->toBe('in_use');
+});
+
+test('restore is rate limited like the other public endpoints', function () {
+    foreach (range(1, 20) as $i) {
+        occaRestore($this, "device-{$i}")->assertStatus(404);
+    }
+    occaRestore($this, 'device-21')->assertStatus(429);
+});
+
+function occaRebind($test, string $key, string $old, string $new, array $extra = [])
+{
+    return $test->postJson('/api/licenses/occa/rebind', array_merge([
+        'key' => $key,
+        'old_device_id' => $old,
+        'device_id' => $new,
+        'platform' => 'macOS',
+        'app_version' => '1.4.0',
+    ], $extra));
+}
+
+test('rebind moves a shared-key activation to the new device id without a new seat', function () {
+    $license = License::factory()->create(['max_devices' => 1]);
+    occaActivate($this, $license, 'random-id')->assertOk();
+
+    $response = occaRebind($this, $license->key, 'random-id', 'hardware-id')->assertOk()
+        ->assertJsonPath('license.key', $license->key)
+        ->assertJsonPath('license.devices_used', 1);
+    expect(app(LicenseTokenService::class)->verify($response->json('token'))['device_id'])->toBe('hardware-id');
+    expect($license->activations()->pluck('device_id')->all())->toBe(['hardware-id']);
+
+    $event = occaEvents($license, LicenseEvent::DEVICE_REBOUND)->sole();
+    expect($event->device_id)->toBe('hardware-id')->and($event->meta)->toBe(['old_device_id' => 'random-id']);
+
+    // The old id is gone; the new one refreshes and restores.
+    $this->postJson('/api/occa/license/refresh', ['key' => $license->key, 'device_id' => 'random-id'])->assertStatus(404)->assertJsonPath('error', 'not_activated');
+    $this->postJson('/api/occa/license/refresh', ['key' => $license->key, 'device_id' => 'hardware-id'])->assertOk();
+    occaRestore($this, 'hardware-id')->assertOk();
+
+    // A retry (the first answer was lost) answers for the new id and moves nothing.
+    occaRebind($this, $license->key, 'random-id', 'hardware-id')->assertOk();
+    expect(occaEvents($license, LicenseEvent::DEVICE_REBOUND))->toHaveCount(1)
+        ->and($license->activations()->count())->toBe(1);
+});
+
+test('rebind moves a per-device key binding without using the key up', function () {
+    $license = perDeviceLicense($this, 2);
+    [$k1, $k2] = $license->keys->pluck('key')->all();
+    $this->postJson('/api/occa/license/activate', ['key' => $k1, 'device_id' => 'random-id', 'platform' => 'macOS'])->assertOk();
+    $this->postJson('/api/occa/license/activate', ['key' => $k2, 'device_id' => 'other-mac', 'platform' => 'macOS'])->assertOk();
+
+    occaRebind($this, $k1, 'random-id', 'hardware-id', ['device_name' => 'Studio Mac'])->assertOk()
+        ->assertJsonPath('license.key', $k1)
+        ->assertJsonPath('license.key_position', 1);
+
+    $key1 = $license->keys()->where('position', 1)->first();
+    expect($key1->status)->toBe('in_use')->and($key1->device_id)->toBe('hardware-id')->and($key1->device_name)->toBe('Studio Mac');
+    $this->postJson('/api/occa/license/activate', ['key' => $k1, 'device_id' => 'hardware-id', 'platform' => 'macOS'])->assertOk();
+    $this->postJson('/api/occa/license/activate', ['key' => $k1, 'device_id' => 'random-id', 'platform' => 'macOS'])->assertStatus(409)->assertJsonPath('error', 'key_in_use');
+
+    // Another device's key cannot move this device, and an unknown old id has nothing to move.
+    occaRebind($this, $k2, 'hardware-id', 'thief')->assertStatus(404)->assertJsonPath('error', 'not_activated');
+    occaRebind($this, $k1, 'nobody', 'thief')->assertStatus(404)->assertJsonPath('error', 'not_activated');
+    expect($license->activations()->pluck('device_id')->sort()->values()->all())->toBe(['hardware-id', 'other-mac']);
+});
+
+test('rebind frees the old shared seat when the new id is already activated', function () {
+    $license = License::factory()->create(['max_devices' => 3]);
+    occaActivate($this, $license, 'random-id')->assertOk();
+    occaActivate($this, $license, 'hardware-id')->assertOk();
+
+    occaRebind($this, $license->key, 'random-id', 'hardware-id')->assertOk()->assertJsonPath('license.devices_used', 1);
+    expect($license->activations()->pluck('device_id')->all())->toBe(['hardware-id']);
+});
+
+test('rebind runs the activation checks', function () {
+    $license = License::factory()->create();
+    occaActivate($this, $license, 'random-id')->assertOk();
+
+    occaRebind($this, $license->key, 'random-id', 'hardware-id', ['platform' => 'iPadOS'])->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+    $this->postJson('/api/licenses/occa/rebind', ['key' => $license->key, 'device_id' => 'x', 'platform' => 'macOS'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
+    occaRebind($this, 'OC32-AAAA-BBBB-CCCC-9999', 'random-id', 'hardware-id')->assertStatus(404)->assertJsonPath('error', 'invalid_key');
+    $license->update(['is_active' => false]);
+    occaRebind($this, $license->key, 'random-id', 'hardware-id')->assertStatus(403)->assertJsonPath('error', 'inactive');
+    expect($license->activations()->pluck('device_id')->all())->toBe(['random-id']);
+    // The alias path works too.
+    $license->update(['is_active' => true]);
+    $this->postJson('/api/occa/license/rebind', ['key' => $license->key, 'old_device_id' => 'random-id', 'device_id' => 'hardware-id', 'platform' => 'macOS'])->assertOk();
+});
+
+// ---------------------------------------------------------------------
+// iPad installers (.ipa) and single-use install links
+// ---------------------------------------------------------------------
+
+/**
+ * A fake embedded.mobileprovision: an XML plist inside a (fake) CMS envelope.
+ */
+function occaProfile(array $devices = ['00008103-000A1B2C3D4E5F01', '00008027-000B2C3D4E5F6A02'], string $expires = '2027-11-01T00:00:00Z', bool $development = false): string
+{
+    $udids = implode('', array_map(fn ($udid) => "<string>$udid</string>", $devices));
+    $taskAllow = $development ? '<true/>' : '<false/>';
+
+    return "\x30\x82\x1f\x2a\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x07\x02\xa0"
+        .'<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+        .'<plist version="1.0"><dict>'
+        .'<key>Name</key><string>OCCA Ad Hoc</string>'
+        .'<key>TeamIdentifier</key><array><string>A9ZMBW5H8D</string></array>'
+        .'<key>TeamName</key><string>Jendela Cakra Digital</string>'
+        .'<key>CreationDate</key><date>2026-11-01T00:00:00Z</date>'
+        ."<key>ExpirationDate</key><date>$expires</date>"
+        .'<key>Entitlements</key><dict><key>application-identifier</key><string>A9ZMBW5H8D.id.cakrapencil.app</string>'
+        ."<key>get-task-allow</key>$taskAllow</dict>"
+        .($devices ? "<key>ProvisionedDevices</key><array>$udids</array>" : '')
+        .'</dict></plist>'
+        ."\xa0\x82\x0b\x31\x00\x00\xff";
+}
+
+/**
+ * An .ipa (zip) as an upload: Payload/OCCA.app/Info.plist (the binary
+ * fixture for 1.1.0 build 42, or an XML plist with $info) and the profile.
+ */
+function occaIpa(?array $info = null, ?string $profile = null, string $name = 'OCCA.ipa'): UploadedFile
+{
+    $path = tempnam(sys_get_temp_dir(), 'ipa');
+    $zip = new ZipArchive;
+    $zip->open($path, ZipArchive::OVERWRITE);
+    if ($info === null) {
+        $zip->addFromString('Payload/OCCA.app/Info.plist', file_get_contents(base_path('tests/Fixtures/ipa/Info.plist')));
+    } else {
+        $entries = '';
+        foreach ($info as $key => $value) {
+            $entries .= "<key>$key</key><string>$value</string>";
+        }
+        $zip->addFromString('Payload/OCCA.app/Info.plist', '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>'.$entries.'</dict></plist>');
+    }
+    $zip->addFromString('Payload/OCCA.app/OCCA', str_repeat("\0", 4096));
+    $zip->addFromString('Payload/OCCA.app/embedded.mobileprovision', $profile ?? occaProfile());
+    $zip->close();
+
+    return new UploadedFile($path, $name, 'application/octet-stream', null, true);
+}
+
+/**
+ * A 1.1.0 iPad version (draft) with its .ipa uploaded; returns its id.
+ */
+function occaIpaRelease($test, array $overrides = []): int
+{
+    $base = '/api/v1/license-manager/products/occa/releases';
+    $id = $test->postJson($base, occaRelease(array_merge(['status' => 'draft', 'platforms' => 'ipad'], $overrides)))->assertCreated()->json('data.id');
+    $test->post("$base/$id/ipa", ['file' => occaIpa()], ['Accept' => 'application/json'])->assertOk();
+
+    return $id;
+}
+
+function occaPath(string $url): string
+{
+    return parse_url($url, PHP_URL_PATH);
+}
+
+beforeEach(function () {
+    config(['app.url' => 'https://hris.example.test']);
+});
+
+test('the plist reader parses binary and XML plists and signed profiles', function () {
+    $info = Plist::parse(file_get_contents(base_path('tests/Fixtures/ipa/Info.plist')));
+    expect($info['CFBundleIdentifier'])->toBe('id.cakrapencil.app')
+        ->and($info['CFBundleVersion'])->toBe('42')
+        ->and($info['UIDeviceFamily'])->toBe([2])
+        ->and($info['LSRequiresIPhoneOS'])->toBeTrue()
+        ->and($info['NSHumanReadableCopyright'])->toContain('ünïcödé');
+
+    $profile = app(IpaInspector::class)->profile(occaProfile());
+    expect($profile)->toMatchArray([
+        'name' => 'OCCA Ad Hoc', 'type' => 'ad_hoc', 'team_id' => 'A9ZMBW5H8D', 'device_count' => 2,
+        'expires_at' => '2027-11-01T00:00:00Z', 'app_id' => 'A9ZMBW5H8D.id.cakrapencil.app',
+    ])
+        ->and(app(IpaInspector::class)->profile(occaProfile(development: true))['type'])->toBe('development')
+        ->and(app(IpaInspector::class)->profile(occaProfile([]))['type'])->toBe('app_store')
+        ->and(app(IpaInspector::class)->profile('not a profile'))->toBeNull();
+});
+
+test('an ipa upload is checked against the product bundle id and the version', function () {
+    Storage::fake('local');
+    Sanctum::actingAs($this->admin);
+    $base = '/api/v1/license-manager/products/occa/releases';
+    $id = $this->postJson($base, occaRelease(['status' => 'draft', 'platforms' => 'ipad', 'build' => 41]))->assertCreated()->json('data.id');
+    $upload = fn ($file) => $this->post("$base/$id/ipa", ['file' => $file], ['Accept' => 'application/json']);
+
+    $upload(UploadedFile::fake()->create('OCCA.dmg', 10))->assertStatus(422)->assertJsonValidationErrors('file');
+    $upload(UploadedFile::fake()->create('broken.ipa', 10))->assertStatus(422)->assertJsonValidationErrors('file');
+    $upload(occaIpa(['CFBundleIdentifier' => 'com.example.other', 'CFBundleShortVersionString' => '1.1.0', 'CFBundleVersion' => '41']))
+        ->assertStatus(422)->assertJsonPath('errors.file.0', 'This .ipa is com.example.other, not OCCA (id.cakrapencil.app).');
+    $upload(occaIpa(['CFBundleIdentifier' => 'id.cakrapencil.app', 'CFBundleShortVersionString' => '1.0.9', 'CFBundleVersion' => '41']))
+        ->assertStatus(422)->assertJsonPath('errors.file.0', 'This .ipa is version 1.0.9, not 1.1.0.');
+    Storage::disk('local')->assertMissing('license-releases/occa/1.1.0/occa-1.1.0.ipa');
+
+    // The binary Info.plist fixture: 1.1.0 build 42 (the version lists 41: a warning).
+    $response = $upload(occaIpa())->assertOk()
+        ->assertJsonPath('message', 'iPad Installer Uploaded With Warnings')
+        ->assertJsonPath('data.ipa.name', 'occa-1.1.0.ipa')
+        ->assertJsonPath('data.ipa.bundle_id', 'id.cakrapencil.app')
+        ->assertJsonPath('data.ipa.short_version', '1.1.0')
+        ->assertJsonPath('data.ipa.build', '42')
+        ->assertJsonPath('data.ipa.minimum_os', '17.0')
+        ->assertJsonPath('data.ipa.profile.type', 'ad_hoc')
+        ->assertJsonPath('data.ipa.profile.type_label', 'Ad Hoc')
+        ->assertJsonPath('data.ipa.profile.device_count', 2)
+        ->assertJsonPath('data.ipa.profile.expires_at', '2027-11-01T00:00:00Z')
+        ->assertJsonPath('data.ipa.profile.expired', false)
+        ->assertJsonPath('data.ipa.warnings', ['The .ipa has build 42; this version lists build 41.'])
+        ->assertJsonPath('data.needs_ipa', true)
+        ->assertJsonPath('data.needs_file', false);
+    expect($response->json('data.ipa.sha256'))->toHaveLength(64)
+        ->and($response->json('data.ipa.profile.devices'))->toBe(['00008103-000A1B2C3D4E5F01', '00008027-000B2C3D4E5F6A02']);
+    Storage::disk('local')->assertExists('license-releases/occa/1.1.0/occa-1.1.0.ipa');
+
+    // An expired development profile: two warnings.
+    $this->putJson("$base/$id", ['build' => 42])->assertOk();
+    $upload(occaIpa(null, occaProfile(expires: '2026-01-01T00:00:00Z', development: true)))->assertOk()
+        ->assertJsonPath('data.ipa.warnings', [
+            'The provisioning profile is Development, not Ad Hoc.',
+            'The provisioning profile has expired; iPads cannot install or open this build.',
+        ]);
+
+    $this->get("$base/$id/ipa")->assertOk()->assertDownload('occa-1.1.0.ipa');
+});
+
+test('a version for ipad or both platforms is published only with its ipa', function () {
+    Storage::fake('local');
+    Sanctum::actingAs($this->admin);
+    $base = '/api/v1/license-manager/products/occa/releases';
+    $id = $this->postJson($base, occaRelease(['status' => 'draft']))->assertCreated()->json('data.id'); // both
+
+    $this->post("$base/$id/file", ['file' => UploadedFile::fake()->create('OCCA.dmg', 20)], ['Accept' => 'application/json'])->assertOk();
+    $this->putJson("$base/$id", ['status' => 'published', 'released_at' => '2026-12-01'])->assertStatus(422)
+        ->assertJsonPath('errors.status.0', 'Upload the iPad installer (.ipa) before publishing this version.');
+    $this->post("$base/$id/ipa", ['file' => occaIpa()], ['Accept' => 'application/json'])->assertOk();
+    $this->putJson("$base/$id", ['status' => 'published', 'released_at' => '2026-12-01'])->assertOk()->assertJsonPath('data.status', 'published');
+
+    // Published: the .ipa stays (replace only).
+    $this->deleteJson("$base/$id/ipa")->assertStatus(422)->assertJsonValidationErrors('file');
+    $this->putJson("$base/$id", ['status' => 'draft'])->assertOk();
+    $this->deleteJson("$base/$id/ipa")->assertOk()->assertJsonPath('data.ipa', null);
+    Storage::disk('local')->assertMissing('license-releases/occa/1.1.0/occa-1.1.0.ipa');
+
+    // A Mac-only version does not need an .ipa.
+    $mac = $this->postJson($base, occaRelease(['version' => '1.2.0', 'status' => 'draft', 'platforms' => 'mac']))->json('data.id');
+    $this->post("$base/$mac/file", ['file' => UploadedFile::fake()->create('OCCA.dmg', 20)], ['Accept' => 'application/json'])->assertOk();
+    $this->putJson("$base/$mac", ['status' => 'published', 'released_at' => '2026-12-01'])->assertOk();
+});
+
+test('an install link installs the ipa once, then answers 410', function () {
+    Storage::fake('local');
+    Sanctum::actingAs($this->admin);
+    $id = occaIpaRelease($this);
+    $links = "/api/v1/license-manager/products/occa/releases/$id/install-links";
+
+    // No .ipa, no link.
+    $empty = $this->postJson('/api/v1/license-manager/products/occa/releases', occaRelease(['version' => '1.3.0', 'status' => 'draft', 'platforms' => 'ipad']))->json('data.id');
+    $this->postJson("/api/v1/license-manager/products/occa/releases/$empty/install-links", [])->assertStatus(422)->assertJsonValidationErrors('release');
+
+    $created = $this->postJson($links, ['device_name' => 'iPad Budi', 'note' => 'Club laptop'])->assertCreated()
+        ->assertJsonPath('data.status', 'active')
+        ->assertJsonPath('data.device_name', 'iPad Budi')
+        ->assertJsonPath('data.app_url_https', true)
+        ->assertJsonPath('data.created_by.id', $this->admin->id);
+    $url = $created->json('data.url');
+    expect($url)->toMatch('#^https://hris\.example\.test/api/licenses/occa/install/[A-Za-z0-9]{40}$#')
+        ->and($created->json('data.manifest_url'))->toBe($url.'/manifest.plist')
+        ->and(Carbon::parse($created->json('data.expires_at'))->diffInDays(now()->addDays(7), true))->toBeLessThan(1);
+    // The token is stored hashed (and encrypted), never in plain text.
+    $token = basename($url);
+    $row = LicenseInstallLink::sole();
+    expect($row->token_hash)->toBe(hash('sha256', $token))->and($row->token_encrypted)->not->toContain($token);
+
+    // The page: Install button with the itms-services link to the https manifest.
+    $page = $this->get(occaPath($url), ['Accept-Language' => 'en-US'])->assertOk()->assertSee('Install OCCA')->assertSee('Version 1.1.0 for iPad');
+    expect($page->getContent())->toContain('itms-services://?action=download-manifest&amp;url='.rawurlencode($url.'/manifest.plist'));
+    $this->get(occaPath($url).'?lang=id')->assertOk()->assertSee('Pasang OCCA');
+
+    // The manifest may be fetched more than once.
+    foreach ([1, 2] as $ignored) {
+        $manifest = $this->get(occaPath($url).'/manifest.plist')->assertOk()->assertHeader('Content-Type', 'text/xml; charset=UTF-8');
+        $plist = Plist::parse($manifest->getContent());
+        expect($plist['items'][0]['assets'][0])->toBe(['kind' => 'software-package', 'url' => $url.'/app.ipa'])
+            ->and($plist['items'][0]['metadata'])->toBe(['bundle-identifier' => 'id.cakrapencil.app', 'bundle-version' => '1.1.0', 'kind' => 'software', 'title' => 'OCCA']);
+    }
+
+    // HEAD does not use the link.
+    $this->call('HEAD', occaPath($url).'/app.ipa')->assertOk()->assertHeader('Accept-Ranges', 'none');
+    expect($row->fresh()->status)->toBe('active');
+
+    $download = $this->get(occaPath($url).'/app.ipa', ['User-Agent' => 'com.apple.appstored/1.0 iOS/18.1'])->assertOk()
+        ->assertHeader('Content-Type', 'application/octet-stream')
+        ->assertHeader('X-Accel-Buffering', 'no');
+    $bytes = $download->streamedContent();
+    expect(strlen($bytes))->toBe(Storage::disk('local')->size('license-releases/occa/1.1.0/occa-1.1.0.ipa'))
+        ->and((int) $download->headers->get('Content-Length'))->toBe(strlen($bytes))
+        ->and(hash('sha256', $bytes))->toBe(LicenseRelease::find($id)->ipa_sha256);
+
+    $row->refresh();
+    expect($row->status)->toBe('used')
+        ->and($row->used_at)->not->toBeNull()
+        ->and($row->used_user_agent)->toBe('com.apple.appstored/1.0 iOS/18.1')
+        ->and($row->download_attempts)->toBe(1)
+        ->and(DB::table('activity_log')->where('description', 'iPad app installed from an install link')->count())->toBe(1);
+
+    // Second use: 410 everywhere.
+    $this->get(occaPath($url).'/app.ipa')->assertStatus(410)->assertSee('already been used');
+    $this->get(occaPath($url).'/manifest.plist')->assertStatus(410);
+    $this->get(occaPath($url).'?lang=en')->assertStatus(410)->assertSee('This install link has already been used.');
+    $this->get('/api/licenses/occa/install/'.str_repeat('x', 40))->assertNotFound();
+
+    $this->getJson($links)->assertOk()
+        ->assertJsonPath('data.links.0.status', 'used')
+        ->assertJsonPath('data.links.0.url', null)
+        ->assertJsonPath('data.app_url_https', true);
+    $this->postJson("$links/{$row->id}/revoke")->assertStatus(422);
+});
+
+test('only one download of a link runs at a time; an interrupted one frees it again', function () {
+    Storage::fake('local');
+    Sanctum::actingAs($this->admin);
+    $id = occaIpaRelease($this);
+    $url = $this->postJson("/api/v1/license-manager/products/occa/releases/$id/install-links", [])->json('data.url');
+    $link = LicenseInstallLink::sole();
+
+    // Another download holds the lease: 409, the link stays active.
+    $lease = $link->claimDownload();
+    $this->get(occaPath($url).'/app.ipa')->assertStatus(409);
+    // The interrupted download releases the lease: retry works.
+    $link->releaseDownload($lease);
+    $link->claimDownload();
+    // A download that died silently frees the link after the lease runs out.
+    $this->travel(LicenseInstallLink::DOWNLOAD_LEASE_SECONDS + 1)->seconds();
+    $this->get(occaPath($url).'/app.ipa')->assertOk()->streamedContent();
+    expect($link->fresh()->status)->toBe('used')->and($link->fresh()->download_attempts)->toBe(3);
+});
+
+test('install links expire and can be revoked', function () {
+    Storage::fake('local');
+    Sanctum::actingAs($this->admin);
+    $id = occaIpaRelease($this);
+    $links = "/api/v1/license-manager/products/occa/releases/$id/install-links";
+
+    $this->postJson($links, ['expires_in_days' => 0])->assertStatus(422)->assertJsonValidationErrors('expires_in_days');
+    $this->postJson($links, ['expires_in_days' => 31])->assertStatus(422)->assertJsonValidationErrors('expires_in_days');
+    $short = $this->postJson($links, ['expires_in_days' => 1])->assertCreated()->json('data');
+    $revoked = $this->postJson($links, [])->assertCreated()->json('data');
+
+    $this->postJson("$links/{$revoked['id']}/revoke")->assertOk()
+        ->assertJsonPath('data.status', 'revoked')
+        ->assertJsonPath('data.revoked_by.id', $this->admin->id)
+        ->assertJsonPath('data.url', null);
+    $this->get(occaPath($revoked['url']).'/app.ipa')->assertStatus(410)->assertSee('revoked');
+    $this->get(occaPath($revoked['url']).'/manifest.plist')->assertStatus(410);
+    $this->get(occaPath($revoked['url']).'?lang=id')->assertStatus(410)->assertSee('sudah dibatalkan');
+
+    $this->get(occaPath($short['url']).'/manifest.plist')->assertOk();
+    $this->travel(25)->hours();
+    $this->get(occaPath($short['url']).'/manifest.plist')->assertStatus(410)->assertSee('expired');
+    $this->get(occaPath($short['url']).'/app.ipa')->assertStatus(410);
+    $this->get(occaPath($short['url']).'?lang=en')->assertStatus(410)->assertSee('This install link has expired.');
+
+    $list = $this->getJson($links)->assertOk();
+    expect(collect($list->json('data.links'))->pluck('status', 'id')->all())->toBe([$revoked['id'] => 'revoked', $short['id'] => 'expired']);
+    // Revoking an expired link is harmless; its status stays expired.
+    $this->postJson("$links/{$short['id']}/revoke")->assertOk()->assertJsonPath('data.status', 'expired');
+    $this->getJson('/api/v1/license-manager/products/occa/releases/'.$id)->assertJsonPath('data.install_links_active', 0);
+});
+
+test('a link for an ipad license is logged in the license events', function () {
+    Storage::fake('local');
+    Sanctum::actingAs($this->admin);
+    $id = occaIpaRelease($this);
+    $links = "/api/v1/license-manager/products/occa/releases/$id/install-links";
+    $ipad = License::factory()->ipad()->create();
+    $mac = License::factory()->create();
+    $off = License::factory()->ipad()->create(['is_active' => false]);
+    $oldLifetime = License::factory()->ipad()->create(['plan' => 'lifetime', 'type' => 'lifetime', 'expires_at' => null, 'updates_major' => 0]);
+
+    $this->postJson($links, ['license_id' => $mac->id])->assertStatus(422)->assertJsonPath('errors.license_id.0', 'Choose an iPad license.');
+    $this->postJson($links, ['license_id' => $off->id])->assertStatus(422)->assertJsonValidationErrors('license_id');
+    $this->postJson($links, ['license_id' => $oldLifetime->id])->assertStatus(422)->assertJsonValidationErrors('license_id');
+    $this->postJson($links, ['license_id' => 999999])->assertStatus(422)->assertJsonValidationErrors('license_id');
+
+    $url = $this->postJson($links, ['license_id' => $ipad->id, 'device_name' => 'iPad Air'])->assertCreated()
+        ->assertJsonPath('data.license.key', $ipad->key)->json('data.url');
+    expect(occaEvents($ipad, LicenseEvent::INSTALL_LINK_CREATED)->first()->meta)->toMatchArray(['version' => '1.1.0', 'device_name' => 'iPad Air']);
+
+    $this->get(occaPath($url).'/app.ipa')->assertOk()->streamedContent();
+    $used = occaEvents($ipad, LicenseEvent::INSTALL_LINK_USED)->first();
+    expect($used)->not->toBeNull()
+        ->and($used->platform)->toBe('iPadOS')
+        ->and($used->app_version)->toBe('1.1.0')
+        ->and($used->user_id)->toBeNull()
+        ->and($used->meta['link_id'])->toBe(LicenseInstallLink::sole()->id);
+    $this->getJson(lmLicenses()."/{$ipad->id}/events?event=install_link_used")->assertOk()->assertJsonPath('data.data.0.label', 'iPad app installed from a link');
+});
+
+test('install links need license-release permissions', function () {
+    Storage::fake('local');
+    Sanctum::actingAs($this->admin);
+    $id = occaIpaRelease($this);
+    $links = "/api/v1/license-manager/products/occa/releases/$id/install-links";
+    $linkId = $this->postJson($links, [])->json('data.id');
+
+    Sanctum::actingAs($this->staff);
+    $this->getJson($links)->assertStatus(403);
+    $this->postJson($links, [])->assertStatus(403);
+    $this->postJson("$links/$linkId/revoke")->assertStatus(403);
+    $this->post("/api/v1/license-manager/products/occa/releases/$id/ipa", ['file' => occaIpa()], ['Accept' => 'application/json'])->assertStatus(403);
+    $this->getJson("/api/v1/license-manager/products/occa/releases/$id/ipa")->assertStatus(403);
+
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo(['license-release-view']);
+    Sanctum::actingAs($viewer);
+    $this->getJson($links)->assertOk()->assertJsonCount(1, 'data.links');
+    $this->postJson($links, [])->assertStatus(403);
+    $this->postJson("$links/$linkId/revoke")->assertStatus(403);
+
+    $editor = User::factory()->create();
+    $editor->givePermissionTo(['license-release-edit']);
+    Sanctum::actingAs($editor);
+    $this->postJson($links, [])->assertCreated();
+    $this->postJson("$links/$linkId/revoke")->assertOk();
+
+    // Links of another product's version are not found.
+    Sanctum::actingAs($this->admin);
+    $this->getJson("/api/v1/license-manager/products/nope/releases/$id/install-links")->assertNotFound();
+});
+
+test('a non-https APP_URL is reported when making a link', function () {
+    Storage::fake('local');
+    config(['app.url' => 'http://localhost:8000']);
+    Sanctum::actingAs($this->admin);
+    $id = occaIpaRelease($this);
+
+    $this->postJson("/api/v1/license-manager/products/occa/releases/$id/install-links", [])->assertCreated()
+        ->assertJsonPath('data.app_url_https', false);
 });

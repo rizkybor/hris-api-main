@@ -93,4 +93,10 @@ class LicenseException extends RuntimeException
     {
         return new self('not_activated', 'This device is not activated for this license key.', 404);
     }
+
+    /** restore: this device has no activation on any license of the product. */
+    public static function noActivation(): self
+    {
+        return new self('not_activated', 'This device has no license activation to restore.', 404);
+    }
 }
