@@ -32,7 +32,12 @@ class LicenseRelease extends Model
 
     public const PLATFORMS_BOTH = 'both';
 
-    public const PLATFORMS = [self::PLATFORMS_BOTH, License::PLATFORM_MAC, License::PLATFORM_IPAD];
+    /**
+     * "both" is Mac + iPad (the apps that share a version line); Windows
+     * versions are their own rows, since OCCA for Windows has its own
+     * release cadence and installer.
+     */
+    public const PLATFORMS = [self::PLATFORMS_BOTH, License::PLATFORM_MAC, License::PLATFORM_IPAD, License::PLATFORM_WINDOWS];
 
     /**
      * Installers are stored on this private disk under
@@ -47,9 +52,13 @@ class LicenseRelease extends Model
     public const FILE_MAX_KB = 2097152;
 
     /**
-     * Installer file types: the Mac disk image (and a zipped app).
+     * Installer file types stored in the "file" slot: the Mac disk image
+     * (and a zipped app or .pkg) for Mac / shared versions, the MSI or
+     * MSIX installer for Windows versions.
      */
-    public const FILE_EXTENSIONS = ['dmg', 'zip', 'pkg'];
+    public const FILE_EXTENSIONS = ['dmg', 'zip', 'pkg', 'msi', 'msix', 'exe'];
+
+    public const WINDOWS_FILE_EXTENSIONS = ['msi', 'msix', 'exe'];
 
     /**
      * The iPad installer: an Ad Hoc signed .ipa, installed over the air
@@ -179,11 +188,30 @@ class LicenseRelease extends Model
     }
 
     /**
-     * Releases for a platform ("mac" / "ipad"): its own and the shared ones.
+     * Releases for a platform ("mac" / "ipad" / "windows"): its own and,
+     * for Mac and iPad, the shared ("both") ones.
      */
     public function scopeForPlatform(Builder $query, ?string $platform): Builder
     {
-        return $platform ? $query->whereIn('platforms', [self::PLATFORMS_BOTH, $platform]) : $query;
+        return match ($platform) {
+            null, '' => $query,
+            License::PLATFORM_WINDOWS => $query->where('platforms', License::PLATFORM_WINDOWS),
+            default => $query->whereIn('platforms', [self::PLATFORMS_BOTH, $platform]),
+        };
+    }
+
+    public function isWindows(): bool
+    {
+        return $this->platforms === License::PLATFORM_WINDOWS;
+    }
+
+    /**
+     * The license platform whose key may download the stored installer:
+     * Windows for a Windows version, Mac for every other (the .dmg).
+     */
+    public function installerPlatform(): string
+    {
+        return $this->isWindows() ? License::PLATFORM_WINDOWS : License::PLATFORM_MAC;
     }
 
     /**
@@ -205,7 +233,8 @@ class LicenseRelease extends Model
     }
 
     /**
-     * A Mac (or shared) version needs its Mac installer before it is published.
+     * A Mac (or shared) version needs its Mac installer, a Windows version
+     * its MSI / MSIX, before it is published.
      */
     public function needsFile(): bool
     {
@@ -223,7 +252,7 @@ class LicenseRelease extends Model
      */
     public function needsIpa(): bool
     {
-        return $this->platforms !== License::PLATFORM_MAC;
+        return in_array($this->platforms, [self::PLATFORMS_BOTH, License::PLATFORM_IPAD], true);
     }
 
     public function kind(): string

@@ -25,8 +25,9 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
  * license-release-*: reading needs -menu, -list or -view, adding -create,
  * editing (incl. publishing and uploading the installer) -edit, deleting
  * -delete, downloading the installer -download. Every version keeps its installers on the private
- * disk: the Mac .dmg (file_*) and the iPad .ipa (ipa_*). A Mac version is
- * published only with the .dmg, an iPad version only with the .ipa, a
+ * disk: the Mac .dmg or Windows .msi (file_*) and the iPad .ipa (ipa_*).
+ * A Mac version is published only with the .dmg, a Windows version only
+ * with the .msi / .msix, an iPad version only with the .ipa, a
  * shared version with both.
  */
 class LicenseReleaseController extends Controller implements HasMiddleware
@@ -46,7 +47,7 @@ class LicenseReleaseController extends Controller implements HasMiddleware
     {
         $request->validate([
             'status' => ['nullable', Rule::in(LicenseRelease::STATUSES)],
-            'platform' => ['nullable', Rule::in([License::PLATFORM_MAC, License::PLATFORM_IPAD])],
+            'platform' => ['nullable', Rule::in(License::PLATFORMS)],
             'search' => ['nullable', 'string', 'max:100'],
         ]);
         $model = LicenseProduct::findByCode($product);
@@ -136,7 +137,8 @@ class LicenseReleaseController extends Controller implements HasMiddleware
 
     /**
      * Upload (or replace) the installer of a version: multipart "file"
-     * (.dmg, .zip or .pkg, up to 2 GB). Stored under
+     * (.dmg, .zip or .pkg; for a Windows version .msi, .msix or .exe; up
+     * to 2 GB). Stored under
      * license-releases/{product}/{version}/ with its size and SHA-256.
      */
     public function uploadFile(Request $request, string $product, string $release)
@@ -145,10 +147,14 @@ class LicenseReleaseController extends Controller implements HasMiddleware
         if (! $item) {
             return $this->notFound();
         }
+        $windows = $item->isWindows();
+        $extensions = $windows ? LicenseRelease::WINDOWS_FILE_EXTENSIONS : array_values(array_diff(LicenseRelease::FILE_EXTENSIONS, LicenseRelease::WINDOWS_FILE_EXTENSIONS));
         $request->validate([
-            'file' => ['required', 'file', 'extensions:'.implode(',', LicenseRelease::FILE_EXTENSIONS), 'max:'.LicenseRelease::FILE_MAX_KB],
+            'file' => ['required', 'file', 'extensions:'.implode(',', $extensions), 'max:'.LicenseRelease::FILE_MAX_KB],
         ], [
-            'file.extensions' => 'Upload the installer as a .dmg (or .zip / .pkg) file.',
+            'file.extensions' => $windows
+                ? 'Upload the Windows installer as an .msi (or .msix / .exe) file.'
+                : 'Upload the installer as a .dmg (or .zip / .pkg) file.',
             'file.max' => 'The installer may be at most 2 GB.',
         ]);
 
@@ -328,8 +334,9 @@ class LicenseReleaseController extends Controller implements HasMiddleware
     }
 
     /**
-     * A Mac version is published only with its .dmg, an iPad version only
-     * with its .ipa, a shared version with both.
+     * A Mac version is published only with its .dmg, a Windows version
+     * only with its .msi, an iPad version only with its .ipa, a shared
+     * (Mac + iPad) version with both.
      */
     private function assertPublishable(LicenseRelease $release): void
     {
@@ -337,7 +344,9 @@ class LicenseReleaseController extends Controller implements HasMiddleware
             return;
         }
         if ($release->needsFile() && ! $release->hasFile()) {
-            throw ValidationException::withMessages(['status' => 'Upload the Mac installer (.dmg) before publishing this version.']);
+            throw ValidationException::withMessages(['status' => $release->isWindows()
+                ? 'Upload the Windows installer (.msi) before publishing this version.'
+                : 'Upload the Mac installer (.dmg) before publishing this version.']);
         }
         if ($release->needsIpa() && ! $release->hasIpa()) {
             throw ValidationException::withMessages(['status' => 'Upload the iPad installer (.ipa) before publishing this version.']);

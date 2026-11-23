@@ -254,10 +254,14 @@ class LicenseCertificateService
     private function activationSteps(?LicenseProduct $product, License $license, bool $isBundle = false, bool $singleKey = false): array
     {
         $name = $product?->name ?: 'the app';
-        // A key only activates on its own platform: Mac (click, Starter
-        // chip) or iPad (tap; there is no free plan on iPad).
+        // A key only activates on its own platform: Mac or Windows PC
+        // (click, Starter chip) or iPad (tap; there is no free plan on iPad).
         $ipad = $license->platform === License::PLATFORM_IPAD;
-        $device = $ipad ? 'iPad' : 'Mac';
+        $device = match ($license->platform) {
+            License::PLATFORM_IPAD => 'iPad',
+            License::PLATFORM_WINDOWS => 'Windows PC',
+            default => 'Mac',
+        };
         $press = $ipad ? 'Tap' : 'Click';
 
         $bundleSteps = [

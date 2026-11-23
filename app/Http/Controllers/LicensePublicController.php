@@ -35,7 +35,7 @@ class LicensePublicController extends Controller
     public function releases(Request $request, string $product): JsonResponse
     {
         return $this->handle($request, [
-            'platform' => ['nullable', Rule::in(['mac', 'ipad', 'macOS', 'iPadOS'])],
+            'platform' => ['nullable', Rule::in(['mac', 'ipad', 'windows', 'macOS', 'iPadOS', 'Windows'])],
         ], fn (array $data) => $this->releaseService->history($product, $this->platform($data['platform'] ?? null)));
     }
 
@@ -48,7 +48,7 @@ class LicensePublicController extends Controller
     {
         return $this->handle($request, [
             'version' => ['required', 'string', 'max:20'],
-            'platform' => ['nullable', Rule::in(['mac', 'ipad', 'macOS', 'iPadOS'])],
+            'platform' => ['nullable', Rule::in(['mac', 'ipad', 'windows', 'macOS', 'iPadOS', 'Windows'])],
             'key' => ['nullable', 'string', 'max:64'],
         ], fn (array $data) => $this->releaseService->check(
             $product,
@@ -78,7 +78,7 @@ class LicensePublicController extends Controller
     }
 
     /**
-     * "macOS" / "iPadOS" (what the apps send) or "mac" / "ipad".
+     * "macOS" / "iPadOS" / "Windows" (what the apps send) or "mac" / "ipad" / "windows".
      */
     private function platform(?string $value): ?string
     {
@@ -91,8 +91,8 @@ class LicensePublicController extends Controller
             'key' => ['required', 'string', 'max:64'],
             'device_id' => ['required', 'string', 'max:255'],
             'device_name' => ['nullable', 'string', 'max:255'],
-            // "macOS" or "iPadOS": a Mac key only activates on a Mac, an
-            // iPad key only on an iPad.
+            // "macOS", "iPadOS" or "Windows": a key only activates on its
+            // own platform.
             'platform' => ['required', 'string', 'max:50'],
             'app_version' => ['nullable', 'string', 'max:50'],
         ], fn (array $data) => $this->licenseService->activate($product, $data['key'], $data));

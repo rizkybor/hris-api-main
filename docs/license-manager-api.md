@@ -135,9 +135,10 @@ Every license resource carries:
 
 ## Keys
 
-Every license is for one **platform**, fixed at creation: `mac` or `ipad`.
-A Mac key only activates on a Mac, an iPad key only on an iPad (see
-`wrong_platform` below). iPad has no Trial.
+Every license is for one **platform**, fixed at creation: `mac`, `ipad` or
+`windows` (OCCA for Windows). A Mac key only activates on a Mac, an iPad key
+only on an iPad, a Windows key only on a Windows PC (see `wrong_platform`
+below). iPad has no Trial; Windows sells the same plans as Mac.
 
 Creating with `platform: "both"` generates a Mac and an iPad license in one
 go (same licensee, plan, period and device limit; each with its own key and
@@ -149,21 +150,22 @@ platform has no numbers left, neither is created.
   `OC32-7KQM-2XRT-9HZP-0001`. Generated server-side, unique across all
   products.
   - `prefix`: the product's `key_prefix`, 1–6 uppercase letters (OCCA: `OC`).
-  - platform digit (`License::PLATFORM_CODES`): `3` Mac, `5` iPad.
+  - platform digit (`License::PLATFORM_CODES`): `3` Mac, `5` iPad, `7` Windows.
   - plan digit (`License::PLAN_DIGITS`): `1` Trial, `2` Professional,
-    `3` Lifetime, `4` Organization. So Mac keys are `31`–`34` and iPad keys
-    `52`–`54`.
+    `3` Lifetime, `4` Organization. So Mac keys are `31`–`34`, iPad keys
+    `52`–`54` and Windows keys `71`–`74`.
   - three random groups from `A–Z` and `2–9` without the ambiguous `0`/`O`,
     `1`/`I`/`L`, so keys are hard to guess.
   - `sequence`: the license's number within its product **and platform**,
     across all plans, always 4 digits (`0001`–`9999`), so an OCCA key is
     always 20 characters (the length the app accepts); creating a license
     beyond `9999` for a platform is refused with a 422 (on `platform`).
-    Mac and iPad count separately (`license_products.mac_license_sequence`,
-    `ipad_license_sequence`), each incremented under a row lock in the
-    create transaction, so concurrent creates never collide; numbers are
-    never reused (also after deletes). Stored on the license as `sequence`;
-    the product resource has `next_sequences: {mac, ipad}` (a preview only).
+    Mac, iPad and Windows count separately (`license_products.mac_license_sequence`,
+    `ipad_license_sequence`, `windows_license_sequence`), each incremented
+    under a row lock in the create transaction, so concurrent creates never
+    collide; numbers are never reused (also after deletes). Stored on the
+    license as `sequence`; the product resource has
+    `next_sequences: {mac, ipad, windows}` (a preview only).
 - **A plan change gives a new key.** The code names the plan, so changing
   the plan (upgrade or downgrade) generates a new key with the new plan's
   code and the **same number** (`OC32-…-0001` → `OC33-…-0001`). Every old
@@ -173,8 +175,8 @@ platform has no numbers left, neither is created.
   `plan_changed` event has `old_key`, `new_key`, `keys_replaced` and
   `devices_signed_out` in `meta`. The platform itself can never change.
 - **One license per licensee.** A licensee (email, case-insensitive) holds
-  at most one license per product and platform (a Mac and an iPad license,
-  or a Mac + iPad bundle, are fine). A second one for the same email and
+  at most one license per product and platform (a Mac, an iPad and a
+  Windows license, or a Mac + iPad bundle plus a Windows license, are fine). A second one for the same email and
   platform is a 422 on `licensee_email` (create, edit and the CLI); a
   different plan is a plan change on the existing license. Deleted
   licenses do not count.
@@ -240,9 +242,9 @@ Errors are always:
 ```
 
 `platform` is **required**: `macOS` on a Mac, `iPadOS` on an iPad (`iOS` is
-accepted for older iPads; case and spaces do not matter). A missing or
-unknown value is `invalid_request`; a key of the other platform is
-`wrong_platform`. `device_name` and `app_version` are optional. Re-activating a
+accepted for older iPads), `Windows` on a Windows PC (case, spaces and
+digits such as "Windows 11" do not matter). A missing or unknown value is
+`invalid_request`; a key of another platform is `wrong_platform`. `device_name` and `app_version` are optional. Re-activating a
 `device_id` that is already registered never consumes another slot; it only
 updates `last_seen_at`, `device_name`, `platform` and `app_version`.
 
@@ -368,8 +370,9 @@ GET /api/licenses/{product}/releases?platform=macOS
 GET /api/licenses/{product}/releases/latest?version=1.0.0&platform=macOS&key=OC33-...
 ```
 
-`releases`: the published versions for the platform (`macOS` / `iPadOS` or
-`mac` / `ipad`; shared releases included), newest first:
+`releases`: the published versions for the platform (`macOS` / `iPadOS` /
+`Windows` or `mac` / `ipad` / `windows`; Mac and iPad include the shared
+`both` releases, Windows only its own), newest first:
 `{"product":"occa","releases":[{version, build, kind, platforms, title,
 released_at, is_critical, download_url, changes:[{type, area, text}]}]}`.
 `kind` is `major` (x.0.0), `minor` (x.y.0, features) or `patch` (x.y.z,
@@ -387,10 +390,12 @@ fixes); a change `type` is `feature`, `improvement` or `fix`.
 | `updates_major`     | The key's covered major version (null = every version)          |
 
 `GET /api/licenses/{product}/releases/{version}/download?key=OC32-...`
-downloads the installer of a published version for a Mac key of the product
-that is on, not expired and covers the version (`upgrade_required` 403 for a
-Lifetime key of an older major, `wrong_platform` for an iPad key). The
-`download_url` of a release with a stored installer points here.
+downloads the installer of a published version for a key of the product
+that is on, not expired, covers the version and is of the installer's
+platform: a Mac key for a Mac / shared version (.dmg), a Windows key for a
+Windows version (.msi / .msix) (`upgrade_required` 403 for a Lifetime key of
+an older major, `wrong_platform` otherwise). The `download_url` of a release
+with a stored installer points here.
 
 ### deactivate
 
@@ -409,7 +414,7 @@ key or device, and also when the product is switched off.
 | 404  | `invalid_key`      | Unknown (or deleted) key, or a key of another product      |
 | 403  | `inactive`         | The owner switched the license off                         |
 | 403  | `expired`          | `expires_at` is in the past                                |
-| 403  | `wrong_platform`   | A Mac key on an iPad or an iPad key on a Mac               |
+| 403  | `wrong_platform`   | A key of another platform (a Mac key on an iPad or a Windows PC, …) |
 | 409  | `device_limit`     | New device while `devices_used >= max_devices`             |
 | 403  | `key_used`         | `per_device`: the key's device was released; the key is dead |
 | 409  | `key_in_use`       | `per_device`: the key is activated on another device       |
@@ -493,6 +498,11 @@ php artisan license:create --product=occa --plan=lifetime --name="Rizky Ajie Kur
     --email=rizky@example.com --phone="+62 812-0000-0000" \
     --village-code=31.71.01.1001 --postal-code=10110 --max-devices=5
 
+# A Windows key (OC7x-...) for OCCA for Windows:
+php artisan license:create --product=occa --platform=windows --plan=professional --months=12 \
+  --name="Jane Orienteer" --email=jane@example.com --phone="+62 812-1111-2222" \
+  --village-code=32.73.01.1001 --postal-code=40151
+
 # An iPad key (OC5x-...); iPad has no trial:
 php artisan license:create --product=occa --platform=ipad --plan=professional --months=12 \
     --name="Jane Orienteer" --email=jane@example.com --phone=08123456789 \
@@ -509,7 +519,7 @@ php artisan license:create --product={product} --plan=organization --months=12 -
 
 `occa:license-create` is an alias of `license:create` (its `--product`
 defaults to `occa`, as does `license:create`'s). `--platform` is `mac`
-(default), `ipad` or `both` (prints both keys).
+(default), `ipad`, `windows` or `both` (Mac + iPad; prints both keys).
 
 Options:
 - `--product` (product code, default `occa`), `--plan` (`trial` |
@@ -532,11 +542,12 @@ Options:
 `{success, message, data}` envelope. License endpoints are nested under the
 product code; a license of another product answers `404`.
 
-Licenses carry `platform` (`mac` | `ipad`), `platform_label`, `bundle_id`
+Licenses carry `platform` (`mac` | `ipad` | `windows`), `platform_label`, `bundle_id`
 and (on show / create) `bundle`: `[{id, key, platform, platform_label, plan,
 is_active}]` of the licenses generated together with it. On create
-`platform` is required (`mac`, `ipad` or `both`) and the plan must be sold
-on it (no Trial on iPad); `both` answers with the Mac license. On update the
+`platform` is required (`mac`, `ipad`, `windows` or `both`) and the plan
+must be sold on it (no Trial on iPad); `both` answers with the Mac license
+(Windows is never bundled). On update the
 platform may only be resent unchanged. The license lists accept a
 `platform` filter.
 
@@ -713,7 +724,8 @@ activity log under `License Manager`.
 
 Every product has a version list in `license_releases`: `version`
 (`major.minor.patch`, unique per product; `major` / `minor` / `patch` are
-kept in sync), `build`, `platforms` (`both` / `mac` / `ipad`), `title`,
+kept in sync), `build`, `platforms` (`both` = Mac + iPad / `mac` / `ipad` /
+`windows`; OCCA for Windows has its own version line and installer), `title`,
 `status` (`draft` / `published`; only published versions reach the apps),
 `released_at` (required to publish), `is_critical` (older versions must
 update), `download_url`, `changes` (`[{type: feature|improvement|fix, area,
@@ -729,9 +741,10 @@ runs. The value is in the signed token, so the app enforces it offline.
 
 Each version also keeps its installers on the private `local` disk under
 `license-releases/{product}/{version}/`, with size and SHA-256: the Mac
-`.dmg` (`file_*`) and the iPad `.ipa` (`ipa_*`, see "iPad installers"
-below). A Mac version is published only with its `.dmg`, an iPad version
-only with its `.ipa`, a shared (`both`) version only with both. Files stay
+`.dmg` or, for a `windows` version, the Windows `.msi` / `.msix` (`file_*`)
+and the iPad `.ipa` (`ipa_*`, see "iPad installers" below). A Mac version is
+published only with its `.dmg`, a Windows version only with its `.msi`, an
+iPad version only with its `.ipa`, a shared (`both`) version only with both. Files stay
 when a version is deleted (soft delete). The server must accept large uploads
 (PHP `upload_max_filesize` / `post_max_size`, nginx `client_max_body_size`;
 up to 2 GB).
@@ -751,7 +764,7 @@ Admin:
 | GET    | `/api/v1/license-manager/products/{product}/releases/{id}` | One version |
 | PUT    | `/api/v1/license-manager/products/{product}/releases/{id}` | Edit / publish |
 | DELETE | `/api/v1/license-manager/products/{product}/releases/{id}` | Delete (soft) |
-| POST   | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Upload / replace the installer (multipart `file`: .dmg, .zip, .pkg) |
+| POST   | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Upload / replace the installer (multipart `file`: .dmg, .zip, .pkg; for a `windows` version .msi, .msix, .exe) |
 | GET    | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Download the installer |
 | DELETE | `/api/v1/license-manager/products/{product}/releases/{id}/file` | Remove it (drafts only) |
 | POST   | `/api/v1/license-manager/products/{product}/releases/{id}/ipa` | Upload / replace the iPad installer (multipart `file`: .ipa) |
@@ -914,3 +927,4 @@ false.
 | `2026_11_10_000014_add_license_release_permissions` | `license-release-*` permissions, copied from `license-manager-*` on existing roles |
 | `2026_11_19_000001_add_ipa_installer_to_license_releases` | iPad installer per version (`ipa_path`, name, size, SHA-256, `ipa_meta`, uploaded_at) |
 | `2026_11_19_000002_create_license_install_links_table` | Single-use iPad install links |
+| `2026_11_23_000001_add_windows_license_sequence_to_license_products` | OCCA for Windows: `windows` platform (key digit 7) with its own counter `windows_license_sequence` |
