@@ -85,8 +85,9 @@ class LicenseReleaseService
         if ($license->isExpired()) {
             throw LicenseException::expired();
         }
-        // The stored installer is the Mac app (.dmg): a Mac key is needed.
-        if ($license->platform !== License::PLATFORM_MAC) {
+        // The stored installer is the Mac app (.dmg) or, for a Windows
+        // version, the Windows installer: a key of that platform is needed.
+        if ($license->platform !== $release->installerPlatform()) {
             throw LicenseException::wrongPlatform($license->platform);
         }
         if (! $license->coversVersion($release->version)) {

@@ -184,7 +184,7 @@ class LicenseFieldRules
     {
         return [
             'postal_code.regex' => 'The :attribute must be 5 digits for Indonesia, or 2-20 letters, digits, spaces or "-" elsewhere.',
-            'platform.in' => 'The :attribute must be Mac or iPad, and cannot be changed after the license is created.',
+            'platform.in' => 'The :attribute must be Mac, iPad or Windows, and cannot be changed after the license is created.',
             'phone.regex' => 'The :attribute may only contain digits, spaces, "+" and "-" (6-20 characters).',
         ];
     }

@@ -36,7 +36,7 @@ class LicenseCreateCommand extends Command
         {--tax-id= : Organization: tax ID / NPWP (optional)}
         {--member-count= : Organization: number of members (optional)}
         {--key-mode=shared : shared (one key for every device) or per_device (one unique key per device; a used key never works again)}
-        {--platform=mac : Platform the key is for: mac, ipad, or both (a Mac and an iPad key together; iPad has no trial)}
+        {--platform=mac : Platform the key is for: mac, ipad, windows, or both (a Mac and an iPad key together; iPad has no trial)}
         {--plan=professional : Plan: trial, professional, lifetime or organization}
         {--lifetime : Optional with --plan=lifetime (implied); rejected for every other plan}
         {--months= : Term length in months (for a term license)}

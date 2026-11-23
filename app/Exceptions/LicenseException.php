@@ -50,7 +50,7 @@ class LicenseException extends RuntimeException
     }
 
     /**
-     * A Mac key on an iPad or the other way round.
+     * A key of another platform (a Mac key on an iPad or a Windows PC, ...).
      */
     public static function wrongPlatform(string $licensePlatform): self
     {
@@ -61,11 +61,11 @@ class LicenseException extends RuntimeException
 
     /**
      * The app did not say (or said something unknown) which platform it
-     * runs on; activation needs "macOS" or "iPadOS".
+     * runs on; activation needs "macOS", "iPadOS" or "Windows".
      */
     public static function unknownPlatform(): self
     {
-        return new self('invalid_request', 'The platform must be macOS or iPadOS.', 422);
+        return new self('invalid_request', 'The platform must be macOS, iPadOS or Windows.', 422);
     }
 
     /**

@@ -16,8 +16,8 @@ class LicenseActivationFactory extends Factory
         return [
             'license_id' => License::factory(),
             'device_id' => fake()->uuid(),
-            'device_name' => fake()->randomElement(['MacBook Pro', 'iPad Pro', 'Mac mini', 'iPad Air']),
-            'platform' => fake()->randomElement(['macOS', 'iPadOS']),
+            'device_name' => fake()->randomElement(['MacBook Pro', 'iPad Pro', 'Mac mini', 'iPad Air', 'Surface Pro']),
+            'platform' => fake()->randomElement(['macOS', 'iPadOS', 'Windows']),
             'app_version' => '1.0.0',
             'activated_at' => now(),
             'last_seen_at' => now(),
