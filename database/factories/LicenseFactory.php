@@ -120,4 +120,15 @@ class LicenseFactory extends Factory
             'key' => License::generateKey('OC', License::PLATFORM_IPAD, $attributes['plan'] ?? License::PLAN_PROFESSIONAL, $attributes['sequence']),
         ]);
     }
+
+    /**
+     * A Windows license (Windows keys use platform code 7, e.g. OC72-...).
+     */
+    public function windows(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'platform' => License::PLATFORM_WINDOWS,
+            'key' => License::generateKey('OC', License::PLATFORM_WINDOWS, $attributes['plan'] ?? License::PLAN_PROFESSIONAL, $attributes['sequence']),
+        ]);
+    }
 }

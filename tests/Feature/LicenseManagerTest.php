@@ -73,6 +73,7 @@ const LICENSE_TEST_MIGRATIONS = [
     'database/migrations/2026_11_11_000002_create_license_retired_keys_table.php',
     'database/migrations/2026_11_19_000001_add_ipa_installer_to_license_releases.php',
     'database/migrations/2026_11_19_000002_create_license_install_links_table.php',
+    'database/migrations/2026_11_23_000001_add_windows_license_sequence_to_license_products.php',
 ];
 
 const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
@@ -80,10 +81,10 @@ const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
 const LICENSE_RELEASE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete', 'download'];
 
 /**
- * OC + platform/plan code (Mac 31-34, iPad 52-54), three random groups,
+ * OC + platform/plan code (Mac 31-34, iPad 52-54, Windows 71-74), three random groups,
  * the 4-digit sequence.
  */
-const OCCA_KEY_REGEX = '/^OC(3[1-4]|5[2-4])-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-\d{4}$/';
+const OCCA_KEY_REGEX = '/^OC(3[1-4]|5[2-4]|7[1-4])-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-\d{4}$/';
 
 /**
  * Indonesian address (fixture regions): Gambir, Jakarta Pusat.
@@ -1394,7 +1395,7 @@ test('admin can list, create, update and delete products, gated by the license-m
         ->assertStatus(201)
         ->assertJsonPath('data.code', 'map-tools-2')
         ->assertJsonPath('data.key_prefix', 'MT')
-        ->assertJsonPath('data.next_sequences', ['mac' => 1, 'ipad' => 1])
+        ->assertJsonPath('data.next_sequences', ['mac' => 1, 'ipad' => 1, 'windows' => 1])
         ->assertJsonPath('data.is_active', true);
 
     // The code never changes; the rest can.
@@ -1950,7 +1951,7 @@ test('keys carry the plan code and a per-product sequence across plans', functio
     // One counter per product, across plans: 0001 … 0004.
     expect(array_map(fn ($key) => substr($key, -4), $keys))->toBe(['0001', '0002', '0003', '0004']);
     expect(License::orderBy('id')->pluck('sequence')->all())->toBe([1, 2, 3, 4]);
-    $this->getJson('/api/v1/license-manager/products/occa')->assertJsonPath('data.next_sequences', ['mac' => 5, 'ipad' => 1]);
+    $this->getJson('/api/v1/license-manager/products/occa')->assertJsonPath('data.next_sequences', ['mac' => 5, 'ipad' => 1, 'windows' => 1]);
 
     // Another product has its own counter.
     LicenseProduct::factory()->demo()->create();
@@ -2143,7 +2144,7 @@ test('iPad keys use platform code 5 and their own sequence, Mac keys code 3', fu
         ->and($ipad1->json('data.platform_label'))->toBe('iPad')
         ->and($mac1->json('data.platform_label'))->toBe('Mac');
 
-    $this->getJson('/api/v1/license-manager/products/occa')->assertJsonPath('data.next_sequences', ['mac' => 3, 'ipad' => 4]);
+    $this->getJson('/api/v1/license-manager/products/occa')->assertJsonPath('data.next_sequences', ['mac' => 3, 'ipad' => 4, 'windows' => 1]);
 });
 
 test('platform is required on store, iPad has no Trial, and the platform cannot change', function () {
@@ -2190,7 +2191,8 @@ test('a key only activates on its own platform and the token carries the platfor
 
     // The platform must be sent and known.
     occaActivate($this, $mac, 'mac-1', ['platform' => null])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
-    occaActivate($this, $mac, 'mac-1', ['platform' => 'Windows'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
+    occaActivate($this, $mac, 'mac-1', ['platform' => 'Android'])->assertStatus(422)
+        ->assertExactJson(['error' => 'invalid_request', 'message' => 'The platform must be macOS, iPadOS or Windows.']);
 
     // Matching platforms work; older iPads report "iOS".
     $token = occaActivate($this, $ipad, 'ipad-1', ['device_name' => 'iPad Air', 'platform' => 'iPadOS'])->assertOk()
@@ -2247,6 +2249,125 @@ test('certificates of a Mac and an iPad license with the same number have differ
 // ---------------------------------------------------------------------
 // Mac + iPad: two keys generated together (one bundle)
 // ---------------------------------------------------------------------
+
+test('Windows keys use platform code 7 and their own sequence, and sell the same plans as Mac', function () {
+    Sanctum::actingAs($this->admin);
+
+    $this->postJson(lmLicenses(), occaIndividual())->assertStatus(201);
+    $win1 = $this->postJson(lmLicenses(), occaIndividual(['platform' => 'windows']))->assertStatus(201);
+    $win2 = $this->postJson(lmLicenses(), occaIndividual(['platform' => 'windows', 'plan' => 'trial', 'duration' => '14_days']))->assertStatus(201);
+    $win3 = $this->postJson(lmLicenses(), occaIndividual(['platform' => 'windows', 'plan' => 'lifetime', 'duration' => null]))->assertStatus(201);
+    $win4 = $this->postJson(lmLicenses(), occaOrganization(['platform' => 'windows']))->assertStatus(201);
+
+    expect($win1->json('data.key'))->toMatch(OCCA_KEY_REGEX)->toStartWith('OC72-')->toEndWith('-0001')
+        ->and($win2->json('data.key'))->toStartWith('OC71-')->toEndWith('-0002')
+        ->and($win3->json('data.key'))->toStartWith('OC73-')->toEndWith('-0003')
+        ->and($win4->json('data.key'))->toStartWith('OC74-')->toEndWith('-0004')
+        ->and($win1->json('data.platform'))->toBe('windows')
+        ->and($win1->json('data.platform_label'))->toBe('Windows')
+        ->and($win1->json('data.bundle_id'))->toBeNull();
+
+    $this->getJson('/api/v1/license-manager/products/occa')->assertJsonPath('data.next_sequences', ['mac' => 2, 'ipad' => 1, 'windows' => 5]);
+
+    // Windows is never part of a "both" bundle, and the platform cannot change.
+    $this->postJson(lmLicenses(), occaIndividual(['platform' => 'both']))->assertStatus(201);
+    expect(License::where('platform', 'windows')->count())->toBe(4);
+    $this->putJson(lmLicenses().'/'.$win1->json('data.id'), ['platform' => 'mac'])->assertStatus(422)->assertJsonValidationErrors('platform');
+    // A Windows license filter shows only Windows licenses.
+    $list = $this->getJson(lmLicenses().'?platform=windows')->assertOk()->json('data');
+    expect(collect($list)->pluck('platform')->unique()->all())->toBe(['windows'])->and($list)->toHaveCount(4);
+});
+
+test('a Windows key activates on Windows only and the token carries the platform', function () {
+    $win = License::factory()->windows()->create();
+    $mac = License::factory()->create();
+
+    occaActivate($this, $win, 'mac-1', ['platform' => 'macOS'])
+        ->assertStatus(403)->assertExactJson(['error' => 'wrong_platform', 'message' => 'This license key is for Windows and cannot be used on this device.']);
+    occaActivate($this, $mac, 'pc-1', ['platform' => 'Windows'])
+        ->assertStatus(403)->assertJsonPath('error', 'wrong_platform')->assertJsonPath('message', 'This license key is for Mac and cannot be used on this device.');
+    expect(occaEvents($win, LicenseEvent::DENIED_WRONG_PLATFORM)->count())->toBe(1);
+
+    // "Windows", "windows", "Windows 11" and "win" all mean Windows.
+    $token = occaActivate($this, $win, 'pc-1', ['device_name' => 'Surface Pro', 'platform' => 'Windows'])->assertOk()
+        ->assertJsonPath('license.platform', 'windows')->json('token');
+    occaActivate($this, $win, 'pc-2', ['platform' => 'windows 11'])->assertOk();
+    occaActivate($this, $win, 'pc-1', ['platform' => 'win'])->assertOk(); // re-activation of a known device
+    expect(app(LicenseTokenService::class)->verify($token)['platform'])->toBe('windows');
+
+    $this->postJson('/api/occa/license/refresh', ['key' => $win->key, 'device_id' => 'pc-1', 'platform' => 'Windows'])->assertOk();
+    $this->postJson('/api/occa/license/refresh', ['key' => $win->key, 'device_id' => 'pc-1', 'platform' => 'macOS'])
+        ->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+    $this->postJson('/api/occa/license/restore', ['device_id' => 'pc-1', 'platform' => 'Windows'])->assertOk()
+        ->assertJsonPath('license.platform', 'windows');
+});
+
+test('license:create takes --platform=windows and allows a Windows trial', function () {
+    $this->artisan('license:create', [...OCCA_CLI_PERSON, '--name' => 'Win User', '--platform' => 'windows', '--months' => 12])->assertSuccessful();
+    expect(License::where('licensee_name', 'Win User')->first())
+        ->platform->toBe('windows')
+        ->key->toStartWith('OC72-')->toEndWith('-0001');
+
+    // One license per email and platform: another person for the trial.
+    $this->artisan('license:create', [...OCCA_CLI_PERSON, '--email' => 'trial@example.com', '--name' => 'Win Trial', '--platform' => 'windows', '--plan' => 'trial', '--days' => 14])->assertSuccessful();
+    expect(License::where('licensee_name', 'Win Trial')->value('key'))->toStartWith('OC71-')->toEndWith('-0002');
+});
+
+test('a Windows version has its own release list, needs an msi and is downloaded with a Windows key', function () {
+    Storage::fake('local');
+    Sanctum::actingAs($this->admin);
+    $base = '/api/v1/license-manager/products/occa/releases';
+
+    // A shared (Mac + iPad) version is not a Windows version.
+    $both = $this->postJson($base, occaRelease(['version' => '1.1.0', 'status' => 'draft']))->json('data.id');
+    $this->post("$base/$both/file", ['file' => UploadedFile::fake()->create('OCCA.dmg', 20)], ['Accept' => 'application/json'])->assertOk();
+    $this->post("$base/$both/ipa", ['file' => occaIpa()], ['Accept' => 'application/json'])->assertOk();
+    $this->putJson("$base/$both", ['status' => 'published', 'released_at' => '2026-12-01'])->assertOk();
+
+    $win = $this->postJson($base, occaRelease(['version' => '0.2.0', 'status' => 'draft', 'platforms' => 'windows']))->assertCreated()
+        ->assertJsonPath('data.needs_ipa', false)->json('data.id');
+    // The Windows installer is an .msi (or .msix / .exe), not a .dmg.
+    $this->post("$base/$win/file", ['file' => UploadedFile::fake()->create('OCCA.dmg', 20)], ['Accept' => 'application/json'])
+        ->assertStatus(422)->assertJsonPath('errors.file.0', 'Upload the Windows installer as an .msi (or .msix / .exe) file.');
+    $this->putJson("$base/$win", ['status' => 'published', 'released_at' => '2026-12-02'])->assertStatus(422)
+        ->assertJsonPath('errors.status.0', 'Upload the Windows installer (.msi) before publishing this version.');
+    $this->post("$base/$win/file", ['file' => UploadedFile::fake()->create('OCCA-x64.msi', 20)], ['Accept' => 'application/json'])->assertOk()
+        ->assertJsonPath('data.file.name', 'occa-x64-0.2.0.msi');
+    $this->putJson("$base/$win", ['status' => 'published', 'released_at' => '2026-12-02'])->assertOk();
+
+    // Public lists: Windows sees only Windows versions, Mac only Mac / shared ones.
+    $this->getJson('/api/licenses/occa/releases?platform=Windows')->assertOk()
+        ->assertJsonCount(1, 'releases')->assertJsonPath('releases.0.version', '0.2.0')->assertJsonPath('releases.0.platforms', 'windows');
+    $this->getJson('/api/licenses/occa/releases?platform=macOS')->assertOk()
+        ->assertJsonCount(1, 'releases')->assertJsonPath('releases.0.version', '1.1.0');
+    $this->getJson('/api/licenses/occa/releases/latest?version=0.1.0&platform=Windows')->assertOk()
+        ->assertJsonPath('latest.version', '0.2.0')->assertJsonPath('update_available', true);
+    $this->getJson('/api/licenses/occa/releases/latest?version=0.2.0&platform=Windows')->assertOk()->assertJsonPath('update_available', false);
+
+    // Download: a Windows key for the Windows version, a Mac key for the Mac one.
+    $winKey = License::factory()->windows()->create()->key;
+    $macKey = License::factory()->create()->key;
+    $this->get("/api/licenses/occa/releases/0.2.0/download?key=$winKey")->assertOk()
+        ->assertHeader('content-disposition', 'attachment; filename=occa-x64-0.2.0.msi');
+    $this->getJson("/api/licenses/occa/releases/0.2.0/download?key=$macKey")->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+    $this->getJson("/api/licenses/occa/releases/1.1.0/download?key=$winKey")->assertStatus(403)->assertJsonPath('error', 'wrong_platform');
+
+    // Back office filter.
+    $this->getJson("$base?platform=windows")->assertOk()->assertJsonCount(1, 'data.releases')->assertJsonPath('data.releases.0.version', '0.2.0');
+    $mac = $this->getJson("$base?platform=mac")->assertOk()->json('data.releases');
+    expect(collect($mac)->pluck('version')->all())->toContain('1.1.0')->not->toContain('0.2.0');
+});
+
+test('a Windows certificate names the Windows PC and its own reference', function () {
+    Sanctum::actingAs($this->admin);
+    $win = License::factory()->windows()->create();
+    $service = app(LicenseCertificateService::class);
+
+    expect(LicenseCertificateService::reference($win))->toBe('LIC-OCCA-WINDOWS-'.$win->sequence);
+    $data = $service->data($win);
+    expect($data['steps']['steps'][0][1])->toContain('Windows PC')
+        ->and($data['steps']['steps'][1][1])->toContain('Click the plan chip');
+});
 
 test('platform "both" creates a Mac and an iPad license together, linked as a bundle', function () {
     Sanctum::actingAs($this->admin);
@@ -3047,7 +3168,7 @@ test('restore never takes a seat for an unknown device', function () {
 test('restore validates its fields', function () {
     $this->postJson('/api/licenses/occa/restore', ['platform' => 'macOS'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
     $this->postJson('/api/licenses/occa/restore', ['device_id' => 'device-1'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
-    occaRestore($this, 'device-1', ['platform' => 'Windows'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
+    occaRestore($this, 'device-1', ['platform' => 'Android'])->assertStatus(422)->assertJsonPath('error', 'invalid_request');
     $this->postJson('/api/licenses/nope/restore', ['device_id' => 'device-1', 'platform' => 'macOS'])->assertStatus(404)->assertJsonPath('error', 'invalid_product');
 });
 

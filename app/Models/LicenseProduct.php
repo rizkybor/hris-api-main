@@ -39,6 +39,7 @@ class LicenseProduct extends Model
         'key_prefix',
         'mac_license_sequence',
         'ipad_license_sequence',
+        'windows_license_sequence',
         'description',
         'icon_path',
         'terms',
@@ -51,6 +52,7 @@ class LicenseProduct extends Model
         'is_active' => 'boolean',
         'mac_license_sequence' => 'integer',
         'ipad_license_sequence' => 'integer',
+        'windows_license_sequence' => 'integer',
         'terms_effective_at' => 'date',
     ];
 

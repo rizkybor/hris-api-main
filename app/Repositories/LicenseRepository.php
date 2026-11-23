@@ -76,7 +76,7 @@ class LicenseRepository implements LicenseRepositoryInterface
                 ->when($plan, fn ($query) => $query->where('plan', $plan))
                 ->select('bundle_id');
             $query->where(fn ($rows) => $rows
-                ->where('platform', '!=', License::PLATFORM_IPAD)
+                ->where('platform', '!=', License::PLATFORM_IPAD) // Windows licenses are never bundled
                 ->orWhereNull('bundle_id')
                 ->orWhereNotIn('bundle_id', $macsShown));
         }
@@ -167,7 +167,7 @@ class LicenseRepository implements LicenseRepositoryInterface
 
         // The product row is locked while the platforms' counters move, so
         // concurrent creates never get the same number; numbers are never
-        // reused. Mac and iPad count separately. A bundle is all or nothing.
+        // reused. Mac, iPad and Windows count separately. A bundle is all or nothing.
         $licenses = DB::transaction(function () use ($product, $licenseDto, $platforms, $bundleId, $data) {
             $locked = LicenseProduct::query()->lockForUpdate()->findOrFail($product->id);
             $created = [];

@@ -61,13 +61,16 @@ class License extends Model
 
     /**
      * The device platform a license is for, fixed at creation: a Mac key
-     * only activates on a Mac, an iPad key only on an iPad.
+     * only activates on a Mac, an iPad key only on an iPad, a Windows key
+     * only on a Windows PC (OCCA for Windows).
      */
     public const PLATFORM_MAC = 'mac';
 
     public const PLATFORM_IPAD = 'ipad';
 
-    public const PLATFORMS = [self::PLATFORM_MAC, self::PLATFORM_IPAD];
+    public const PLATFORM_WINDOWS = 'windows';
+
+    public const PLATFORMS = [self::PLATFORM_MAC, self::PLATFORM_IPAD, self::PLATFORM_WINDOWS];
 
     /**
      * Create-only choice: one Mac and one iPad license generated together
@@ -75,19 +78,22 @@ class License extends Model
      */
     public const PLATFORM_BOTH = 'both';
 
-    public const CREATE_PLATFORMS = [self::PLATFORM_MAC, self::PLATFORM_IPAD, self::PLATFORM_BOTH];
+    public const CREATE_PLATFORMS = [self::PLATFORM_MAC, self::PLATFORM_IPAD, self::PLATFORM_WINDOWS, self::PLATFORM_BOTH];
 
     public const PLATFORM_LABELS = [
         self::PLATFORM_MAC => 'Mac',
         self::PLATFORM_IPAD => 'iPad',
+        self::PLATFORM_WINDOWS => 'Windows',
     ];
 
     /**
      * Plans sold per platform: iPad has no Trial (no free plan there).
+     * Windows sells the same plans as Mac (Starter is free, Trial is a key).
      */
     public const PLATFORM_PLANS = [
         self::PLATFORM_MAC => [self::PLAN_TRIAL, self::PLAN_PROFESSIONAL, self::PLAN_LIFETIME, self::PLAN_ORGANIZATION],
         self::PLATFORM_IPAD => [self::PLAN_PROFESSIONAL, self::PLAN_LIFETIME, self::PLAN_ORGANIZATION],
+        self::PLATFORM_WINDOWS => [self::PLAN_TRIAL, self::PLAN_PROFESSIONAL, self::PLAN_LIFETIME, self::PLAN_ORGANIZATION],
     ];
 
     public const CATEGORY_INDIVIDUAL = 'individual';
@@ -183,12 +189,14 @@ class License extends Model
     /**
      * The key's two-digit code ({prefix}{code}-...) is platform digit + plan
      * digit: Mac 31 Trial, 32 Professional, 33 Lifetime, 34 Organization;
-     * iPad 52 Professional, 53 Lifetime, 54 Organization. A key never
-     * changes, so the code is the platform and plan at creation.
+     * iPad 52 Professional, 53 Lifetime, 54 Organization; Windows 71 Trial,
+     * 72 Professional, 73 Lifetime, 74 Organization. A key never changes,
+     * so the code is the platform and plan at creation.
      */
     public const PLATFORM_CODES = [
         self::PLATFORM_MAC => '3',
         self::PLATFORM_IPAD => '5',
+        self::PLATFORM_WINDOWS => '7',
     ];
 
     public const PLAN_DIGITS = [
@@ -333,13 +341,14 @@ class License extends Model
     }
 
     /**
-     * The platforms a create request stands for ("both" = Mac and iPad).
+     * The platforms a create request stands for ("both" = Mac and iPad;
+     * Windows is always its own license).
      *
      * @return list<string>
      */
     public static function platformsFor(?string $choice): array
     {
-        return $choice === self::PLATFORM_BOTH ? self::PLATFORMS : [$choice ?: self::PLATFORM_MAC];
+        return $choice === self::PLATFORM_BOTH ? [self::PLATFORM_MAC, self::PLATFORM_IPAD] : [$choice ?: self::PLATFORM_MAC];
     }
 
     /**
@@ -438,9 +447,10 @@ class License extends Model
     }
 
     /**
-     * The platform an app reports on activation ("macOS", "iPadOS", ...)
-     * as a license platform, or null when it is not a Mac or an iPad.
-     * Older iPads report "iOS"; OCCA does not run on iPhone.
+     * The platform an app reports on activation ("macOS", "iPadOS",
+     * "Windows", ...) as a license platform, or null when it is none of
+     * them. Older iPads report "iOS"; OCCA does not run on iPhone. The
+     * Windows app sends "Windows" (digits such as "Windows 11" are ignored).
      */
     public static function platformFromDevice(?string $reported): ?string
     {
@@ -449,6 +459,7 @@ class License extends Model
         return match (true) {
             in_array($value, ['macos', 'mac', 'osx', 'macosx'], true) => self::PLATFORM_MAC,
             in_array($value, ['ipados', 'ipad', 'ios'], true) => self::PLATFORM_IPAD,
+            in_array($value, ['windows', 'win', 'win32', 'win64', 'winnt', 'microsoftwindows'], true) => self::PLATFORM_WINDOWS,
             default => null,
         };
     }
