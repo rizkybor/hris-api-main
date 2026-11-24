@@ -16,6 +16,7 @@ class LicenseProductResource extends JsonResource
             'id' => $this->id,
             'code' => $this->code,
             'name' => $this->name,
+            'is_licensed' => (bool) ($this->is_licensed ?? true),
             'key_prefix' => $this->key_prefix,
             // Preview only: the number the next Mac / iPad / Windows license gets.
             'next_sequences' => [
@@ -24,6 +25,7 @@ class LicenseProductResource extends JsonResource
                 'windows' => (int) $this->windows_license_sequence + 1,
             ],
             'description' => $this->description,
+            'website_url' => $this->website_url,
             'icon_url' => $this->iconUrl(),
             'terms' => $this->terms,
             'terms_version' => $this->terms_version,

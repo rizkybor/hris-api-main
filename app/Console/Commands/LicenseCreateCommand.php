@@ -92,6 +92,11 @@ class LicenseCreateCommand extends Command
 
             return self::FAILURE;
         }
+        if (! $product->is_licensed) {
+            $this->error('"'.$product->code.'" is an app without licensing; licenses cannot be created for it.');
+
+            return self::FAILURE;
+        }
 
         $input = [];
         foreach (self::OPTIONS as $field => $option) {

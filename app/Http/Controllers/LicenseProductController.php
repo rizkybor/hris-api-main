@@ -64,10 +64,16 @@ class LicenseProductController extends Controller implements HasMiddleware
             'key_prefix' => strtoupper(trim((string) $request->input('key_prefix'))),
         ]);
 
-        $data = $request->validate(array_merge($this->rules(), [
+        $licensed = $request->boolean('is_licensed', true);
+        $data = $request->validate(array_merge($this->rules($licensed), [
             'code' => ['required', 'string', 'min:2', 'max:50', 'regex:'.LicenseProduct::CODE_REGEX, Rule::unique('license_products', 'code')],
             'terms_version' => ['nullable', 'required_with:terms', 'string', 'max:20', 'regex:'.self::VERSION_REGEX],
         ]), $this->messages());
+        $data['is_licensed'] = $licensed;
+        if (! $licensed) {
+            // An app without licensing has no keys, so no key prefix.
+            $data['key_prefix'] = null;
+        }
 
         $icon = $data['icon'] ?? null;
         unset($data['icon'], $data['remove_icon']);
@@ -85,8 +91,8 @@ class LicenseProductController extends Controller implements HasMiddleware
 
     /**
      * The code is part of the public API path compiled into the apps, so it
-     * never changes; name, key prefix (new keys only), description and
-     * is_active can.
+     * never changes; name, key prefix (new keys only), description,
+     * is_active and is_licensed (off only while it has no licenses) can.
      */
     public function update(Request $request, string $product)
     {
@@ -99,9 +105,17 @@ class LicenseProductController extends Controller implements HasMiddleware
             $request->merge(['key_prefix' => strtoupper(trim((string) $request->input('key_prefix')))]);
         }
 
-        $rules = $this->rules();
-        foreach (['name', 'key_prefix'] as $field) {
-            array_unshift($rules[$field], 'sometimes');
+        $licensed = $request->has('is_licensed') ? $request->boolean('is_licensed') : (bool) $model->is_licensed;
+        // Licensing can only be switched off while the app has no licenses
+        // at all (deleted ones included): keys already issued must keep working.
+        if (! $licensed && $model->is_licensed && $model->licenses()->withTrashed()->exists()) {
+            return ResponseHelper::jsonResponse(false, 'This app already has licenses, so licensing cannot be switched off.', null, 422);
+        }
+        $rules = $this->rules($licensed);
+        array_unshift($rules['name'], 'sometimes');
+        // Switching licensing on for an app without a key prefix needs one now.
+        if (! ($licensed && ! $model->key_prefix)) {
+            array_unshift($rules['key_prefix'], 'sometimes');
         }
         $termsChanged = $request->has('terms') && self::normalizeTerms($request->input('terms')) !== self::normalizeTerms($model->terms);
         // New terms text needs a new version (licenses keep the version
@@ -119,6 +133,10 @@ class LicenseProductController extends Controller implements HasMiddleware
             $data['terms_effective_at'] = now()->toDateString();
         }
 
+        $data['is_licensed'] = $licensed;
+        if (! $licensed) {
+            $data['key_prefix'] = null;
+        }
         $model->update($data);
 
         if ($icon) {
@@ -183,12 +201,17 @@ class LicenseProductController extends Controller implements HasMiddleware
         return trim(str_replace("\r\n", "\n", (string) $terms));
     }
 
-    private function rules(): array
+    private function rules(bool $licensed = true): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'key_prefix' => ['required', 'string', 'regex:'.LicenseProduct::KEY_PREFIX_REGEX],
+            'is_licensed' => ['sometimes', 'boolean'],
+            'key_prefix' => $licensed
+                ? ['required', 'string', 'regex:'.LicenseProduct::KEY_PREFIX_REGEX]
+                : ['nullable', 'string', 'regex:'.LicenseProduct::KEY_PREFIX_REGEX],
             'description' => ['nullable', 'string', 'max:2000'],
+            // Where the app lives (website, App Store, download page); optional.
+            'website_url' => ['nullable', 'url', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             // App icon: png / jpg / webp up to 1 MB; square works best.
             'icon' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:1024'],

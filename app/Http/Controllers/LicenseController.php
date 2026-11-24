@@ -110,7 +110,11 @@ class LicenseController extends Controller implements HasMiddleware
         $data = $request->validated();
 
         try {
-            $license = $this->licenseRepository->create(LicenseProduct::findByCodeOrFail($product), $data);
+            $productModel = LicenseProduct::findByCodeOrFail($product);
+            if (! $productModel->is_licensed) {
+                return ResponseHelper::jsonResponse(false, 'This app does not use licenses, so licenses cannot be created for it.', null, 422);
+            }
+            $license = $this->licenseRepository->create($productModel, $data);
 
             return ResponseHelper::jsonResponse(true, 'License Created Successfully', new LicenseResource($license), 201);
         } catch (ModelNotFoundException $e) {

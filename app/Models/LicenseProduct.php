@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * An app sold through the License Manager (OCCA, ...).
+ * An app in the License Manager (OCCA, ...). Licensed apps sell keys;
+ * non-licensed apps (is_licensed = false) are only kept here: catalog
+ * entry, versions and installers, no keys and no activations.
  * "code" is the slug used in the public API path and the admin URLs.
  */
 class LicenseProduct extends Model
@@ -36,11 +38,13 @@ class LicenseProduct extends Model
     protected $fillable = [
         'code',
         'name',
+        'is_licensed',
         'key_prefix',
         'mac_license_sequence',
         'ipad_license_sequence',
         'windows_license_sequence',
         'description',
+        'website_url',
         'icon_path',
         'terms',
         'terms_version',
@@ -50,6 +54,7 @@ class LicenseProduct extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_licensed' => 'boolean',
         'mac_license_sequence' => 'integer',
         'ipad_license_sequence' => 'integer',
         'windows_license_sequence' => 'integer',
