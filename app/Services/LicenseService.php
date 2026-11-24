@@ -433,6 +433,9 @@ class LicenseService
         if (! $product) {
             throw LicenseException::invalidProduct();
         }
+        if (! $product->is_licensed) {
+            throw LicenseException::productNotLicensed();
+        }
         if (! $product->is_active) {
             throw LicenseException::productInactive();
         }

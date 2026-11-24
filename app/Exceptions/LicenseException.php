@@ -24,6 +24,11 @@ class LicenseException extends RuntimeException
         return new self('invalid_product', 'This product does not exist.', 404);
     }
 
+    public static function productNotLicensed(): self
+    {
+        return new self('not_licensed', 'This app does not use license keys.', 403);
+    }
+
     public static function productInactive(): self
     {
         return new self('product_inactive', 'This product is not available for activation.', 403);

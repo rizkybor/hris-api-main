@@ -74,6 +74,7 @@ const LICENSE_TEST_MIGRATIONS = [
     'database/migrations/2026_11_19_000001_add_ipa_installer_to_license_releases.php',
     'database/migrations/2026_11_19_000002_create_license_install_links_table.php',
     'database/migrations/2026_11_23_000001_add_windows_license_sequence_to_license_products.php',
+    'database/migrations/2026_11_24_000001_add_is_licensed_to_license_products_table.php',
 ];
 
 const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
@@ -3703,3 +3704,52 @@ test('a term license stops working once it expires, on every app call, until the
     $license->update(['expires_at' => now()->addMonth()]);
     $this->postJson('/api/occa/license/refresh', ['key' => $license->key, 'device_id' => 'device-1'])->assertOk();
 })->with([License::PLAN_TRIAL, License::PLAN_PROFESSIONAL, License::PLAN_ORGANIZATION]);
+
+test('an app without licensing is kept with no key prefix, versions only', function () {
+    Sanctum::actingAs($this->admin);
+
+    $this->postJson('/api/v1/license-manager/products', [
+        'code' => 'field-notes',
+        'name' => 'Field Notes',
+        'is_licensed' => false,
+        'key_prefix' => 'FN',
+        'website_url' => 'https://example.com/field-notes',
+    ])->assertCreated()
+        ->assertJsonPath('data.is_licensed', false)
+        ->assertJsonPath('data.key_prefix', null)
+        ->assertJsonPath('data.website_url', 'https://example.com/field-notes');
+
+    // A licensed app still needs its key prefix.
+    $this->postJson('/api/v1/license-manager/products', ['code' => 'other-app', 'name' => 'Other'])
+        ->assertStatus(422)->assertJsonValidationErrors('key_prefix');
+
+    // Versions work as for any app.
+    $this->postJson('/api/v1/license-manager/products/field-notes/releases', occaRelease(['status' => 'draft', 'platforms' => 'windows']))
+        ->assertCreated();
+
+    // Licenses do not: not from the admin, not from the CLI, not on activation.
+    $this->postJson('/api/v1/license-manager/products/field-notes/licenses', occaIndividual())
+        ->assertStatus(422);
+    expect(Artisan::call('license:create', ['--product' => 'field-notes', '--no-interaction' => true]))->toBe(1);
+    $this->postJson('/api/licenses/field-notes/activate', ['key' => 'FN32-AAAA-AAAA-AAAA-0001', 'device_id' => 'pc-1', 'platform' => 'Windows'])
+        ->assertStatus(403)->assertJsonPath('error', 'not_licensed');
+});
+
+test('licensing can be switched off only while the app has no licenses, and on again with a key prefix', function () {
+    Sanctum::actingAs($this->admin);
+    $this->postJson('/api/v1/license-manager/products', ['code' => 'draft-app', 'name' => 'Draft', 'key_prefix' => 'DA'])->assertCreated();
+
+    $this->putJson('/api/v1/license-manager/products/draft-app', ['is_licensed' => false])
+        ->assertOk()->assertJsonPath('data.is_licensed', false)->assertJsonPath('data.key_prefix', null);
+
+    // Back on: the key prefix is required again.
+    $this->putJson('/api/v1/license-manager/products/draft-app', ['is_licensed' => true])
+        ->assertStatus(422)->assertJsonValidationErrors('key_prefix');
+    $this->putJson('/api/v1/license-manager/products/draft-app', ['is_licensed' => true, 'key_prefix' => 'da'])
+        ->assertOk()->assertJsonPath('data.is_licensed', true)->assertJsonPath('data.key_prefix', 'DA');
+
+    // OCCA has licenses: licensing stays on.
+    License::factory()->create();
+    $this->putJson('/api/v1/license-manager/products/occa', ['is_licensed' => false])->assertStatus(422);
+    expect(LicenseProduct::findByCode('occa')->is_licensed)->toBeTrue();
+});
