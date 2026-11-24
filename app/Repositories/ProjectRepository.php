@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Constants\CacheConstants;
 use App\DTOs\ProjectDto;
+use App\Enums\ProjectStatus;
 use App\Interfaces\ProjectRepositoryInterface;
 use App\Models\PaymentReceipt;
 use App\Models\Project;
@@ -34,7 +35,14 @@ class ProjectRepository implements ProjectRepositoryInterface
                     $query->search($search);
                 }
 
-                if ($status) {
+                if ($status === 'overdue') {
+                    // Past the end date while being worked on: only active
+                    // projects count (planning / on hold / draft haven't run
+                    // against the schedule yet).
+                    $query->where('status', ProjectStatus::ACTIVE->value)
+                        ->whereNotNull('end_date')
+                        ->whereDate('end_date', '<', now()->toDateString());
+                } elseif ($status) {
                     $query->where('status', $status);
                 }
             })
