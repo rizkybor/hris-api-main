@@ -147,14 +147,16 @@ class LicenseReleaseController extends Controller implements HasMiddleware
         if (! $item) {
             return $this->notFound();
         }
-        $windows = $item->isWindows();
-        $extensions = $windows ? LicenseRelease::WINDOWS_FILE_EXTENSIONS : array_values(array_diff(LicenseRelease::FILE_EXTENSIONS, LicenseRelease::WINDOWS_FILE_EXTENSIONS));
+        $extensions = $item->fileExtensions();
         $request->validate([
             'file' => ['required', 'file', 'extensions:'.implode(',', $extensions), 'max:'.LicenseRelease::FILE_MAX_KB],
         ], [
-            'file.extensions' => $windows
-                ? 'Upload the Windows installer as an .msi (or .msix / .exe) file.'
-                : 'Upload the installer as a .dmg (or .zip / .pkg) file.',
+            'file.extensions' => match ($item->platforms) {
+                License::PLATFORM_WINDOWS => 'Upload the Windows installer as an .msi (or .msix / .exe) file.',
+                LicenseRelease::PLATFORM_ANDROID => 'Upload the Android app as an .apk (or .aab) file.',
+                LicenseRelease::PLATFORMS_MULTI => 'Upload the installer as one of: .'.implode(', .', $extensions).'.',
+                default => 'Upload the installer as a .dmg (or .zip / .pkg) file.',
+            },
             'file.max' => 'The installer may be at most 2 GB.',
         ]);
 
@@ -344,12 +346,16 @@ class LicenseReleaseController extends Controller implements HasMiddleware
             return;
         }
         if ($release->needsFile() && ! $release->hasFile()) {
-            throw ValidationException::withMessages(['status' => $release->isWindows()
-                ? 'Upload the Windows installer (.msi) before publishing this version.'
-                : 'Upload the Mac installer (.dmg) before publishing this version.']);
+            throw ValidationException::withMessages(['status' => match ($release->platforms) {
+                License::PLATFORM_WINDOWS => 'Upload the Windows installer (.msi) before publishing this version.',
+                LicenseRelease::PLATFORM_ANDROID => 'Upload the Android app (.apk / .aab) before publishing this version.',
+                default => 'Upload the Mac installer (.dmg) before publishing this version.',
+            }]);
         }
         if ($release->needsIpa() && ! $release->hasIpa()) {
-            throw ValidationException::withMessages(['status' => 'Upload the iPad installer (.ipa) before publishing this version.']);
+            throw ValidationException::withMessages(['status' => $release->platforms === LicenseRelease::PLATFORM_IOS
+                ? 'Upload the iOS app (.ipa) before publishing this version.'
+                : 'Upload the iPad installer (.ipa) before publishing this version.']);
         }
     }
 
@@ -372,6 +378,12 @@ class LicenseReleaseController extends Controller implements HasMiddleware
                 Rule::unique('license_releases', 'version')->where('product_id', $product->id)->whereNull('deleted_at')->ignore($release?->id)]),
             'build' => ['nullable', 'integer', 'min:1', 'max:999999'],
             'platforms' => array_merge($sometimes, ['required', Rule::in(LicenseRelease::PLATFORMS)]),
+            // Multiplatform: the platforms it covers (two or more).
+            'target_platforms' => ['nullable', 'required_if:platforms,'.LicenseRelease::PLATFORMS_MULTI, 'array', 'min:2'],
+            'target_platforms.*' => ['distinct', Rule::in(LicenseRelease::TARGET_PLATFORMS)],
+            // Android: minimum and target SDK (API level), both optional.
+            'android_min_sdk' => ['nullable', 'integer', 'between:'.LicenseRelease::ANDROID_SDK_MIN.','.LicenseRelease::ANDROID_SDK_MAX],
+            'android_target_sdk' => ['nullable', 'integer', 'between:'.LicenseRelease::ANDROID_SDK_MIN.','.LicenseRelease::ANDROID_SDK_MAX, 'gte:android_min_sdk'],
             'title' => ['nullable', 'string', 'max:255'],
             'status' => array_merge($sometimes, ['required', Rule::in(LicenseRelease::STATUSES)]),
             'released_at' => ['nullable', 'required_if:status,'.LicenseRelease::STATUS_PUBLISHED, 'date_format:Y-m-d'],
@@ -391,6 +403,9 @@ class LicenseReleaseController extends Controller implements HasMiddleware
             'version.regex' => 'Use a version like 1.0.0 (major.minor.patch).',
             'version.unique' => 'This version is already in the list.',
             'released_at.required_if' => 'A published version needs a release date.',
+            'target_platforms.required_if' => 'Choose at least two platforms for a multiplatform version.',
+            'target_platforms.min' => 'Choose at least two platforms for a multiplatform version.',
+            'android_target_sdk.gte' => 'The target SDK cannot be lower than the minimum SDK.',
         ];
     }
 
@@ -409,6 +424,22 @@ class LicenseReleaseController extends Controller implements HasMiddleware
         if (array_key_exists('is_critical', $data)) {
             $data['is_critical'] = (bool) $data['is_critical'];
         }
+        // Platform-specific fields only stay when they apply.
+        $platforms = $data['platforms'] ?? $release?->platforms;
+        if ($platforms !== null) {
+            if ($platforms !== LicenseRelease::PLATFORMS_MULTI) {
+                $data['target_platforms'] = null;
+            } elseif (isset($data['target_platforms'])) {
+                $data['target_platforms'] = array_values(array_intersect(LicenseRelease::TARGET_PLATFORMS, $data['target_platforms']));
+            }
+            $list = $platforms === LicenseRelease::PLATFORMS_MULTI
+                ? ($data['target_platforms'] ?? $release?->target_platforms ?? [])
+                : [$platforms];
+            if (! in_array(LicenseRelease::PLATFORM_ANDROID, $list, true)) {
+                $data['android_min_sdk'] = null;
+                $data['android_target_sdk'] = null;
+            }
+        }
 
         return $data;
     }
@@ -424,7 +455,7 @@ class LicenseReleaseController extends Controller implements HasMiddleware
             $base = License::forProduct($product)
                 ->where('is_active', true)
                 ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
-                ->when($release->platforms !== LicenseRelease::PLATFORMS_BOTH, fn ($q) => $q->where('platform', $release->platforms));
+                ->whereIn('platform', $release->platformList());
 
             $release->licenses_covered = (clone $base)
                 ->where(fn ($q) => $q->whereNull('updates_major')->orWhere('updates_major', '>=', $release->major))

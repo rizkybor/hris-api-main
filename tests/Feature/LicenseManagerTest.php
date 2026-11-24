@@ -75,6 +75,7 @@ const LICENSE_TEST_MIGRATIONS = [
     'database/migrations/2026_11_19_000002_create_license_install_links_table.php',
     'database/migrations/2026_11_23_000001_add_windows_license_sequence_to_license_products.php',
     'database/migrations/2026_11_24_000001_add_is_licensed_to_license_products_table.php',
+    'database/migrations/2026_11_24_000002_add_mobile_platforms_to_license_releases_table.php',
 ];
 
 const LICENSE_ACTIONS = ['menu', 'list', 'view', 'create', 'edit', 'delete'];
@@ -3752,4 +3753,50 @@ test('licensing can be switched off only while the app has no licenses, and on a
     License::factory()->create();
     $this->putJson('/api/v1/license-manager/products/occa', ['is_licensed' => false])->assertStatus(422);
     expect(LicenseProduct::findByCode('occa')->is_licensed)->toBeTrue();
+});
+
+test('versions can be for Android (with SDK levels), iOS, or several platforms at once', function () {
+    Sanctum::actingAs($this->admin);
+    $base = '/api/v1/license-manager/products/occa/releases';
+
+    // Android: min / target SDK kept; target below min is refused.
+    $this->postJson($base, occaRelease(['version' => '3.0.0', 'status' => 'draft', 'platforms' => 'android', 'android_min_sdk' => 26, 'android_target_sdk' => 21]))
+        ->assertStatus(422)->assertJsonValidationErrors('android_target_sdk');
+    $android = $this->postJson($base, occaRelease(['version' => '3.0.0', 'status' => 'draft', 'platforms' => 'android', 'android_min_sdk' => 26, 'android_target_sdk' => 35]))
+        ->assertCreated()
+        ->assertJsonPath('data.android_min_sdk', 26)
+        ->assertJsonPath('data.android_target_sdk', 35)
+        ->assertJsonPath('data.needs_file', true)
+        ->assertJsonPath('data.needs_ipa', false)
+        ->json('data.id');
+    // An Android version takes an .apk / .aab, not a .dmg; it can't be published without it.
+    Storage::fake('local');
+    $this->post("{$base}/{$android}/file", ['file' => UploadedFile::fake()->create('occa.dmg', 10)], ['Accept' => 'application/json'])
+        ->assertStatus(422)->assertJsonValidationErrors('file');
+    $this->putJson("{$base}/{$android}", ['status' => 'published', 'released_at' => '2026-12-01'])->assertStatus(422)->assertJsonValidationErrors('status');
+    $this->post("{$base}/{$android}/file", ['file' => UploadedFile::fake()->create('occa.apk', 10)], ['Accept' => 'application/json'])->assertOk();
+
+    // iOS needs the .ipa; SDK fields are dropped when Android is not a platform.
+    $this->postJson($base, occaRelease(['version' => '3.0.1', 'status' => 'draft', 'platforms' => 'ios', 'android_min_sdk' => 26]))
+        ->assertCreated()
+        ->assertJsonPath('data.needs_ipa', true)
+        ->assertJsonPath('data.needs_file', false)
+        ->assertJsonPath('data.android_min_sdk', null);
+
+    // Multiplatform: two or more platforms, no installer required to publish.
+    $this->postJson($base, occaRelease(['version' => '3.1.0', 'platforms' => 'multi', 'target_platforms' => ['android']]))
+        ->assertStatus(422)->assertJsonValidationErrors('target_platforms');
+    $this->postJson($base, occaRelease(['version' => '3.1.0', 'platforms' => 'multi', 'target_platforms' => ['windows', 'android', 'mac'], 'android_min_sdk' => 24]))
+        ->assertCreated()
+        ->assertJsonPath('data.status', 'published')
+        ->assertJsonPath('data.target_platforms', ['mac', 'windows', 'android'])
+        ->assertJsonPath('data.android_min_sdk', 24)
+        ->assertJsonPath('data.needs_file', false)
+        ->assertJsonPath('data.needs_ipa', false);
+
+    // The multiplatform version shows up for each platform it lists.
+    $product = LicenseProduct::findByCode('occa');
+    expect($product->releases()->forPlatform('windows')->pluck('version')->all())->toContain('3.1.0')
+        ->and($product->releases()->forPlatform('ipad')->pluck('version')->all())->not->toContain('3.1.0')
+        ->and($product->releases()->forPlatform('android')->pluck('version')->sort()->values()->all())->toBe(['3.0.0', '3.1.0']);
 });

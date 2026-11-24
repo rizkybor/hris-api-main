@@ -37,7 +37,33 @@ class LicenseRelease extends Model
      * versions are their own rows, since OCCA for Windows has its own
      * release cadence and installer.
      */
-    public const PLATFORMS = [self::PLATFORMS_BOTH, License::PLATFORM_MAC, License::PLATFORM_IPAD, License::PLATFORM_WINDOWS];
+    public const PLATFORM_ANDROID = 'android';
+
+    public const PLATFORM_IOS = 'ios';
+
+    /**
+     * One version for several platforms, listed in target_platforms.
+     */
+    public const PLATFORMS_MULTI = 'multi';
+
+    public const PLATFORMS = [
+        self::PLATFORMS_BOTH, License::PLATFORM_MAC, License::PLATFORM_IPAD, License::PLATFORM_WINDOWS,
+        self::PLATFORM_ANDROID, self::PLATFORM_IOS, self::PLATFORMS_MULTI,
+    ];
+
+    /**
+     * Platforms a multiplatform version can list.
+     */
+    public const TARGET_PLATFORMS = [
+        License::PLATFORM_MAC, License::PLATFORM_IPAD, License::PLATFORM_WINDOWS, self::PLATFORM_ANDROID, self::PLATFORM_IOS,
+    ];
+
+    /**
+     * Android API levels accepted for minimum / target SDK.
+     */
+    public const ANDROID_SDK_MIN = 16;
+
+    public const ANDROID_SDK_MAX = 40;
 
     /**
      * Installers are stored on this private disk under
@@ -59,6 +85,10 @@ class LicenseRelease extends Model
     public const FILE_EXTENSIONS = ['dmg', 'zip', 'pkg', 'msi', 'msix', 'exe'];
 
     public const WINDOWS_FILE_EXTENSIONS = ['msi', 'msix', 'exe'];
+
+    public const MAC_FILE_EXTENSIONS = ['dmg', 'zip', 'pkg'];
+
+    public const ANDROID_FILE_EXTENSIONS = ['apk', 'aab'];
 
     /**
      * The iPad installer: an Ad Hoc signed .ipa, installed over the air
@@ -100,6 +130,9 @@ class LicenseRelease extends Model
         'patch',
         'build',
         'platforms',
+        'target_platforms',
+        'android_min_sdk',
+        'android_target_sdk',
         'title',
         'status',
         'released_at',
@@ -131,6 +164,9 @@ class LicenseRelease extends Model
         'file_uploaded_at' => 'datetime',
         'ipa_size' => 'integer',
         'ipa_meta' => 'array',
+        'target_platforms' => 'array',
+        'android_min_sdk' => 'integer',
+        'android_target_sdk' => 'integer',
         'ipa_uploaded_at' => 'datetime',
         'changes' => 'array',
     ];
@@ -193,25 +229,82 @@ class LicenseRelease extends Model
      */
     public function scopeForPlatform(Builder $query, ?string $platform): Builder
     {
-        return match ($platform) {
-            null, '' => $query,
-            License::PLATFORM_WINDOWS => $query->where('platforms', License::PLATFORM_WINDOWS),
-            default => $query->whereIn('platforms', [self::PLATFORMS_BOTH, $platform]),
+        if ($platform === null || $platform === '') {
+            return $query;
+        }
+        // Mac and iPad include the shared Mac + iPad line; every platform
+        // includes the multiplatform versions that list it.
+        $own = in_array($platform, [License::PLATFORM_MAC, License::PLATFORM_IPAD], true)
+            ? [self::PLATFORMS_BOTH, $platform]
+            : [$platform];
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereIn('platforms', $own)
+            ->orWhere(fn (Builder $m) => $m->where('platforms', self::PLATFORMS_MULTI)->whereJsonContains('target_platforms', $platform)));
+    }
+
+    /**
+     * The platforms this version runs on ("both" = Mac and iPad).
+     *
+     * @return array<int, string>
+     */
+    public function platformList(): array
+    {
+        return match ($this->platforms) {
+            self::PLATFORMS_BOTH => [License::PLATFORM_MAC, License::PLATFORM_IPAD],
+            self::PLATFORMS_MULTI => array_values($this->target_platforms ?? []),
+            default => [$this->platforms],
+        };
+    }
+
+    public function isMultiplatform(): bool
+    {
+        return $this->platforms === self::PLATFORMS_MULTI;
+    }
+
+    /**
+     * Android settings apply when Android is one of its platforms.
+     */
+    public function hasAndroid(): bool
+    {
+        return in_array(self::PLATFORM_ANDROID, $this->platformList(), true);
+    }
+
+    /**
+     * Allowed extensions for the installer file slot: the Mac disk image,
+     * the Windows installer, the Android package, or for a multiplatform
+     * version any of them (one file, e.g. a .zip bundle).
+     *
+     * @return array<int, string>
+     */
+    public function fileExtensions(): array
+    {
+        return match ($this->platforms) {
+            License::PLATFORM_WINDOWS => self::WINDOWS_FILE_EXTENSIONS,
+            self::PLATFORM_ANDROID => self::ANDROID_FILE_EXTENSIONS,
+            self::PLATFORMS_MULTI => array_values(array_unique(array_merge(self::MAC_FILE_EXTENSIONS, self::WINDOWS_FILE_EXTENSIONS, self::ANDROID_FILE_EXTENSIONS))),
+            default => self::MAC_FILE_EXTENSIONS,
+        };
+    }
+
+    /**
+     * Whether the stored installer file is for a license of this platform
+     * (the Mac .dmg for Mac keys, the .msi for Windows keys; a
+     * multiplatform file for any platform it lists).
+     */
+    public function fileServesPlatform(string $platform): bool
+    {
+        return match ($this->platforms) {
+            self::PLATFORMS_MULTI => in_array($platform, $this->platformList(), true),
+            License::PLATFORM_WINDOWS => $platform === License::PLATFORM_WINDOWS,
+            License::PLATFORM_MAC, self::PLATFORMS_BOTH => $platform === License::PLATFORM_MAC,
+            default => false,
         };
     }
 
     public function isWindows(): bool
     {
         return $this->platforms === License::PLATFORM_WINDOWS;
-    }
-
-    /**
-     * The license platform whose key may download the stored installer:
-     * Windows for a Windows version, Mac for every other (the .dmg).
-     */
-    public function installerPlatform(): string
-    {
-        return $this->isWindows() ? License::PLATFORM_WINDOWS : License::PLATFORM_MAC;
     }
 
     /**
@@ -234,11 +327,13 @@ class LicenseRelease extends Model
 
     /**
      * A Mac (or shared) version needs its Mac installer, a Windows version
-     * its MSI / MSIX, before it is published.
+     * its MSI / MSIX, an Android version its APK / AAB, before it is
+     * published. A multiplatform version has no required installer (one
+     * file can't cover every platform it lists).
      */
     public function needsFile(): bool
     {
-        return $this->platforms !== License::PLATFORM_IPAD;
+        return in_array($this->platforms, [self::PLATFORMS_BOTH, License::PLATFORM_MAC, License::PLATFORM_WINDOWS, self::PLATFORM_ANDROID], true);
     }
 
     public function hasIpa(): bool
@@ -252,7 +347,7 @@ class LicenseRelease extends Model
      */
     public function needsIpa(): bool
     {
-        return in_array($this->platforms, [self::PLATFORMS_BOTH, License::PLATFORM_IPAD], true);
+        return in_array($this->platforms, [self::PLATFORMS_BOTH, License::PLATFORM_IPAD, self::PLATFORM_IOS], true);
     }
 
     public function kind(): string
