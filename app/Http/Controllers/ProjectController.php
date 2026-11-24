@@ -65,7 +65,8 @@ class ProjectController extends Controller implements HasMiddleware
     {
         $request = $request->validate([
             'search' => 'nullable|string',
-            'status' => 'nullable|string|in:'.implode(',', array_column(ProjectStatus::cases(), 'value')),
+            // A project status, or "overdue" (active and past its end date).
+            'status' => 'nullable|string|in:'.implode(',', [...array_column(ProjectStatus::cases(), 'value'), 'overdue']),
             'row_per_page' => 'required|integer',
         ]);
 
