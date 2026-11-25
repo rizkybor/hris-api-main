@@ -59,8 +59,8 @@ class ScreeningSubmitted extends Notification implements ShouldQueue
             ->line('Kebutuhan: '.$this->needs())
             ->line('Email: '.self::plain($s->email ?: '-').' · Telepon/WA: '.self::plain($s->phone ?: '-'))
             ->line('Bahasa form: '.strtoupper($s->lang))
-            ->action('Buka di HRIS', $this->url())
-            ->line('Rekomendasi layanan dan estimasi harga sudah disiapkan di HRIS (hanya untuk tim internal).');
+            ->action('Buka di TEMPO', $this->url())
+            ->line('Rekomendasi layanan dan estimasi harga sudah disiapkan di TEMPO (hanya untuk tim internal).');
     }
 
     public function toArray(object $notifiable): array
