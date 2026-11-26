@@ -34,6 +34,9 @@ class Project extends Model
         'budget',
         'warranty_period_months',
         'retention_period_months',
+        'retention_start_date',
+        'retention_end_date',
+        'uat_rounds_planned',
         'project_leader_id',
         'team_assignment_mode',
         'client_id',
@@ -47,9 +50,38 @@ class Project extends Model
         'additional_access',
     ];
 
+    /**
+     * completed_at follows the status, however it is changed (the Edit form
+     * or the Mark as completed / Reactivate buttons): set when the project
+     * becomes completed, cleared when it leaves completed.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Project $project) {
+            // The retention length in months follows the retention dates.
+            if ($project->isDirty(['retention_start_date', 'retention_end_date'])) {
+                $project->retention_period_months = $project->retention_start_date && $project->retention_end_date
+                    ? max(1, (int) round($project->retention_start_date->floatDiffInMonths($project->retention_end_date->copy()->addDay())))
+                    : null;
+            }
+            if (! $project->isDirty('status')) {
+                return;
+            }
+            $completed = $project->status === 'completed';
+            if ($completed && ! $project->completed_at) {
+                $project->completed_at = now();
+            } elseif (! $completed) {
+                $project->completed_at = null;
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
+            'completed_at' => 'datetime',
+            'retention_start_date' => 'date',
+            'retention_end_date' => 'date',
             'budget' => 'decimal:2',
             'additional_access' => 'array',
         ];
@@ -167,6 +199,14 @@ class Project extends Model
     public function documents()
     {
         return $this->hasMany(ProjectDocument::class);
+    }
+
+    /**
+     * UAT rounds held with the client (see uat_rounds_planned); order by round.
+     */
+    public function uatSessions()
+    {
+        return $this->hasMany(ProjectUatSession::class);
     }
 
     /**

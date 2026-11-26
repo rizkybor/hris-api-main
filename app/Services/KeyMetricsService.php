@@ -140,7 +140,10 @@ class KeyMetricsService
     {
         $active = DB::table('projects')->where('status', 'active')->whereNull('deleted_at');
         $count = (clone $active)->count();
-        $overdue = (clone $active)->whereNotNull('end_date')->whereDate('end_date', '<', $this->today->toDateString())->count();
+        $overdue = (clone $active)->whereNotNull('end_date')->whereDate('end_date', '<', $this->today->toDateString())
+            // In (or past) the retention phase: development is over.
+            ->where(fn ($q) => $q->whereNull('retention_start_date')->orWhereDate('retention_start_date', '>', $this->today->toDateString()))
+            ->count();
         $new = (clone $active)->where('created_at', '>=', $this->today->copy()->startOfMonth()->utc())->count();
 
         return [

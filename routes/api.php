@@ -71,6 +71,7 @@ use App\Http\Controllers\ProjectDocumentController;
 use App\Http\Controllers\ProjectRateSettingController;
 use App\Http\Controllers\ProjectTaskCommentController;
 use App\Http\Controllers\ProjectTaskController;
+use App\Http\Controllers\ProjectUatController;
 use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\PublicScreeningController;
 use App\Http\Controllers\PurchaseOrderController;
@@ -204,6 +205,13 @@ Route::prefix('v1')
 
             // Project Documents
             Route::apiResource('project-documents', ProjectDocumentController::class);
+
+            // UAT rounds agreed with the client and each round held
+            Route::get('projects/{projectId}/uat', [ProjectUatController::class, 'index']);
+            Route::put('projects/{projectId}/uat/plan', [ProjectUatController::class, 'updatePlan']);
+            Route::post('projects/{projectId}/uat/sessions', [ProjectUatController::class, 'store']);
+            Route::put('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'update']);
+            Route::delete('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'destroy']);
 
             // Project Cash Ledger (debit/credit against the project's budget)
             Route::apiResource('project-cash-transactions', ProjectCashTransactionController::class)->except(['show']);
