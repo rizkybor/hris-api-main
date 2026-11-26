@@ -16,6 +16,21 @@ class PdfMerger
      */
     public function merge(array $documents, string $title = ''): string
     {
+        return $this->join(array_map(fn ($bytes) => StreamReader::createByString($bytes), $documents), $title);
+    }
+
+    /**
+     * Same, from files on disk (large sets: the bytes never all sit in memory).
+     *
+     * @param  list<string>  $paths
+     */
+    public function mergeFiles(array $paths, string $title = ''): string
+    {
+        return $this->join($paths, $title);
+    }
+
+    private function join(array $sources, string $title): string
+    {
         $pdf = new Fpdi;
         $pdf->SetAutoPageBreak(false);
         if ($title !== '') {
@@ -23,8 +38,8 @@ class PdfMerger
         }
         $pdf->SetCreator('OPUS · Jendela Cakra Digital', true);
 
-        foreach ($documents as $bytes) {
-            $pages = $pdf->setSourceFile(StreamReader::createByString($bytes));
+        foreach ($sources as $source) {
+            $pages = $pdf->setSourceFile($source);
             for ($page = 1; $page <= $pages; $page++) {
                 $template = $pdf->importPage($page);
                 $size = $pdf->getTemplateSize($template);

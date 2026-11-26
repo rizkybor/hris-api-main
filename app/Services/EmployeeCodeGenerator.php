@@ -41,7 +41,7 @@ class EmployeeCodeGenerator
 
     public function generate(string $employmentType, ?string $hireDate = null): string
     {
-        $year = $hireDate ? Carbon::parse($hireDate)->format('y') : now()->format('y');
+        $year = $hireDate ? Carbon::parse($hireDate)->format('y') : now('Asia/Jakarta')->format('y');
         $statusLetter = self::STATUS_LETTERS[$employmentType] ?? 'F';
         $statusNumeric = self::STATUS_NUMERIC[$employmentType] ?? 1;
 

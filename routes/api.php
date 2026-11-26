@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnalyticsSourceController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\AnnualArchiveController;
 use App\Http\Controllers\AssetMaintenanceLogController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceSettingController;
@@ -596,6 +597,9 @@ Route::prefix('v1')
 
             // Document Letters: Letters (Surat)
             Route::get('letters/{id}/export-pdf', [LetterController::class, 'exportPdf']);
+            // Annual archive: every document of a type in one year as one PDF
+            Route::get('annual-archive/options', [AnnualArchiveController::class, 'options']);
+            Route::post('annual-archive/export', [AnnualArchiveController::class, 'export'])->middleware('throttle:6,1');
             Route::post('letters/{id}/cancel', [LetterController::class, 'cancel']);
             Route::apiResource('letters', LetterController::class);
 

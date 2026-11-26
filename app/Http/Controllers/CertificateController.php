@@ -114,7 +114,7 @@ class CertificateController extends Controller implements HasMiddleware
                 $settings->company_code,
                 $validated['category_code'],
                 $validated['program_code'],
-                now(),
+                $this->numberService->today(),
                 $settings->number_format
             );
 
