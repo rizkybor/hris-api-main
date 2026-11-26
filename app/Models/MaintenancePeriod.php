@@ -60,7 +60,8 @@ class MaintenancePeriod extends Model
     {
         $adjusted = round((float) ($this->adjustments_sum_hours ?? $this->adjustments()->sum('hours')), 2);
         $used = round((float) ($this->logs_sum_hours ?? $this->logs()->sum('hours')), 2);
-        $total = round($this->quota_hours + $this->carried_hours + $adjusted, 2);
+        // Never below 0 (older data may hold a too-large deduction).
+        $total = round(max(0, $this->quota_hours + $this->carried_hours + $adjusted), 2);
 
         return [
             'quota' => $this->quota_hours,

@@ -33,7 +33,7 @@ class MeetingNoteController extends Controller implements HasMiddleware
      * list is the server-side source of truth the controller re-checks on
      * every action, so it holds even if a role's permissions drift.
      */
-    private const ALLOWED_ROLES = ['manager', 'operational_director', 'hr', 'finance'];
+    public const ALLOWED_ROLES = ['manager', 'operational_director', 'hr', 'finance'];
 
     private const RELATIONS = ['creator.employeeProfile', 'updater', 'attendees.user', 'attachments'];
 

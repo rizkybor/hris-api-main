@@ -59,6 +59,25 @@ class DocumentNumberService
         return ($sequence->last_number ?? 0) + 1;
     }
 
+    /** Company time zone: numbering follows the date in Indonesia (WIB). */
+    public const TIMEZONE = 'Asia/Jakarta';
+
+    /** Today in WIB (the app runs in UTC; 1 Jan 00:00-07:00 WIB is still 31 Dec UTC). */
+    public function today(): Carbon
+    {
+        return Carbon::now(self::TIMEZONE);
+    }
+
+    /**
+     * The date as seen in WIB, so the year (and with it the sequence, which
+     * restarts at 001 every year) never comes from a UTC clock. A date-only
+     * value (midnight UTC) stays on the same day.
+     */
+    public function local(Carbon $date): Carbon
+    {
+        return $date->copy()->setTimezone(self::TIMEZONE);
+    }
+
     public function romanMonth(int $month): string
     {
         return self::ROMAN_MONTHS[$month] ?? '';
@@ -69,6 +88,7 @@ class DocumentNumberService
      */
     public function generatePoNumber(string $type, Carbon $date): string
     {
+        $date = $this->local($date);
         $seq = $this->nextSequence('po', '', (int) $date->year);
 
         return sprintf('PO/%03d/%s/OPS/JCD/%s/%d', $seq, $type, $this->romanMonth($date->month), $date->year);
@@ -79,6 +99,7 @@ class DocumentNumberService
      */
     public function generateInvoiceNumber(string $clientCode, Carbon $date): string
     {
+        $date = $this->local($date);
         $year2 = $date->format('y');
         $seq = $this->nextSequence('invoice', '', (int) $date->year);
 
@@ -90,6 +111,7 @@ class DocumentNumberService
      */
     public function generateReceiptNumber(string $clientCode, Carbon $date): string
     {
+        $date = $this->local($date);
         $year2 = $date->format('y');
         $seq = $this->nextSequence('receipt', '', (int) $date->year);
 
@@ -102,6 +124,7 @@ class DocumentNumberService
      */
     public function generateLetterNumber(string $letterCode, string $type, string $divisionCode, Carbon $date): array
     {
+        $date = $this->local($date);
         $year = (int) $date->year;
         $seq = $this->nextSequence('letter', strtoupper($letterCode), $year);
 
@@ -123,6 +146,7 @@ class DocumentNumberService
      */
     public function generateNotaDinasNumber(Carbon $date): array
     {
+        $date = $this->local($date);
         $year = (int) $date->year;
         $seq = $this->nextSequence('nota_dinas', '', $year);
 
@@ -138,6 +162,7 @@ class DocumentNumberService
      */
     public function generateMeetingNoteNumber(Carbon $date): array
     {
+        $date = $this->local($date);
         $year = (int) $date->year;
         $seq = $this->nextSequence('meeting_note', '', $year);
 
@@ -167,6 +192,7 @@ class DocumentNumberService
         Carbon $date,
         ?string $format = null
     ): array {
+        $date = $this->local($date);
         $year = (int) $date->year;
         $monthRoman = $this->romanMonth($date->month);
         $scopeKey = $this->certificateScopeKey($companyCode, $categoryCode, $programCode, $monthRoman);
@@ -187,6 +213,7 @@ class DocumentNumberService
         Carbon $date,
         ?string $format = null
     ): array {
+        $date = $this->local($date);
         $year = (int) $date->year;
         $monthRoman = $this->romanMonth($date->month);
         $scopeKey = $this->certificateScopeKey($companyCode, $categoryCode, $programCode, $monthRoman);

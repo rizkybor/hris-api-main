@@ -25,6 +25,7 @@ use App\Models\Invoice;
 use App\Models\PaymentReceipt;
 use App\Models\Payroll;
 use App\Models\Project;
+use App\Models\StaffRaportReview;
 use App\Models\Subscription;
 use App\Services\DocumentReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -65,6 +66,9 @@ class ReportController extends Controller implements HasMiddleware
         return [
             new Middleware(PermissionMiddleware::using(['report-menu|report-view']), only: ['attendance', 'payroll', 'employee', 'finance', 'pph21', 'ppn', 'project', 'pph23', 'subscription', 'maintenance', 'documents']),
             new Middleware(PermissionMiddleware::using(['report-export']), only: ['export']),
+            // Maintenance contracts also need Maintenance access (report-view
+            // alone, e.g. HR, must not read every client's hours and balance).
+            new Middleware(PermissionMiddleware::using(['maintenance-menu|maintenance-list']), only: ['maintenance']),
             new Middleware(PermissionMiddleware::using(['staff-raport-menu|staff-raport-list']), only: ['staffRaport', 'staffRaportDetail']),
             new Middleware(PermissionMiddleware::using(['staff-raport-export']), only: ['staffRaportPdf']),
             new Middleware(PermissionMiddleware::using(['staff-raport-review']), only: ['saveStaffRaportReview']),
@@ -328,9 +332,9 @@ class ReportController extends Controller implements HasMiddleware
             $match = ['employee_id' => $employee->id, 'reviewer_id' => $request->user()->id];
 
             if ($text === '') {
-                \App\Models\StaffRaportReview::where($match)->delete();
+                StaffRaportReview::where($match)->delete();
             } else {
-                \App\Models\StaffRaportReview::updateOrCreate($match, ['review' => $text]);
+                StaffRaportReview::updateOrCreate($match, ['review' => $text]);
             }
 
             return ResponseHelper::jsonResponse(true, 'Review Saved Successfully', $this->reportRepository->staffRaportReviews($employee->id), 200);
@@ -443,6 +447,10 @@ class ReportController extends Controller implements HasMiddleware
             ? ($request->query('source') === 'operational_cost' ? 'OperationalCost' : 'CompanyCashBook')
             : str_replace(' ', '', ucwords(str_replace('_', ' ', $type)));
         $filename = 'Report_'.$label.'_'.now('Asia/Jakarta')->format('Ymd_His').'.xlsx';
+
+        if ($type === 'maintenance' && ! ($request->user()?->can('maintenance-menu') || $request->user()?->can('maintenance-list'))) {
+            return ResponseHelper::jsonResponse(false, 'You do not have access to maintenance contracts.', null, 403);
+        }
 
         try {
             $export = match ($type) {

@@ -31,6 +31,7 @@ class Letter extends Model
         'subject',
         'recipient',
         'employee_id',
+        'project_id',
         'body',
         'items',
         'signatory_name',
@@ -66,6 +67,12 @@ class Letter extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** The project a cover letter (Surat Pengantar) was written for. */
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
     }
 
     public function employee()

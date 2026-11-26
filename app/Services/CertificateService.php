@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\TaskStatus;
 use App\Models\Certificate;
 use App\Models\CertificateSetting;
-use App\Enums\TaskStatus;
 use App\Models\CertificateTemplate;
 use App\Models\ProjectTask;
 use App\Models\StaffTaskAssignee;
@@ -42,7 +42,8 @@ class CertificateService
         int $userId,
         ?string $batchId = null
     ): Certificate {
-        $date = now();
+        // WIB, so the number's year/month (and sequence reset) follow Indonesia.
+        $date = $this->numberService->today();
 
         $numberData = $this->numberService->generateCertificateNumber(
             $settings->company_code,

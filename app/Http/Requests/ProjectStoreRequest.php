@@ -30,6 +30,9 @@ class ProjectStoreRequest extends FormRequest
             'budget' => ['nullable', 'numeric', 'min:0'],
             'warranty_period_months' => ['nullable', 'integer', 'min:0'],
             'retention_period_months' => ['nullable', 'integer', 'min:0'],
+            // Retention phase after development (both dates or neither).
+            'retention_start_date' => ['nullable', 'date', 'required_with:retention_end_date', 'after_or_equal:start_date'],
+            'retention_end_date' => ['nullable', 'date', 'required_with:retention_start_date', 'after_or_equal:retention_start_date'],
             'project_leader_id' => ['nullable', 'exists:employee_profiles,id', new NotProtectedEmployee('Project Leader')],
             'client_id' => ['nullable', 'exists:clients,id'],
             // "team": exactly one Team supplies both the leader and the
@@ -68,6 +71,8 @@ class ProjectStoreRequest extends FormRequest
             'budget' => 'Budget',
             'warranty_period_months' => 'Warranty Period',
             'retention_period_months' => 'Retention Period',
+            'retention_start_date' => 'Retention Start Date',
+            'retention_end_date' => 'Retention End Date',
             'project_leader_id' => 'Project Leader',
             'client_id' => 'Client',
             'team_assignment_mode' => 'Team Assignment Mode',

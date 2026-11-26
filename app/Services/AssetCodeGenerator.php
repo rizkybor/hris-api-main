@@ -22,7 +22,7 @@ class AssetCodeGenerator
 {
     public function generate(string $categoryCode, ?string $purchaseDate = null): string
     {
-        $year = $purchaseDate ? Carbon::parse($purchaseDate)->format('y') : now()->format('y');
+        $year = $purchaseDate ? Carbon::parse($purchaseDate)->format('y') : now('Asia/Jakarta')->format('y');
         $prefix = "JCD-{$categoryCode}-{$year}-";
 
         return $prefix.str_pad((string) $this->nextSequence($prefix), 4, '0', STR_PAD_LEFT);
