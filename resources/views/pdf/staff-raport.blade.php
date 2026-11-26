@@ -2,245 +2,185 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <style>
-        /* Same letterhead-background approach as pdf/letter.blade.php --
-           see that file for the full reasoning behind the @page margin /
-           negative-offset / page-1-clearance trio. Uses the "secondary"
-           template per spec, not the template-picker used by Letters.
-
-           Left/right margins match official-memo.blade.php's 25mm side
-           margins (Official Memo / Purchase Order both use this same
-           template-letter-secondary.png background, per spec). Top/bottom
-           are measured directly off the image itself (checked which pixel
-           rows aren't blank): the header graphic (logo/name/tagline) ends
-           at ~42.2mm from the top, and the footer graphic (address block)
-           starts at ~277mm, i.e. ~20mm from the bottom -- so bottom stays
-           at 24mm (not Official Memo's narrower 12mm) since this report's
-           tables regularly run long enough to actually reach that margin,
-           unlike a typical memo. */
-        @page { margin: 48mm 25mm 24mm 25mm; }
-        .page { position: relative; z-index: 1; }
-        .letterhead { position: fixed; top: -48mm; left: -25mm; width: 210mm; height: 297mm; z-index: -1; }
-
-        /* A table row that straddles a page break renders its cells'
-           borders/background split awkwardly across the gap -- keep each
-           row whole, letting the break fall between rows instead. */
-        table.data-table tr { page-break-inside: avoid; }
-
-        body { font-family: "Helvetica", "Arial", sans-serif; color: #1f2937; font-size: 10.5pt; }
-
-        .header-row { margin-bottom: 6mm; }
-
-        h1.title { font-size: 15.5pt; margin: 0 0 1mm 0; color: #070b30; }
-        .subtitle { font-size: 9.5pt; color: #6b7280; margin: 0 0 4mm 0; }
-
-        .employee-name { font-size: 13.5pt; font-weight: bold; margin: 0; }
-        .employee-meta { font-size: 9.5pt; color: #4b5563; margin: 1mm 0 0 0; }
-
-        /* "Helvetica"/"Arial" resolve to dompdf's core PDF fonts, which
-           don't cover the Unicode star glyph (renders as tofu boxes) --
-           DejaVu Sans is dompdf's bundled font with full Unicode coverage,
-           so it's forced here specifically for the star characters. */
-        .stars { font-family: "DejaVu Sans", sans-serif; font-size: 15.5pt; letter-spacing: 1px; color: #f59e0b; margin: 2mm 0 0 0; }
-        .stars .empty { color: #d1d5db; }
-        .score-label { font-size: 9.5pt; color: #6b7280; }
-
-        /* A real table with spacer cells: gives the cards a gap between them
-           while the outer edges stay flush with the content width. */
-        .summary-row { width: 100%; border-collapse: collapse; margin: 4mm 0 6mm 0; }
-        .summary-row td { vertical-align: top; padding: 0; border: none; }
-        .summary-row td.gap { width: 4mm; }
-        .summary-card { height: 13mm; padding: 3mm; border: 1px solid #dcdedd; border-radius: 4px; }
-        .summary-card .value { font-size: 14.5pt; font-weight: bold; color: #070b30; }
-        .summary-card .label { font-size: 8.5pt; color: #6b7280; }
-
-        table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
-        table.data-table th, table.data-table td { border: 1px solid #94a3b8; padding: 3px 6px; font-size: 9.5pt; }
-        table.data-table th { background-color: #eef2ff; font-weight: bold; text-align: left; }
-
-        h3.section-title { font-size: 11.5pt; margin: 0 0 2mm 0; color: #1f2937; border-bottom: 1px solid #dcdedd; padding-bottom: 1mm; }
-            /* Counts and scores read better centered under their headers. */
-        .data-table.counts th, .data-table.counts td, .data-table .c { text-align: center; }
-    </style>
+    @include('pdf.partials.report-style')
 </head>
 <body>
-    <img class="letterhead" src="{{ public_path('images/template-letter-secondary.png') }}">
+{{-- Keep to the multi-line PHP block form in this view: Blade mis-parses a
+     file that mixes it with the one-line form. --}}
+@php
+    $fmt = fn ($date, $pattern = 'd M Y') => $date ? \Carbon\Carbon::parse($date)->locale('id')->translatedFormat($pattern) : '—';
+    $employmentLabel = ['full_time' => 'Karyawan tetap', 'contract' => 'Kontrak', 'part_time' => 'Paruh waktu', 'intern' => 'Magang'];
+    // Same 0-5 scale the app shows as stars, in words.
+    $ratingLabel = [5 => 'Istimewa', 4 => 'Sangat baik', 3 => 'Baik', 2 => 'Cukup', 1 => 'Perlu perbaikan'];
+    $roleLabel = ['manager' => 'Manager', 'operational_director' => 'Direktur Operasional', 'finance' => 'Finance Manager', 'hr' => 'HR'];
+    $reviewStatus = ['draft' => 'Draf', 'submitted' => 'Diajukan', 'completed' => 'Selesai', 'acknowledged' => 'Dikonfirmasi'];
+    $periodName = ['This Month' => 'Bulan ini', 'This Week' => 'Minggu ini', 'All Time' => 'Seluruh masa kerja', 'Tenure' => 'Masa kerja'][$period_label] ?? $period_label;
+    $absent = $attendance['absent'] + $attendance['no_record'];
+    $excused = $attendance['sick_leave'] + $attendance['leave'];
+    $section = 0;
+@endphp
 
-    <div class="page">
-        <h1 class="title">Staff Performance Raport</h1>
-        <p class="subtitle">
-            Period: {{ $period_label }} ({{ \Carbon\Carbon::parse($period['start_date'])->translatedFormat('d M Y') }} &ndash; {{ \Carbon\Carbon::parse($period['end_date'])->translatedFormat('d M Y') }})
-            &bull; Generated {{ $generated_at->translatedFormat('d M Y H:i') }}
+    @include('pdf.partials.report-masthead', ['docType' => 'Laporan Kinerja Karyawan', 'docDate' => $generated_at])
+
+    <p class="doc-title">{{ $employee['name'] }}</p>
+    <p class="doc-subtitle">
+        {{ $employee['job_title'] ?: 'Karyawan' }}@if($employee['team']) &middot; {{ $employee['team'] }}@endif
+    </p>
+    <p class="doc-meta">
+        Periode <strong>{{ $periodName }}</strong> ({{ $fmt($period['start_date']) }} – {{ $fmt($period['end_date']) }})
+        &nbsp;&middot;&nbsp; No. karyawan <strong>{{ $employee['code'] ?: '—' }}</strong>
+    </p>
+    @if(! empty($employee['access_ended_on']))
+        <p class="doc-meta bad">
+            Akses berakhir {{ $fmt($employee['access_ended_on'], 'd F Y') }} ({{ $employee['access_end_reason'] === 'probation' ? 'masa percobaan selesai' : 'kontrak selesai' }}).
         </p>
-        @if(!empty($employee['access_ended_on']))
-            <p class="subtitle" style="color: #b42318;">
-                Access ended {{ \Carbon\Carbon::parse($employee['access_ended_on'])->translatedFormat('d M Y') }}
-                ({{ $employee['access_end_reason'] === 'probation' ? 'probation period ended' : 'contract ended' }})
-            </p>
-        @endif
+    @endif
 
-        <div class="header-row">
-            <p class="employee-name">{{ $employee['name'] }}</p>
-            <p class="employee-meta">
-                {{ $employee['code'] }}
-                @if($employee['job_title']) &bull; {{ $employee['job_title'] }} @endif
-                @if($employee['team']) &bull; {{ $employee['team'] }} @endif
-            </p>
-            <p class="employee-meta">
-                {{ ucfirst(str_replace('_', ' ', $employee['employment_type'] ?? '-')) }}
-                @if($employee['start_date']) &bull; Joined {{ \Carbon\Carbon::parse($employee['start_date'])->translatedFormat('d M Y') }} @endif
-            </p>
-            <div class="stars">
-                @for($i = 1; $i <= 5; $i++)
-                    <span class="{{ $i <= $stars ? '' : 'empty' }}">&#9733;</span>
-                @endfor
-                <span class="score-label">&nbsp;{{ $overall_score !== null ? $overall_score.'%' : 'No data' }}</span>
-            </div>
-        </div>
+    {{-- Ringkasan --}}
+    <h2><span class="n">{{ ++$section }}.</span>Ringkasan</h2>
+    <table class="figures">
+        <tr>
+            <td style="width: 34%;">
+                <p class="figure">{{ $overall_score !== null ? $overall_score.'%' : '—' }}</p>
+                <p class="figure-label">Skor keseluruhan{{ $overall_score !== null && isset($ratingLabel[$stars]) ? ' · '.$ratingLabel[$stars] : '' }}</p>
+            </td>
+            <td style="width: 33%;">
+                <p class="figure">{{ $attendance_rate !== null ? $attendance_rate.'%' : '—' }}</p>
+                <p class="figure-label">Kehadiran ({{ $attendance['total'] }} hari kerja dinilai)</p>
+            </td>
+            <td style="width: 33%;">
+                <p class="figure">{{ $task_completion_rate !== null ? $task_completion_rate.'%' : '—' }}</p>
+                <p class="figure-label">Penyelesaian tugas ({{ $tasks['done'] }} dari {{ $tasks['total'] }})</p>
+            </td>
+        </tr>
+    </table>
+    <div class="bar"><div style="width: {{ max(0, min(100, (int) ($overall_score ?? 0))) }}%;"></div></div>
 
-        <table class="summary-row">
+    <table class="facts" style="margin-top: 5mm;">
+        <tr><td class="k">Jabatan</td><td class="v">{{ $employee['job_title'] ?: '—' }}</td></tr>
+        <tr><td class="k">Tim</td><td class="v">{{ $employee['team'] ?: '—' }}</td></tr>
+        <tr><td class="k">Status karyawan</td><td class="v">{{ $employmentLabel[$employee['employment_type'] ?? ''] ?? ucfirst(str_replace('_', ' ', $employee['employment_type'] ?? '—')) }}</td></tr>
+        <tr><td class="k">Bergabung</td><td class="v">{{ $fmt($employee['start_date'], 'd F Y') }}</td></tr>
+    </table>
+
+    {{-- Kehadiran --}}
+    <h2><span class="n">{{ ++$section }}.</span>Kehadiran</h2>
+    <table class="data attendance">
+        <thead>
             <tr>
-                <td style="width: 32%;"><div class="summary-card">
-                    <div class="value">{{ $attendance_rate !== null ? $attendance_rate.'%' : '-' }}</div>
-                    <div class="label">Attendance ({{ $attendance['total'] }} working days scored)</div>
-                </div></td>
-                <td class="gap"></td>
-                <td style="width: 32%;"><div class="summary-card">
-                    <div class="value">{{ $task_completion_rate !== null ? $task_completion_rate.'%' : '-' }}</div>
-                    <div class="label">Task Completion ({{ $tasks['done'] }}/{{ $tasks['total'] }} tasks due)</div>
-                </div></td>
-                <td class="gap"></td>
-                <td style="width: 32%;"><div class="summary-card">
-                    <div class="value">{{ $overall_score !== null ? $overall_score.'%' : '-' }}</div>
-                    <div class="label">Overall Score</div>
-                </div></td>
+                <th class="c" style="width: 14.28%;">Hari kerja</th>
+                <th class="c" style="width: 14.28%;">Tepat waktu</th>
+                <th class="c" style="width: 14.28%;">Remote</th>
+                <th class="c" style="width: 14.28%;">Terlambat</th>
+                <th class="c" style="width: 14.28%;">Tidak hadir</th>
+                <th class="c" style="width: 14.28%;">Sakit / cuti</th>
+                <th class="c" style="width: 14.28%;">Libur</th>
             </tr>
-        </table>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="c">{{ $attendance['working_days'] }}</td>
+                <td class="c">{{ $attendance['present'] }}</td>
+                <td class="c">{{ $attendance['remote'] }}</td>
+                <td class="c {{ $attendance['late'] ? 'warn' : '' }}">{{ $attendance['late'] }}@if($attendance['late'])<br><span class="small muted">{{ $attendance['late_minutes'] }} menit</span>@endif</td>
+                <td class="c {{ $absent ? 'bad' : '' }}">{{ $absent }}</td>
+                <td class="c">{{ $excused }}</td>
+                <td class="c">{{ $attendance['holidays'] }}</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="note">
+        Penilaian per hari kerja: tepat waktu atau remote 100; terlambat hingga 15 menit 90, 16–60 menit 75, lebih dari 60 menit 50; tidak hadir 0.
+        Sakit, cuti yang disetujui, dan hari libur tidak dihitung.
+        @if($tasks['staff_done_late']) {{ $tasks['staff_done_late'] }} tugas staf diselesaikan melewati tenggat.@endif
+    </p>
 
-        <h3 class="section-title">Attendance Breakdown</h3>
-        <table class="data-table counts">
+    {{-- Tugas --}}
+    <h2><span class="n">{{ ++$section }}.</span>Tugas yang Diselesaikan</h2>
+    @if(count($completed_tasks) > 0)
+        <table class="data">
             <thead>
                 <tr>
-                    <th>Working Days</th>
-                    <th>On Time</th>
-                    <th>Remote</th>
-                    <th>Late</th>
-                    <th>Absent / No Check-in</th>
-                    <th>Sick / Leave</th>
-                    <th>Holidays</th>
+                    <th style="width: 7%;">No</th>
+                    <th style="width: 55%;">Tugas</th>
+                    <th style="width: 20%;">Sumber</th>
+                    <th style="width: 18%;">Tenggat</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>{{ $attendance['working_days'] }}</td>
-                    <td>{{ $attendance['present'] }}</td>
-                    <td>{{ $attendance['remote'] }}</td>
-                    <td>{{ $attendance['late'] }}@if($attendance['late']) ({{ $attendance['late_minutes'] }} min)@endif</td>
-                    <td>{{ $attendance['absent'] + $attendance['no_record'] }}</td>
-                    <td>{{ $attendance['sick_leave'] + $attendance['leave'] }}</td>
-                    <td>{{ $attendance['holidays'] }}</td>
-                </tr>
+                @foreach($completed_tasks as $index => $task)
+                    <tr>
+                        <td class="muted">{{ $index + 1 }}</td>
+                        <td>{{ $task['title'] }}@if($task['project_name'])<br><span class="small muted">{{ $task['project_name'] }}</span>@endif</td>
+                        <td>{{ $task['source'] === 'project_task' ? 'Tugas proyek' : 'Tugas staf' }}</td>
+                        <td>{{ $fmt($task['due_date']) }}</td>
+                    </tr>
+                @endforeach
             </tbody>
         </table>
-        <p style="color: #6b7280; font-size: 8.5pt; margin: -4mm 0 5mm 0;">
-            Each working day is scored: on time / remote 100, late up to 15 min 90, 16-60 min 75, over 60 min 50, absent or no check-in 0.
-            Sick days, approved leave and holidays are not counted.
-            @if($tasks['staff_done_late']) {{ $tasks['staff_done_late'] }} staff task(s) were completed after their due date. @endif
-        </p>
+    @else
+        <p class="muted">Tidak ada tugas yang diselesaikan pada periode ini.</p>
+    @endif
 
-        <h3 class="section-title">Completed Tasks ({{ count($completed_tasks) }})</h3>
-        @if(count($completed_tasks) > 0)
-            <table class="data-table">
+    {{-- Penilaian kinerja --}}
+    @if($performance_review)
+        <h2><span class="n">{{ ++$section }}.</span>Penilaian Kinerja Terakhir</h2>
+        <table class="facts">
+            <tr><td class="k">Periode penilaian</td><td class="v">{{ $performance_review['period'] ?? '—' }}@if($performance_review['period_start'] && $performance_review['period_end']) <span class="muted">({{ $fmt($performance_review['period_start']) }} – {{ $fmt($performance_review['period_end']) }})</span>@endif</td></tr>
+            <tr><td class="k">Penilai</td><td class="v">{{ $performance_review['reviewer_name'] ?? '—' }} <span class="muted">&middot; {{ $reviewStatus[$performance_review['status']] ?? ucfirst($performance_review['status']) }}</span></td></tr>
+            <tr><td class="k">Nilai keseluruhan</td><td class="v"><strong>{{ $performance_review['overall_rating'] }} / 5</strong></td></tr>
+        </table>
+        @if(! empty($performance_review['category_scores']))
+            <table class="data" style="margin-top: 4mm;">
                 <thead>
                     <tr>
-                        <th class="c" style="width: 8%;">No</th>
-                        <th style="width: 52%;">Task</th>
-                        <th style="width: 20%;">Source</th>
-                        <th class="c" style="width: 20%;">Due Date</th>
+                        <th style="width: 70%;">Aspek</th>
+                        <th class="num" style="width: 30%;">Nilai</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($completed_tasks as $index => $task)
+                    @foreach($performance_review['category_scores'] as $category => $score)
                         <tr>
-                            <td class="c">{{ $index + 1 }}</td>
-                            <td>{{ $task['title'] }}{{ $task['project_name'] ? ' ('.$task['project_name'].')' : '' }}</td>
-                            <td>{{ $task['source'] === 'project_task' ? 'Project Task' : 'Staff Task' }}</td>
-                            <td class="c">{{ $task['due_date'] ? \Carbon\Carbon::parse($task['due_date'])->translatedFormat('d M Y') : '-' }}</td>
+                            <td>{{ ucfirst(str_replace('_', ' ', $category)) }}</td>
+                            <td class="num">{{ $score }} / 5</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-        @else
-            <p style="color: #6b7280; font-size: 9.5pt;">No completed tasks in this period.</p>
         @endif
+        @foreach(['strengths' => 'Kekuatan', 'areas_for_improvement' => 'Hal yang perlu ditingkatkan', 'goals_next_period' => 'Target periode berikutnya'] as $field => $label)
+            @if($performance_review[$field])
+                <p style="margin-top: 3mm;"><strong>{{ $label }}.</strong> {{ $performance_review[$field] }}</p>
+            @endif
+        @endforeach
+    @endif
 
-        @if($performance_review)
-            <h3 class="section-title">Latest Performance Review</h3>
-            <div style="page-break-inside: avoid; margin-bottom: 6mm;">
-                <p style="margin: 0 0 2mm 0; font-size: 9.5pt; color: #6b7280;">
-                    Period: {{ $performance_review['period'] ?? '-' }}
-                    @if($performance_review['period_start'] && $performance_review['period_end'])
-                        ({{ \Carbon\Carbon::parse($performance_review['period_start'])->translatedFormat('d M Y') }} &ndash; {{ \Carbon\Carbon::parse($performance_review['period_end'])->translatedFormat('d M Y') }})
-                    @endif
-                    &bull; Reviewer: {{ $performance_review['reviewer_name'] ?? '-' }}
-                    &bull; Status: {{ ucfirst($performance_review['status']) }}
+    {{-- Catatan penilai --}}
+    @if(! empty($reviews))
+        <h2><span class="n">{{ ++$section }}.</span>Catatan Penilai</h2>
+        @foreach($reviews as $note)
+            <div style="page-break-inside: avoid; padding: 0 0 3mm 0; margin-bottom: 3mm; border-bottom: 0.4pt solid #e5e7eb;">
+                <p class="small muted" style="margin-bottom: 1mm;">
+                    <strong style="color: #1f2933;">{{ $note['reviewer_name'] ?? '—' }}</strong>@if($note['reviewer_role']) &middot; {{ $roleLabel[$note['reviewer_role']] ?? $note['reviewer_role'] }}@endif
+                    @if($note['updated_at']) &middot; {{ \Carbon\Carbon::parse($note['updated_at'])->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y') }}@endif
                 </p>
-                <p style="margin: 0 0 3mm 0; font-size: 10.5pt;">
-                    Overall Rating: <strong style="color: #070b30;">{{ $performance_review['overall_rating'] }} / 5</strong>
-                </p>
-
-                @if(!empty($performance_review['category_scores']))
-                    <table class="data-table counts" style="margin-bottom: 3mm;">
-                        <thead>
-                            <tr>
-                                @foreach($performance_review['category_scores'] as $category => $score)
-                                    <th>{{ ucwords(str_replace('_', ' ', $category)) }}</th>
-                                @endforeach
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                @foreach($performance_review['category_scores'] as $score)
-                                    <td>{{ $score }} / 5</td>
-                                @endforeach
-                            </tr>
-                        </tbody>
-                    </table>
-                @endif
-
-                @if($performance_review['strengths'])
-                    <p style="margin: 0 0 2mm 0; font-size: 9.5pt;"><strong>Strengths:</strong> {{ $performance_review['strengths'] }}</p>
-                @endif
-                @if($performance_review['areas_for_improvement'])
-                    <p style="margin: 0 0 2mm 0; font-size: 9.5pt;"><strong>Areas for Improvement:</strong> {{ $performance_review['areas_for_improvement'] }}</p>
-                @endif
-                @if($performance_review['goals_next_period'])
-                    <p style="margin: 0; font-size: 9.5pt;"><strong>Goals for Next Period:</strong> {{ $performance_review['goals_next_period'] }}</p>
-                @endif
+                <p style="white-space: pre-line;">{{ $note['review'] }}</p>
             </div>
-        @endif
+        @endforeach
+    @endif
 
-        @if(!empty($reviews))
-            <h3 class="section-title">Reviewer Notes</h3>
-            @foreach($reviews as $note)
-                <div style="page-break-inside: avoid; margin-bottom: 4mm; padding: 3mm 4mm; border-left: 2px solid #1f5bd8; background: #f5f7fa;">
-                    <p style="margin: 0 0 1.5mm 0; font-size: 9pt; color: #6b7280;">
-                        <strong style="color: #0f1b2d;">{{ $note['reviewer_name'] ?? '-' }}</strong>
-                        @if($note['reviewer_role']) &bull; {{ ['manager' => 'Manager', 'operational_director' => 'Operational Director', 'finance' => 'Finance Manager'][$note['reviewer_role']] ?? $note['reviewer_role'] }} @endif
-                        @if($note['updated_at']) &bull; {{ \Carbon\Carbon::parse($note['updated_at'])->timezone('Asia/Jakarta')->translatedFormat('d M Y') }} @endif
-                    </p>
-                    <p style="margin: 0; font-size: 9.5pt; white-space: pre-line;">{{ $note['review'] }}</p>
-                </div>
-            @endforeach
-        @endif
-
-        <div style="page-break-inside: avoid; margin-top: 14mm; text-align: right;">
-            <p style="margin: 0;">Tangerang Selatan, {{ $generated_at->translatedFormat('d F Y') }}</p>
-            <p style="margin: 0; font-weight: bold;">PT. Jendela Cakra Digital</p>
-            @include('pdf.partials.signature', ['name' => 'Aldi Pratama Putra, S.Ikom', 'enabled' => $use_signature ?? false])
-            <p style="margin: 0; border-top: 1px solid #1f2937; display: inline-block; padding-top: 2px;">{{ \App\Support\SignatoryName::format('Aldi Pratama Putra, S.Ikom') }}</p>
-            <p style="margin: 0;">Director</p>
-        </div>
-    </div>
+    {{-- Pengesahan --}}
+    <table style="margin-top: 12mm; page-break-inside: avoid;">
+        <tr>
+            <td style="width: 55%;"></td>
+            <td>
+                <p>Tangerang Selatan, {{ $generated_at->locale('id')->translatedFormat('d F Y') }}</p>
+                <p style="font-weight: bold;">PT. Jendela Cakra Digital</p>
+                @include('pdf.partials.signature', ['name' => 'Aldi Pratama Putra, S.Ikom', 'enabled' => $use_signature ?? false])
+                <p style="border-top: 0.6pt solid #1f2933; display: inline-block; padding-top: 1mm;">{{ \App\Support\SignatoryName::format('Aldi Pratama Putra, S.Ikom') }}</p>
+                <p class="muted">Direktur</p>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

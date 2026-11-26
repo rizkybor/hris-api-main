@@ -48,7 +48,7 @@ class ProjectProgressReportService
         $tasks = $project->tasks;
         $summary = $this->summary($project);
 
-        return Pdf::loadView('pdf.project-progress', [
+        $pdf = Pdf::loadView('pdf.project-progress', [
             'project' => $project,
             'totalTasks' => $summary['totalTasks'],
             'doneTasks' => $tasks->where('status', 'done')->values(),
@@ -59,8 +59,10 @@ class ProjectProgressReportService
             'timeline' => $this->timeline($project, $summary['progress']),
             'phases' => $this->phases($project),
             'uat' => $this->uat($project),
-            'generatedAt' => Carbon::now(),
-        ])->setPaper('a4');
+            'generatedAt' => Carbon::now('Asia/Jakarta'),
+        ]);
+
+        return ReportPageFooter::apply($pdf->setPaper('a4'), 'Laporan Progres Proyek · '.$project->name);
     }
 
     public static function filename(Project $project): string
@@ -74,7 +76,9 @@ class ProjectProgressReportService
      */
     public function phases(Project $project): array
     {
-        $today = Carbon::today();
+        // Today's calendar date in WIB, on the same (UTC midnight) basis as
+        // the parsed project dates it is compared with.
+        $today = Carbon::parse(Carbon::now('Asia/Jakarta')->toDateString());
         $completed = $project->status === 'completed';
         $phase = function (?string $label, $start, $end) use ($today, $completed) {
             $start = $start ? Carbon::parse($start)->startOfDay() : null;
@@ -104,7 +108,7 @@ class ProjectProgressReportService
         ];
     }
 
-    /** "3 months 2 days" (30-day months, like the app's duration labels). */
+    /** "3 bulan 2 hari" (30-day months, like the app's duration labels). */
     public static function length(Carbon $start, Carbon $end): string
     {
         $days = max(1, (int) $start->diffInDays($end));
@@ -112,10 +116,10 @@ class ProjectProgressReportService
         $rest = $days % 30;
         $parts = [];
         if ($months) {
-            $parts[] = $months.' '.($months === 1 ? 'month' : 'months');
+            $parts[] = $months.' bulan';
         }
         if ($rest || ! $months) {
-            $parts[] = $rest.' '.($rest === 1 ? 'day' : 'days');
+            $parts[] = $rest.' hari';
         }
 
         return implode(' ', $parts);
@@ -153,7 +157,7 @@ class ProjectProgressReportService
 
         $start = Carbon::parse($project->start_date)->startOfDay();
         $end = Carbon::parse($project->end_date)->startOfDay();
-        $today = Carbon::now()->startOfDay();
+        $today = Carbon::parse(Carbon::now('Asia/Jakarta')->toDateString());
 
         $totalDurationDays = max(1, (int) $start->diffInDays($end));
         $daysElapsed = (int) min($totalDurationDays, max(0, $start->diffInDays($today, false)));

@@ -68,7 +68,7 @@
            (not in the shared partial, which purchase-order/official-memo/
            bast also use and weren't asked about) with the average of the
            two so total content width is unchanged, just centered. */
-        .page { position: relative; z-index: 1; margin-top: -25mm; padding-left: 22mm; padding-right: 22mm; }
+        .page { position: relative; z-index: 1; margin-top: -25mm; padding-left: 22mm; padding-right: 22mm; line-height: 1.5; }
         .letterhead { position: fixed; top: -{{ $topMargin }}mm; left: 0; width: 210mm; height: 297mm; z-index: -1; }
         /* .cancelled-stamp (shared partial) is also position:fixed, so its
            top/left need the same margin-box correction to land in the same
@@ -84,8 +84,10 @@
            whether the author wanted that or not. */
         .body-content p, .body-content > div { margin: 0 0 3mm 0; }
         .body-content table { width: 100%; border-collapse: collapse; margin: 3mm 0; }
-        .body-content table td, .body-content table th { border: 1px solid #94a3b8; padding: 4px 6px; }
-        .body-content table th { background-color: #eef2ff; font-weight: bold; }
+        /* Cells never justify (it stretches short lines) and start at the top. */
+        .body-content table td, .body-content table th { border: 0.6pt solid #94a3b8; padding: 1.5mm 2.5mm; text-align: left; vertical-align: top; line-height: 1.4; }
+        .body-content table th { background-color: #f1f5f9; font-weight: bold; }
+        .body-content table p { margin: 0; text-align: left; }
         .body-content ul, .body-content ol { margin: 0 0 3mm 0; padding-left: 18px; }
         .body-content blockquote { margin: 3mm 0; padding-left: 8px; border-left: 3px solid #cbd5e1; color: #475569; }
         /* Matches the Rich Text Editor's own Title/Subtitle/Heading/Sub
@@ -132,15 +134,27 @@
                 <p style="margin: 0; padding: 1px 0; font-weight: bold;">{{ strtoupper('Tentang '.$letter->subject) }}</p>
             </div>
         @else
-            <table style="margin-bottom: 6mm;">
+            {{-- Fixed label/colon widths (not %), so the colon sits right
+                 after the longest label ("Lampiran") instead of far out. --}}
+            @php
+                $isCoverLetter = $letter->project_id && ($letter->letterCode?->code === 'SPG');
+            @endphp
+            <table style="margin-bottom: 6mm; width: auto;">
                 <tr>
-                    <td style="border: none; width: 22%; padding: 1px 0;">Nomor</td>
-                    <td style="border: none; width: 3%; padding: 1px 0;">:</td>
+                    <td style="border: none; width: 19mm; padding: 1px 0; vertical-align: top;">Nomor</td>
+                    <td style="border: none; width: 4mm; padding: 1px 0; vertical-align: top;">:</td>
                     <td style="border: none; padding: 1px 0;">{{ $letter->letter_number }}</td>
                 </tr>
+                @if($isCoverLetter)
+                    <tr>
+                        <td style="border: none; padding: 1px 0; vertical-align: top;">Lampiran</td>
+                        <td style="border: none; padding: 1px 0; vertical-align: top;">:</td>
+                        <td style="border: none; padding: 1px 0;">1 (satu) berkas Laporan Progres Proyek</td>
+                    </tr>
+                @endif
                 <tr>
-                    <td style="border: none; padding: 1px 0;">Perihal</td>
-                    <td style="border: none; padding: 1px 0;">:</td>
+                    <td style="border: none; padding: 1px 0; vertical-align: top;">Perihal</td>
+                    <td style="border: none; padding: 1px 0; vertical-align: top;">:</td>
                     <td style="border: none; padding: 1px 0; font-weight: bold;">{{ $letter->subject }}</td>
                 </tr>
             </table>
@@ -150,14 +164,14 @@
              general-purpose statement, not addressed to a specific
              recipient, so the "Kepada Yth." block is hidden for it. --}}
         @if($letter->recipient && ! $isSecondaryTemplate)
-            <p style="margin: 0 0 8mm 0;">
+            <p style="margin: 0 0 6mm 0;">
                 Kepada Yth.<br>
                 {!! nl2br(e($letter->recipient)) !!}<br>
                 di Tempat
             </p>
         @endif
 
-        <div class="body-content" style="text-align: justify; line-height: 1.6; margin-bottom: {{ $letter->items ? '6mm' : '14mm' }};">
+        <div class="body-content" style="text-align: justify; line-height: 1.5; margin-bottom: {{ $letter->items ? '6mm' : '10mm' }};">
             {{-- RichTextEditor bodies are already HTML (wrapped in <p> tags etc.) and render as-is.
                  Older letters saved before the rich text editor was added are plain text, so they
                  still need escaping + nl2br to preserve line breaks without showing raw tags. --}}
