@@ -28,6 +28,7 @@ class ProjectResource extends JsonResource
             'type' => $this->type,
             'priority' => $this->priority,
             'status' => $this->status,
+            'completed_at' => $this->completed_at,
             'start_date' => $this->start_date,
             'end_date' => $this->end_date,
             'description' => $this->description,
@@ -35,6 +36,12 @@ class ProjectResource extends JsonResource
             'budget' => (float) (string) $this->budget,
             'warranty_period_months' => $this->warranty_period_months,
             'retention_period_months' => $this->retention_period_months,
+            // Phases: development is start_date - end_date, then retention.
+            'retention_start_date' => $this->retention_start_date?->toDateString(),
+            'retention_end_date' => $this->retention_end_date?->toDateString(),
+            // UAT rounds agreed with the client, and how many took place.
+            'uat_rounds_planned' => $this->uat_rounds_planned,
+            'uat_rounds_done' => $this->whenHas('uat_rounds_done'),
             'progress' => $progress,
             'leader' => new EmployeeProfileResource($this->projectLeader),
             'team_assignment_mode' => $this->team_assignment_mode,

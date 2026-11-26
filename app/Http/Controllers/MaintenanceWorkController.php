@@ -8,6 +8,7 @@ use App\Models\MaintenanceContract;
 use App\Models\MaintenanceFeature;
 use App\Models\MaintenanceLog;
 use App\Services\MaintenanceService;
+use App\Support\IndonesianValidation;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -78,6 +79,14 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
         if ($date->gt($this->service->today()->endOfDay())) {
             throw ValidationException::withMessages(['work_date' => 'Tanggal pekerjaan tidak boleh di masa depan.']);
         }
+        // Nothing can be logged once the contract is over: after its end
+        // date, or at all when it was marked ended.
+        if ($contract->end_date && $date->copy()->startOfDay()->gt(Carbon::parse($contract->end_date, MaintenanceService::TZ)->startOfDay())) {
+            throw ValidationException::withMessages(['work_date' => 'Kontrak berakhir pada '.Carbon::parse($contract->end_date)->locale('id')->translatedFormat('d F Y').'; pekerjaan setelah tanggal itu tidak bisa dicatat.']);
+        }
+        if ($contract->status === 'ended') {
+            throw ValidationException::withMessages(['work_date' => 'Kontrak ini sudah berakhir, jam tidak bisa dicatat lagi.']);
+        }
 
         if (! empty($data['maintenance_feature_id'])) {
             $feature = $contract->features()->find($data['maintenance_feature_id']);
@@ -112,7 +121,7 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
 
     public function storeLog(Request $request, int $contractId)
     {
-        $data = $request->validate($this->logRules());
+        $data = $request->validate($this->logRules(), ...IndonesianValidation::args());
         $contract = MaintenanceContract::findOrFail($contractId);
         $this->service->sync($contract);
 
@@ -135,8 +144,9 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
 
     public function updateLog(Request $request, int $id)
     {
-        $data = $request->validate($this->logRules());
-        $log = MaintenanceLog::with(['contract', 'feature', 'period'])->findOrFail($id);
+        $data = $request->validate($this->logRules(), ...IndonesianValidation::args());
+        // whereHas: logs of a deleted contract are gone too (404, not 500).
+        $log = MaintenanceLog::with(['contract', 'feature', 'period'])->whereHas('contract')->findOrFail($id);
         $this->assertEditable($log);
 
         $log->update([...$data, ...$this->target($log->contract, $data), 'visible_to_client' => $data['visible_to_client'] ?? $log->visible_to_client]);
@@ -146,7 +156,7 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
 
     public function destroyLog(int $id)
     {
-        $log = MaintenanceLog::with(['feature', 'period'])->findOrFail($id);
+        $log = MaintenanceLog::with(['feature', 'period'])->whereHas('contract')->findOrFail($id);
         $this->assertEditable($log);
         $log->delete();
 
@@ -162,7 +172,7 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
             'description' => ['nullable', 'string', 'max:5000'],
             'estimated_hours' => ['required', 'numeric', 'min:0.5', 'max:1000'],
             'visible_to_client' => ['boolean'],
-        ]);
+        ], ...IndonesianValidation::args());
         $contract = MaintenanceContract::findOrFail($contractId);
         $feature = $contract->features()->create([...$data, 'status' => 'proposed', 'created_by' => Auth::id()]);
 
@@ -172,13 +182,13 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
     /** The estimate is fixed once approved (it's what was reserved). */
     public function updateFeature(Request $request, int $id)
     {
-        $feature = MaintenanceFeature::findOrFail($id);
+        $feature = MaintenanceFeature::whereHas('contract')->findOrFail($id);
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
             'estimated_hours' => [$feature->status === 'proposed' ? 'required' : 'prohibited', 'numeric', 'min:0.5', 'max:1000'],
             'visible_to_client' => ['boolean'],
-        ]);
+        ], ...IndonesianValidation::args());
         $feature->update($data);
 
         return ResponseHelper::jsonResponse(true, 'Feature Updated', MaintenanceContractResource::feature($feature->fresh()), 200);
@@ -186,7 +196,7 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
 
     public function destroyFeature(int $id)
     {
-        $feature = MaintenanceFeature::findOrFail($id);
+        $feature = MaintenanceFeature::whereHas('contract')->findOrFail($id);
         if ($feature->status !== 'proposed') {
             throw ValidationException::withMessages(['feature' => 'Hanya fitur berstatus Diusulkan yang bisa dihapus. Batalkan fitur ini sebagai gantinya.']);
         }
@@ -197,7 +207,7 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
 
     public function approveFeature(int $id)
     {
-        $feature = MaintenanceFeature::findOrFail($id);
+        $feature = MaintenanceFeature::whereHas('contract')->findOrFail($id);
         if ($feature->status !== 'proposed') {
             throw ValidationException::withMessages(['feature' => 'Fitur ini sudah disetujui sebelumnya.']);
         }
@@ -208,7 +218,7 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
 
     public function completeFeature(int $id)
     {
-        $feature = MaintenanceFeature::findOrFail($id);
+        $feature = MaintenanceFeature::whereHas('contract')->findOrFail($id);
         if (! $feature->isOpen()) {
             throw ValidationException::withMessages(['feature' => 'Fitur ini belum disetujui atau sudah selesai.']);
         }
@@ -219,7 +229,7 @@ class MaintenanceWorkController extends Controller implements HasMiddleware
 
     public function cancelFeature(int $id)
     {
-        $feature = MaintenanceFeature::findOrFail($id);
+        $feature = MaintenanceFeature::whereHas('contract')->findOrFail($id);
         if ($feature->isSettled()) {
             throw ValidationException::withMessages(['feature' => 'Fitur ini sudah selesai atau dibatalkan.']);
         }

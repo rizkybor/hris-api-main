@@ -11,7 +11,6 @@ use App\Models\Invoice;
 use App\Models\Subscription;
 use App\Services\DocumentNumberService;
 use App\Services\SubscriptionInsightsService;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -204,7 +203,9 @@ class SubscriptionController extends Controller implements HasMiddleware
 
                 $client = $subscription->client;
                 $clientCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $client->name), 0, 4)) ?: 'CLI';
-                $date = Carbon::now();
+                // Today in WIB: on 1 Jan before 07:00 the UTC clock still says
+                // last year, which would give last year's invoice number.
+                $date = $this->numberService->today();
 
                 $bankAccount = $subscription->bank_name
                     ? BankAccount::where('bank_name', $subscription->bank_name)->first()

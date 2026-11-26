@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnalyticsSourceController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\AnnualArchiveController;
 use App\Http\Controllers\AssetMaintenanceLogController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendanceSettingController;
@@ -68,9 +69,11 @@ use App\Http\Controllers\ProjectCalculationController;
 use App\Http\Controllers\ProjectCashTransactionController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDocumentController;
+use App\Http\Controllers\ProjectProgressExportController;
 use App\Http\Controllers\ProjectRateSettingController;
 use App\Http\Controllers\ProjectTaskCommentController;
 use App\Http\Controllers\ProjectTaskController;
+use App\Http\Controllers\ProjectUatController;
 use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\PublicScreeningController;
 use App\Http\Controllers\PurchaseOrderController;
@@ -192,6 +195,9 @@ Route::prefix('v1')
             Route::get('projects/statistics', [ProjectController::class, 'getStatistics']);
             Route::get('projects/all/paginated', [ProjectController::class, 'getAllPaginated']);
             Route::get('projects/{id}/export-progress', [ProjectController::class, 'exportProgress']);
+            // Progress report with an optional cover letter (Surat Pengantar), one PDF
+            Route::get('projects/{id}/cover-letter-options', [ProjectProgressExportController::class, 'options']);
+            Route::post('projects/{id}/export-progress', [ProjectProgressExportController::class, 'export']);
             Route::apiResource('projects', ProjectController::class);
 
             Route::apiResource('project-tasks', ProjectTaskController::class);
@@ -204,6 +210,13 @@ Route::prefix('v1')
 
             // Project Documents
             Route::apiResource('project-documents', ProjectDocumentController::class);
+
+            // UAT rounds agreed with the client and each round held
+            Route::get('projects/{projectId}/uat', [ProjectUatController::class, 'index']);
+            Route::put('projects/{projectId}/uat/plan', [ProjectUatController::class, 'updatePlan']);
+            Route::post('projects/{projectId}/uat/sessions', [ProjectUatController::class, 'store']);
+            Route::put('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'update']);
+            Route::delete('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'destroy']);
 
             // Project Cash Ledger (debit/credit against the project's budget)
             Route::apiResource('project-cash-transactions', ProjectCashTransactionController::class)->except(['show']);
@@ -584,6 +597,9 @@ Route::prefix('v1')
 
             // Document Letters: Letters (Surat)
             Route::get('letters/{id}/export-pdf', [LetterController::class, 'exportPdf']);
+            // Annual archive: every document of a type in one year as one PDF
+            Route::get('annual-archive/options', [AnnualArchiveController::class, 'options']);
+            Route::post('annual-archive/export', [AnnualArchiveController::class, 'export'])->middleware('throttle:6,1');
             Route::post('letters/{id}/cancel', [LetterController::class, 'cancel']);
             Route::apiResource('letters', LetterController::class);
 

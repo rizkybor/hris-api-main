@@ -8,6 +8,7 @@ use App\Enums\ProjectStatus;
 use App\Interfaces\ProjectRepositoryInterface;
 use App\Models\PaymentReceipt;
 use App\Models\Project;
+use App\Models\ProjectUatSession;
 use App\Models\Team;
 use App\Models\TeamMember;
 use App\Models\User;
@@ -41,7 +42,10 @@ class ProjectRepository implements ProjectRepositoryInterface
                     // against the schedule yet).
                     $query->where('status', ProjectStatus::ACTIVE->value)
                         ->whereNotNull('end_date')
-                        ->whereDate('end_date', '<', now()->toDateString());
+                        ->whereDate('end_date', '<', now()->toDateString())
+                        // Once the retention phase has started, development
+                        // is over: not overdue.
+                        ->where(fn ($q) => $q->whereNull('retention_start_date')->orWhereDate('retention_start_date', '>', now()->toDateString()));
                 } elseif ($status) {
                     $query->where('status', $status);
                 }
@@ -137,6 +141,7 @@ class ProjectRepository implements ProjectRepositoryInterface
             },
             'invoices.receipts',
         ])
+            ->withCount(['uatSessions as uat_rounds_done' => fn ($query) => $query->whereIn('status', ProjectUatSession::DONE_STATUSES)])
             ->findOrFail($id);
     }
 
