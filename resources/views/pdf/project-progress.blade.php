@@ -26,6 +26,16 @@
         .badge-status-on_hold, .badge-status-behind { background-color: #fef9c3; color: #a16207; }
         .badge-status-completed { background-color: #dbeafe; color: #1d4ed8; }
         .badge-status-cancelled, .badge-status-overdue { background-color: #fee2e2; color: #b91c1c; }
+        .badge-status-in-retention, .badge-state-running { background-color: #e0f2fe; color: #0369a1; }
+        .badge-status-retention-ended, .badge-state-done { background-color: #dcfce7; color: #15803d; }
+        .badge-state-upcoming { background-color: #f1f5f9; color: #475569; }
+        .badge-uat-scheduled { background-color: #f1f5f9; color: #475569; }
+        .badge-uat-in_progress { background-color: #e0f2fe; color: #0369a1; }
+        .badge-uat-passed { background-color: #dcfce7; color: #15803d; }
+        .badge-uat-revision { background-color: #fef9c3; color: #a16207; }
+        .phase-table td { border-bottom: 1px solid #e5e7eb; padding: 5px 4px; font-size: 9pt; vertical-align: middle; }
+        .phase-table tr.total td { border-bottom: none; border-top: 1.5px solid #0b1d51; font-weight: bold; color: #0b1d51; }
+        .phase-swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
         .badge-priority-low { background-color: #f1f5f9; color: #475569; }
         .badge-priority-medium { background-color: #fef9c3; color: #a16207; }
         .badge-priority-high, .badge-priority-urgent { background-color: #fee2e2; color: #b91c1c; }
@@ -80,15 +90,18 @@
                     <table class="info-table">
                         <tr><td style="width: 30%;">Project Leader</td><td>{{ $project->projectLeader?->user?->name ?? '-' }}</td></tr>
                         <tr><td>Teams Assigned</td><td>{{ $project->teams->pluck('name')->implode(', ') ?: '-' }}</td></tr>
-                        <tr><td>Type</td><td>{{ $project->type ?? '-' }}</td></tr>
+                        <tr><td>Client</td><td>{{ $project->client?->name ?? '-' }}</td></tr>
+                        <tr><td>Type</td><td>{{ $project->type ? ucwords(str_replace('_', ' ', $project->type)) : '-' }}</td></tr>
                     </table>
                 </td>
                 <td style="width: 40%; border: none; vertical-align: top;">
                     <table class="info-table">
-                        <tr><td style="width: 45%;" class="label">Start Date</td><td>{{ $project->start_date ? \Carbon\Carbon::parse($project->start_date)->translatedFormat('d F Y') : '-' }}</td></tr>
-                        <tr><td class="label">End Date</td><td>{{ $project->end_date ? \Carbon\Carbon::parse($project->end_date)->translatedFormat('d F Y') : 'Ongoing' }}</td></tr>
-                        <tr><td class="label">Duration</td><td>{{ $timeline['totalDurationDays'] !== null ? $timeline['totalDurationDays'].' days' : '-' }}</td></tr>
-                        <tr><td class="label">Running For</td><td>{{ $timeline['daysElapsed'] !== null ? $timeline['daysElapsed'].' days' : '-' }}</td></tr>
+                        <tr><td style="width: 45%;" class="label">Development</td><td>{{ $phases['development']['start'] ? $phases['development']['start']->translatedFormat('d M Y').' – '.($phases['development']['end']?->translatedFormat('d M Y') ?? 'Ongoing') : '-' }}</td></tr>
+                        <tr><td class="label">Retention</td><td>{{ $phases['retention']['start'] && $phases['retention']['end'] ? $phases['retention']['start']->translatedFormat('d M Y').' – '.$phases['retention']['end']->translatedFormat('d M Y') : '-' }}</td></tr>
+                        <tr><td class="label">Total Duration</td><td>{{ $phases['total']['length'] ?? '-' }}</td></tr>
+                        @if($project->status === 'completed' && $project->completed_at)
+                            <tr><td class="label">Completed On</td><td>{{ $project->completed_at->translatedFormat('d F Y') }}</td></tr>
+                        @endif
                         <tr>
                             <td class="label">Schedule Status</td>
                             <td><span class="badge badge-status-{{ strtolower(str_replace(' ', '-', $timeline['status'])) }}">{{ strtoupper($timeline['status']) }}</span></td>
@@ -97,6 +110,28 @@
                 </td>
             </tr>
         </table>
+
+        {{-- Project Timeline: development, retention, total --}}
+        <div style="margin-top: 6mm;">
+            <p class="section-title">Project Timeline</p>
+            <table class="phase-table" style="margin-top: 2mm;">
+                @foreach(['development' => '#0b1d51', 'retention' => '#2563eb'] as $key => $color)
+                    @php($phase = $phases[$key])
+                    <tr>
+                        <td style="width: 26%;"><span class="phase-swatch" style="background-color: {{ $color }};"></span>{{ $key === 'development' ? 'Development' : 'Retention Period' }}</td>
+                        <td style="width: 38%;">{{ $phase['start'] && $phase['end'] ? $phase['start']->translatedFormat('d F Y').' – '.$phase['end']->translatedFormat('d F Y') : 'Not set' }}</td>
+                        <td style="width: 20%;">{{ $phase['length'] ?? '-' }}</td>
+                        <td style="width: 16%; text-align: right;">@if($phase['state'])<span class="badge badge-state-{{ strtolower($phase['state']) }}">{{ strtoupper($phase['state']) }}</span>@endif</td>
+                    </tr>
+                @endforeach
+                <tr class="total">
+                    <td>Total Project Time</td>
+                    <td>{{ $phases['total']['start'] && $phases['total']['end'] ? $phases['total']['start']->translatedFormat('d F Y').' – '.$phases['total']['end']->translatedFormat('d F Y') : '-' }}</td>
+                    <td>{{ $phases['total']['length'] ?? '-' }}</td>
+                    <td></td>
+                </tr>
+            </table>
+        </div>
 
         {{-- Progress Overview --}}
         <div style="margin-top: 6mm;">
@@ -149,6 +184,45 @@
                 </tr>
             </table>
         </div>
+
+        {{-- User Acceptance Test --}}
+        @if($uat['planned'] || $uat['sessions']->count())
+            <div style="margin-top: 6mm;">
+                <p class="section-title">User Acceptance Test (UAT)</p>
+                <p style="margin: 1mm 0 0 0; font-size: 9pt;">
+                    {{ $uat['planned'] ? $uat['done'].' of '.$uat['planned'].' agreed UAT rounds held' : $uat['done'].' UAT round(s) held' }}@if($uat['passedRound']) · <strong style="color: #15803d;">Passed in UAT {{ $uat['passedRound'] }}</strong>@endif
+                </p>
+                @if($uat['sessions']->count())
+                    <table class="task-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 12%;">Round</th>
+                                <th style="width: 20%;">Date</th>
+                                <th style="width: 18%;">Result</th>
+                                <th style="width: 50%;">Findings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($uat['sessions'] as $session)
+                                @php($findings = $session->findingList())
+                                <tr>
+                                    <td>UAT {{ $session->round }}@if($uat['planned'] && $session->round > $uat['planned'])<br><span style="font-size: 7pt; color: #a16207;">extra</span>@endif</td>
+                                    <td>{{ $session->date ? $session->date->translatedFormat('d M Y') : '-' }}</td>
+                                    <td><span class="badge badge-uat-{{ $session->status }}">{{ ['scheduled' => 'SCHEDULED', 'in_progress' => 'IN PROGRESS', 'passed' => 'PASSED', 'revision' => 'REVISION'][$session->status] ?? strtoupper($session->status) }}</span></td>
+                                    <td>
+                                        @if(count($findings))
+                                            {{ count($findings) }} finding(s): {{ \Illuminate\Support\Str::limit(implode('; ', $findings), 160) }}
+                                        @else
+                                            <span style="color: #94a3b8;">-</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        @endif
 
         {{-- Completed Tasks --}}
         <div style="margin-top: 6mm;">

@@ -38,7 +38,8 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // The progress export returns the new cover letter's number here.
+    'exposed_headers' => ['X-Letter-Number'],
 
     'max_age' => 0,
 

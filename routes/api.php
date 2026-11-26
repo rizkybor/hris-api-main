@@ -68,6 +68,7 @@ use App\Http\Controllers\ProjectCalculationController;
 use App\Http\Controllers\ProjectCashTransactionController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDocumentController;
+use App\Http\Controllers\ProjectProgressExportController;
 use App\Http\Controllers\ProjectRateSettingController;
 use App\Http\Controllers\ProjectTaskCommentController;
 use App\Http\Controllers\ProjectTaskController;
@@ -193,6 +194,9 @@ Route::prefix('v1')
             Route::get('projects/statistics', [ProjectController::class, 'getStatistics']);
             Route::get('projects/all/paginated', [ProjectController::class, 'getAllPaginated']);
             Route::get('projects/{id}/export-progress', [ProjectController::class, 'exportProgress']);
+            // Progress report with an optional cover letter (Surat Pengantar), one PDF
+            Route::get('projects/{id}/cover-letter-options', [ProjectProgressExportController::class, 'options']);
+            Route::post('projects/{id}/export-progress', [ProjectProgressExportController::class, 'export']);
             Route::apiResource('projects', ProjectController::class);
 
             Route::apiResource('project-tasks', ProjectTaskController::class);
