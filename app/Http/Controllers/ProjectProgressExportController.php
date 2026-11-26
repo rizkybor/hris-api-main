@@ -63,7 +63,7 @@ class ProjectProgressExportController extends Controller implements HasMiddlewar
         $last = $previous->first()
             ?? Letter::query()->whereNotNull('signatory_name')->latest('id')->first();
         $summary = $this->reports->summary($project);
-        $today = Carbon::today();
+        $today = Carbon::today('Asia/Jakarta');
 
         return ResponseHelper::jsonResponse(true, 'Cover Letter Options Retrieved Successfully', [
             'can_create' => $canCreate,
@@ -203,21 +203,42 @@ class ProjectProgressExportController extends Controller implements HasMiddlewar
     /** Indonesian cover letter text, filled from the project's numbers. */
     private function body(Project $project, array $summary, Carbon $today): string
     {
-        $name = e($project->name);
-        $date = $today->locale('id')->translatedFormat('d F Y');
+        $fmt = fn (?Carbon $date) => $date ? $date->locale('id')->translatedFormat('d F Y') : '-';
         $phases = $this->reports->phases($project);
+        $uat = $this->reports->uat($project);
+
         $stage = match (true) {
-            $project->status === 'completed' => ' Proyek telah dinyatakan selesai.',
-            $phases['retention']['state'] === 'Running' => ' Saat ini proyek berada pada masa retensi hingga '.$phases['retention']['end']->locale('id')->translatedFormat('d F Y').'.',
-            $phases['development']['state'] === 'Running' => ' Saat ini proyek berada pada tahap pengembangan (development) yang dijadwalkan selesai pada '.$phases['development']['end']->locale('id')->translatedFormat('d F Y').'.',
-            default => '',
+            $project->status === 'completed' => 'Selesai'.($project->completed_at ? ' ('.$fmt($project->completed_at->copy()->tz('Asia/Jakarta')).')' : ''),
+            $phases['retention']['state'] === 'Running' => 'Masa retensi, hingga '.$fmt($phases['retention']['end']),
+            $phases['development']['state'] === 'Running' => 'Pengembangan (development), hingga '.$fmt($phases['development']['end']),
+            $phases['development']['state'] === 'Upcoming' => 'Belum dimulai',
+            default => 'Pengembangan selesai',
         };
 
+        // A short summary table (Uraian / Keterangan) keeps the letter
+        // scannable; the full detail is in the attached report.
+        $rows = [
+            'Nama proyek' => e($project->name),
+            'Progres pekerjaan' => $summary['progress'].'% ('.$summary['doneCount'].' dari '.$summary['totalTasks'].' pekerjaan selesai)',
+            'Tahap saat ini' => e($stage),
+            'Periode development' => $phases['development']['start'] ? $fmt($phases['development']['start']).' s.d. '.$fmt($phases['development']['end']) : '-',
+        ];
+        if ($phases['retention']['start']) {
+            $rows['Masa retensi'] = $fmt($phases['retention']['start']).' s.d. '.$fmt($phases['retention']['end']);
+        }
+        if ($uat['planned'] || $uat['done']) {
+            $rows['UAT'] = $uat['done'].($uat['planned'] ? ' dari '.$uat['planned'] : '').' sesi terlaksana'.($uat['passedRound'] ? ', dinyatakan lulus pada UAT ke-'.$uat['passedRound'] : '');
+        }
+        $table = '<table><tbody><tr><th style="width: 34%;">Uraian</th><th>Keterangan</th></tr>';
+        foreach ($rows as $label => $value) {
+            $table .= '<tr><td>'.$label.'</td><td>'.$value.'</td></tr>';
+        }
+        $table .= '</tbody></table>';
+
         return '<p>Dengan hormat,</p>'
-            .'<p>Bersama surat ini, kami menyampaikan Laporan Progres Proyek <strong>'.$name.'</strong> per tanggal '.$date.'. '
-            .'Hingga tanggal tersebut, progres pekerjaan telah mencapai <strong>'.$summary['progress'].'%</strong> ('
-            .$summary['doneCount'].' dari '.$summary['totalTasks'].' pekerjaan selesai).'.$stage.'</p>'
-            .'<p>Rincian progres, linimasa proyek, hasil UAT, serta status setiap pekerjaan kami lampirkan pada halaman berikutnya.</p>'
+            .'<p>Bersama surat ini, kami sampaikan Laporan Progres Proyek <strong>'.e($project->name).'</strong> per tanggal '.$fmt($today).', dengan ringkasan sebagai berikut:</p>'
+            .$table
+            .'<p>Rincian linimasa, hasil UAT, dan status setiap pekerjaan dapat Bapak/Ibu lihat pada laporan terlampir.</p>'
             .'<p>Demikian surat pengantar ini kami sampaikan. Atas perhatian dan kerja sama Bapak/Ibu, kami ucapkan terima kasih.</p>';
     }
 }

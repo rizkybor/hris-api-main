@@ -51,7 +51,7 @@ test('the options carry a draft cover letter from the project', function () {
         ->assertJsonPath('data.draft.template', 'primary')
         ->assertJsonPath('data.divisions.0.code', 'PRJ')
         ->assertJsonCount(0, 'data.letters');
-    expect($this->getJson("{$this->url}/cover-letter-options")->json('data.draft.body'))->toContain('masa retensi hingga 31 Januari 2027');
+    expect($this->getJson("{$this->url}/cover-letter-options")->json('data.draft.body'))->toContain('Masa retensi, hingga 31 Januari 2027');
 });
 
 test('the report alone shows the timeline and the UAT', function () {
