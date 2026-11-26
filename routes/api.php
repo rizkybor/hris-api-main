@@ -32,6 +32,7 @@ use App\Http\Controllers\DashboardWidgetController;
 use App\Http\Controllers\DivisionCodeController;
 use App\Http\Controllers\DocumentLetterController;
 use App\Http\Controllers\DocumentSettingController;
+use App\Http\Controllers\DocumentSummaryController;
 use App\Http\Controllers\EmployeeFileController;
 use App\Http\Controllers\EmployeeProfileController;
 use App\Http\Controllers\EmployeeResignationController;
@@ -617,6 +618,7 @@ Route::prefix('v1')
             Route::apiResource('division-codes', DivisionCodeController::class)->only(['index', 'store', 'update', 'destroy']);
 
             // Document Letters: Invoices
+            Route::get('invoices/summary', [DocumentSummaryController::class, 'invoices']);
             Route::get('invoices/{id}/export-pdf', [InvoiceController::class, 'exportPdf']);
             Route::post('invoices/{id}/mark-as-paid', [InvoiceController::class, 'markAsPaid']);
             Route::post('invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
@@ -626,11 +628,13 @@ Route::prefix('v1')
             Route::apiResource('bank-accounts', BankAccountController::class)->only(['index', 'store', 'update', 'destroy']);
 
             // Document Letters: Payment Receipts
+            Route::get('payment-receipts/summary', [DocumentSummaryController::class, 'paymentReceipts']);
             Route::get('payment-receipts/{id}/export-pdf', [PaymentReceiptController::class, 'exportPdf']);
             Route::post('payment-receipts/{id}/cancel', [PaymentReceiptController::class, 'cancel']);
             Route::apiResource('payment-receipts', PaymentReceiptController::class);
 
             // Document Letters: Purchase Orders
+            Route::get('purchase-orders/summary', [DocumentSummaryController::class, 'purchaseOrders']);
             Route::get('purchase-orders/{id}/export-pdf', [PurchaseOrderController::class, 'exportPdf']);
             Route::post('purchase-orders/{id}/cancel', [PurchaseOrderController::class, 'cancel']);
             Route::apiResource('purchase-orders', PurchaseOrderController::class);

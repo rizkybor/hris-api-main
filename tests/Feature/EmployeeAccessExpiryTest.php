@@ -145,6 +145,6 @@ describe('staff report closing notes', function () {
 
         $html = view('pdf.staff-raport', $data + ['period_label' => 'Tenure', 'generated_at' => now(), 'use_signature' => false])->render();
 
-        expect($html)->toContain('Reviewer Notes')->toContain('Kerja bagus selama kontrak.')->toContain('Manager Reviewer')->toContain('contract ended');
+        expect($html)->toContain('Catatan Penilai')->toContain('Kerja bagus selama kontrak.')->toContain('Manager Reviewer')->toContain('kontrak selesai');
     });
 });

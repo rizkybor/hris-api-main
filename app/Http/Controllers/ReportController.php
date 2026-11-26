@@ -28,6 +28,7 @@ use App\Models\Project;
 use App\Models\StaffRaportReview;
 use App\Models\Subscription;
 use App\Services\DocumentReportService;
+use App\Services\Pdf\ReportPageFooter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -303,10 +304,13 @@ class ReportController extends Controller implements HasMiddleware
 
             $data = $this->reportRepository->getStaffRaportDetail((int) $employeeId, $startDate, $endDate);
             $data['period_label'] = $periodLabel;
-            $data['generated_at'] = now();
+            $data['generated_at'] = now('Asia/Jakarta');
             $data['use_signature'] = $request->boolean('with_signature');
 
-            $pdf = Pdf::loadView('pdf.staff-raport', $data)->setPaper('a4');
+            $pdf = ReportPageFooter::apply(
+                Pdf::loadView('pdf.staff-raport', $data)->setPaper('a4'),
+                'Laporan Kinerja Karyawan · '.($data['employee']['name'] ?? '')
+            );
 
             $filename = str_replace(' ', '-', $data['employee']['name'] ?? 'staff-raport').'-'.$period.'.pdf';
 
