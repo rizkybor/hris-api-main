@@ -11,6 +11,7 @@ use App\Models\MaintenanceLog;
 use App\Models\MaintenancePeriod;
 use App\Models\Project;
 use App\Services\MaintenanceService;
+use App\Support\IndonesianValidation;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
@@ -100,7 +101,10 @@ class MaintenanceContractController extends Controller implements HasMiddleware
                 return ['id' => $c->id, 'name' => $c->name, 'client' => $c->client?->name, 'status' => $c->status, ...$p->totals()];
             })->sortByDesc('used_percent')->values();
 
+            // Quota work only: feature hours draw on the balance, not the
+            // monthly quota (same scope as "used").
             $categories = MaintenanceLog::whereIn('maintenance_contract_id', $contracts->pluck('id'))
+                ->whereNull('maintenance_feature_id')
                 ->whereBetween('work_date', [$current.'-01', Carbon::createFromFormat('Y-m-d', $current.'-01')->endOfMonth()->toDateString()])
                 ->selectRaw('category, SUM(hours) as hours, COUNT(*) as c')->groupBy('category')->get()
                 ->map(fn ($row) => ['category' => $row->category ?: 'other', 'hours' => round((float) $row->hours, 2), 'count' => (int) $row->c])
@@ -182,7 +186,7 @@ class MaintenanceContractController extends Controller implements HasMiddleware
 
     public function store(Request $request)
     {
-        $data = $request->validate($this->rules());
+        $data = $request->validate($this->rules(), ...IndonesianValidation::args());
         $this->assertProjectBelongsToClient($data);
 
         try {
@@ -198,7 +202,7 @@ class MaintenanceContractController extends Controller implements HasMiddleware
 
     public function update(Request $request, int $id)
     {
-        $data = $request->validate($this->rules());
+        $data = $request->validate($this->rules(), ...IndonesianValidation::args());
         $this->assertProjectBelongsToClient($data);
 
         try {
@@ -269,6 +273,7 @@ class MaintenanceContractController extends Controller implements HasMiddleware
     {
         $period = MaintenancePeriod::withSum('adjustments', 'hours')->withSum('logs', 'hours')
             ->with(['adjustments' => fn ($q) => $q->with('creator')->latest('id'), 'logs' => fn ($q) => $q->with('performer')->orderByDesc('work_date')->orderByDesc('id')])
+            ->whereHas('contract')
             ->findOrFail($id);
 
         return ResponseHelper::jsonResponse(true, 'Maintenance Period Retrieved Successfully', [
@@ -286,7 +291,8 @@ class MaintenanceContractController extends Controller implements HasMiddleware
 
     private function openPeriod(int $id): MaintenancePeriod
     {
-        $period = MaintenancePeriod::findOrFail($id);
+        // whereHas: a deleted (soft-deleted) contract's months are gone too.
+        $period = MaintenancePeriod::whereHas('contract')->findOrFail($id);
         if ($period->isClosed()) {
             throw ValidationException::withMessages(['period' => 'Bulan ini sudah ditutup dan tidak bisa diubah lagi.']);
         }
@@ -294,10 +300,24 @@ class MaintenanceContractController extends Controller implements HasMiddleware
         return $period;
     }
 
+    /**
+     * Quota + carried + adjustments may not drop below 0 hours: a negative
+     * total would turn into "overage" (billable hours) nobody worked.
+     */
+    private function assertTotalStaysPositive(MaintenancePeriod $period, float $change): void
+    {
+        $total = (float) $period->totals()['total'];
+        if ($change < 0 && $total + $change < 0) {
+            throw ValidationException::withMessages([
+                'hours' => 'Pengurangan maksimal '.rtrim(rtrim(number_format($total, 2, '.', ''), '0'), '.').' jam (total kuota bulan ini tidak boleh kurang dari 0).',
+            ]);
+        }
+    }
+
     /** null = follow the contract's policy. */
     public function setLeftoverAction(Request $request, int $id)
     {
-        $data = $request->validate(['leftover_action' => ['nullable', Rule::in(MaintenanceContract::LEFTOVER_POLICIES)]]);
+        $data = $request->validate(['leftover_action' => ['nullable', Rule::in(MaintenanceContract::LEFTOVER_POLICIES)]], ...IndonesianValidation::args());
         $period = $this->openPeriod($id);
         $period->update(['leftover_action' => $data['leftover_action'] ?? null]);
 
@@ -309,8 +329,9 @@ class MaintenanceContractController extends Controller implements HasMiddleware
         $data = $request->validate([
             'hours' => ['required', 'numeric', 'between:-1000,1000', 'not_in:0'],
             'reason' => ['required', 'string', 'max:500'],
-        ]);
+        ], ...IndonesianValidation::args());
         $period = $this->openPeriod($id);
+        $this->assertTotalStaysPositive($period, (float) $data['hours']);
         $period->adjustments()->create([...$data, 'created_by' => Auth::id()]);
 
         return ResponseHelper::jsonResponse(true, 'Quota Adjusted', null, 201);
@@ -319,7 +340,9 @@ class MaintenanceContractController extends Controller implements HasMiddleware
     public function destroyAdjustment(int $id)
     {
         $adjustment = MaintenanceAdjustment::findOrFail($id);
-        $this->openPeriod($adjustment->maintenance_period_id);
+        $period = $this->openPeriod($adjustment->maintenance_period_id);
+        // Removing a top-up must not leave the month below zero either.
+        $this->assertTotalStaysPositive($period, -1 * (float) $adjustment->hours);
         $adjustment->delete();
 
         return ResponseHelper::jsonResponse(true, 'Adjustment Removed', null, 200);
@@ -333,7 +356,7 @@ class MaintenanceContractController extends Controller implements HasMiddleware
         $data = $request->validate([
             'hours' => ['required', 'numeric', 'between:-1000,1000', 'not_in:0'],
             'reason' => ['required', 'string', 'max:500'],
-        ]);
+        ], ...IndonesianValidation::args());
         $contract = MaintenanceContract::findOrFail($id);
 
         DB::transaction(function () use ($contract, $data) {

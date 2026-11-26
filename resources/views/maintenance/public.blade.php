@@ -242,7 +242,7 @@
                             <tr>
                                 <td>
                                     {{ $bankType[$entry->type] ?? $entry->type }}
-                                    <div class="small muted">{{ $entry->note }}</div>
+                                    @if($entry->client_note)<div class="small muted">{{ $entry->client_note }}</div>@endif
                                 </td>
                                 <td class="num">
                                     <span class="{{ $entry->hours >= 0 ? 'pos' : 'neg' }}">{{ $entry->hours >= 0 ? '+' : '−' }}{{ $h(abs($entry->hours)) }}</span>

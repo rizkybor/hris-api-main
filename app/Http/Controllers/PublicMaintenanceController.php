@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MaintenanceBankEntry;
 use App\Models\MaintenanceContract;
 use App\Services\MaintenanceService;
 use Illuminate\Http\Request;
@@ -44,12 +45,29 @@ class PublicMaintenanceController extends Controller
             'logs' => $period ? $period->logs()->where('visible_to_client', true)->orderBy('work_date')->orderBy('id')->get() : collect(),
             'balance' => $service->balance($contract),
             'expiring' => $service->expiringSoon($contract),
-            'bankEntries' => $contract->bankEntries()->latest('id')->take(15)->get(),
+            'bankEntries' => self::clientSafe($contract->bankEntries()->with('feature:id,title,visible_to_client')->latest('id')->take(15)->get()),
             'features' => $contract->features()->withSum('logs', 'hours')->where('visible_to_client', true)
                 ->where('status', '!=', 'cancelled')->latest('id')->get(),
         ])->withHeaders([
             'Cache-Control' => 'no-store, max-age=0',
             'X-Robots-Tag' => 'noindex, nofollow',
         ]);
+    }
+
+    /**
+     * The note each balance entry may show the client (client_note):
+     * manual top-ups/deductions carry an internal reason, and entries of a
+     * feature hidden from the client must not reveal its title.
+     */
+    private static function clientSafe($entries)
+    {
+        return $entries->each(function (MaintenanceBankEntry $entry) {
+            $entry->client_note = match (true) {
+                in_array($entry->type, ['adjust_in', 'adjust_out'], true) => null,
+                $entry->type === 'expire' => 'Kedaluwarsa',
+                $entry->maintenance_feature_id && ! $entry->feature?->visible_to_client => 'Pengembangan fitur',
+                default => $entry->note,
+            };
+        });
     }
 }
