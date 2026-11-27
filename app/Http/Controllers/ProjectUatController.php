@@ -36,7 +36,7 @@ class ProjectUatController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['project-list|project-create|project-edit|project-delete']), only: ['index', 'beritaAcaraOptions', 'beritaAcaraPdf']),
+            new Middleware(PermissionMiddleware::using(['project-list|project-create|project-edit|project-delete']), only: ['index', 'locationItems', 'beritaAcaraOptions', 'beritaAcaraPdf']),
             new Middleware(PermissionMiddleware::using(['project-edit']), only: ['generateBeritaAcara']),
             new Middleware(PermissionMiddleware::using(['project-export']), only: ['exportOptions', 'export']),
             new Middleware(PermissionMiddleware::using(['project-edit']), only: ['updatePlan', 'store', 'update', 'storeItem', 'updateItem', 'destroyItem', 'resolveItem', 'uploadItemPhoto', 'deleteItemPhoto']),
@@ -393,6 +393,33 @@ class ProjectUatController extends Controller implements HasMiddleware
         }
 
         return ResponseHelper::jsonResponse(true, 'UAT Item Added Successfully', $this->payload($location->session->project), 201);
+    }
+
+    /** A page of a session's findings/notes (the UAT payload carries only the first few). */
+    public function locationItems(Request $request, string $projectId, string $locationId)
+    {
+        $data = $request->validate([
+            'offset' => ['nullable', 'integer', 'min:0'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+        $location = ProjectUatLocation::query()
+            ->whereKey($locationId)
+            ->whereHas('session', fn ($query) => $query->where('project_id', $projectId))
+            ->first();
+        if (! $location) {
+            return ResponseHelper::jsonResponse(false, 'UAT Session Not Found', null, 404);
+        }
+        $offset = (int) ($data['offset'] ?? 0);
+        $limit = (int) ($data['limit'] ?? 10);
+        $items = $location->items()->with('resolver:id,name')->skip($offset)->take($limit)->get();
+        $total = $location->items()->count();
+
+        return ResponseHelper::jsonResponse(true, 'UAT Items Retrieved Successfully', [
+            'items' => $items->map(fn (ProjectUatItem $item) => ProjectUatSessionResource::item($item))->values(),
+            'offset' => $offset,
+            'total' => $total,
+            'has_more' => $offset + $items->count() < $total,
+        ], 200);
     }
 
     /** Edit a finding/note; location_id moves it to another session of the same UAT. */
