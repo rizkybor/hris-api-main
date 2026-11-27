@@ -365,3 +365,28 @@ test('generating a Berita Acara needs letter-create', function () {
     $this->postJson("{$this->base}/sessions/{$uat['id']}/berita-acara", ['date' => '2026-11-26', 'template' => 'primary', 'division_code_id' => $division->id, 'second_party_name' => 'X'])->assertForbidden();
     $this->get("{$this->base}/sessions/{$uat['id']}/berita-acara")->assertNotFound();
 });
+
+test('a session sends its first five items; the rest come in pages while scrolling', function () {
+    $uat = newUat($this);
+    $location = $uat['locations'][0]['id'];
+    foreach (range(1, 12) as $n) {
+        $this->postJson("{$this->base}/locations/{$location}/items", ['type' => $n % 3 ? 'finding' : 'note', 'description' => "Item {$n}"])->assertCreated();
+    }
+
+    $this->getJson($this->base)
+        ->assertJsonCount(5, 'data.sessions.0.locations.0.items')
+        ->assertJsonPath('data.sessions.0.locations.0.items_total', 12)
+        ->assertJsonPath('data.sessions.0.locations.0.items.4.description', 'Item 5')
+        ->assertJsonPath('data.sessions.0.items_count', 12)
+        ->assertJsonPath('data.sessions.0.locations.0.notes_count', 4);
+
+    $this->getJson("{$this->base}/locations/{$location}/items?offset=5&limit=5")
+        ->assertOk()
+        ->assertJsonCount(5, 'data.items')
+        ->assertJsonPath('data.items.0.description', 'Item 6')
+        ->assertJsonPath('data.has_more', true);
+    $this->getJson("{$this->base}/locations/{$location}/items?offset=10&limit=5")
+        ->assertJsonCount(2, 'data.items')
+        ->assertJsonPath('data.has_more', false)
+        ->assertJsonPath('data.total', 12);
+});
