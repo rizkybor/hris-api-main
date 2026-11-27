@@ -218,6 +218,9 @@ Route::prefix('v1')
             Route::post('projects/{projectId}/uat/sessions', [ProjectUatController::class, 'store']);
             Route::put('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'update']);
             Route::delete('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'destroy']);
+            Route::patch('projects/{projectId}/uat/items/{itemId}/resolve', [ProjectUatController::class, 'resolveItem']);
+            Route::post('projects/{projectId}/uat/items/{itemId}/photo', [ProjectUatController::class, 'uploadItemPhoto']);
+            Route::delete('projects/{projectId}/uat/items/{itemId}/photo', [ProjectUatController::class, 'deleteItemPhoto']);
 
             // Project Cash Ledger (debit/credit against the project's budget)
             Route::apiResource('project-cash-transactions', ProjectCashTransactionController::class)->except(['show']);

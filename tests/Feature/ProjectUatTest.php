@@ -54,12 +54,21 @@ test('rounds are numbered in order and count towards the agreement', function ()
         'date' => '2026-11-20',
         'status' => 'revision',
         'notes' => 'Klien minta revisi',
-        'findings' => "Tombol simpan tidak aktif\n\nLaporan tidak muncul\n",
+        'items' => [
+            ['type' => 'finding', 'feature' => 'Order', 'menu' => 'Daftar Order', 'description' => 'Tombol simpan tidak aktif'],
+            ['type' => 'finding', 'description' => 'Laporan tidak muncul'],
+            ['type' => 'note', 'feature' => 'Dashboard', 'description' => 'Klien minta warna grafik diganti'],
+        ],
         'attachment' => UploadedFile::fake()->create('BA UAT 1.pdf', 120, 'application/pdf'),
     ], ['Accept' => 'application/json'])
         ->assertCreated()
         ->assertJsonPath('data.sessions.0.round', 1)
         ->assertJsonPath('data.sessions.0.findings_count', 2)
+        ->assertJsonPath('data.sessions.0.notes_count', 1)
+        ->assertJsonPath('data.sessions.0.items.0.feature', 'Order')
+        ->assertJsonPath('data.sessions.0.items.0.menu', 'Daftar Order')
+        ->assertJsonPath('data.sessions.0.items.1.feature', null)
+        ->assertJsonPath('data.sessions.0.items.2.type', 'note')
         ->assertJsonPath('data.sessions.0.attachment.name', 'BA UAT 1.pdf')
         ->assertJsonPath('data.sessions.0.attachment.type', 'pdf')
         ->assertJsonPath('data.done', 1)
@@ -138,4 +147,140 @@ test('a viewer can read the UAT but not change it', function () {
     $this->getJson($this->base)->assertOk()->assertJsonPath('data.planned', null);
     $this->putJson("{$this->base}/plan", ['uat_rounds_planned' => 2])->assertForbidden();
     $this->postJson("{$this->base}/sessions", [])->assertForbidden();
+});
+
+test('findings and notes can be edited, cleared and are validated', function () {
+    $session = ProjectUatSession::create(['project_id' => $this->project->id, 'round' => 1, 'status' => 'revision']);
+    $session->items()->create(['type' => 'finding', 'description' => 'Lama']);
+
+    // Not sent: left as they are.
+    $this->putJson("{$this->base}/sessions/{$session->id}", ['status' => 'passed'])
+        ->assertOk()->assertJsonPath('data.sessions.0.findings_count', 1);
+
+    // Replaced, in the order given.
+    $this->putJson("{$this->base}/sessions/{$session->id}", ['items' => [
+        ['type' => 'note', 'description' => 'Catatan A'],
+        ['type' => 'finding', 'feature' => '  Laporan ', 'menu' => '', 'description' => ' Total salah '],
+    ]])
+        ->assertOk()
+        ->assertJsonPath('data.sessions.0.items.0.description', 'Catatan A')
+        ->assertJsonPath('data.sessions.0.items.1.feature', 'Laporan')
+        ->assertJsonPath('data.sessions.0.items.1.menu', null)
+        ->assertJsonPath('data.sessions.0.items.1.description', 'Total salah');
+
+    // A multipart form sends items_sent=1 and no items to clear them all.
+    $this->post("{$this->base}/sessions/{$session->id}", ['_method' => 'PUT', 'items_sent' => '1'], ['Accept' => 'application/json'])
+        ->assertOk()->assertJsonCount(0, 'data.sessions.0.items');
+
+    $this->putJson("{$this->base}/sessions/{$session->id}", ['items' => [['type' => 'bug', 'description' => 'x']]])->assertUnprocessable();
+    $this->putJson("{$this->base}/sessions/{$session->id}", ['items' => [['type' => 'finding', 'description' => '']]])->assertUnprocessable();
+});
+
+test('the migration turns old one-per-line findings into items', function () {
+    $migration = require database_path('migrations/2026_11_27_000001_create_project_uat_items_table.php');
+    $migration->down();
+    $sessionId = DB::table('project_uat_sessions')->insertGetId(['project_id' => $this->project->id, 'round' => 1, 'status' => 'revision', 'findings' => "Satu\n\n Dua \n", 'created_at' => now(), 'updated_at' => now()]);
+    $migration->up();
+
+    expect(DB::table('project_uat_items')->where('project_uat_session_id', $sessionId)->orderBy('position')->pluck('description')->all())->toBe(['Satu', 'Dua'])
+        ->and(DB::table('project_uat_items')->where('project_uat_session_id', $sessionId)->pluck('type')->unique()->all())->toBe(['finding']);
+});
+
+test('an item can be checked off and keeps that state when the round is edited', function () {
+    $session = ProjectUatSession::create(['project_id' => $this->project->id, 'round' => 1, 'status' => 'revision']);
+    $item = $session->items()->create(['type' => 'finding', 'description' => 'Tombol simpan']);
+
+    $this->patchJson("{$this->base}/items/{$item->id}/resolve", ['resolved' => true])
+        ->assertOk()
+        ->assertJsonPath('data.sessions.0.items.0.is_resolved', true)
+        ->assertJsonPath('data.sessions.0.items.0.resolved_by', $this->user->name)
+        ->assertJsonPath('data.sessions.0.resolved_count', 1);
+
+    // Editing the round with the item's id keeps the check-off; a new item is added.
+    $this->putJson("{$this->base}/sessions/{$session->id}", ['items' => [
+        ['id' => $item->id, 'type' => 'finding', 'description' => 'Tombol simpan (diperjelas)'],
+        ['type' => 'note', 'description' => 'Baru'],
+    ]])
+        ->assertOk()
+        ->assertJsonPath('data.sessions.0.items.0.is_resolved', true)
+        ->assertJsonPath('data.sessions.0.items.0.description', 'Tombol simpan (diperjelas)')
+        ->assertJsonPath('data.sessions.0.items.1.is_resolved', false);
+
+    $this->patchJson("{$this->base}/items/{$item->id}/resolve", ['resolved' => false])
+        ->assertOk()->assertJsonPath('data.sessions.0.items.0.resolved_at', null);
+});
+
+test('a proof photo can be attached, replaced and removed, and is kept small', function () {
+    $session = ProjectUatSession::create(['project_id' => $this->project->id, 'round' => 1, 'status' => 'revision']);
+    $item = $session->items()->create(['type' => 'note', 'description' => 'Perlu bukti']);
+    $this->cloudinary->shouldReceive('uploadImage')->andReturn('hris/project-files/bukti-1', 'hris/project-files/bukti-2');
+
+    $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->image('bukti.jpg', 800, 600)->size(300)], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('data.sessions.0.items.0.photo.name', 'bukti.jpg');
+
+    $this->cloudinary->shouldReceive('delete')->once()->with('hris/project-files/bukti-1');
+    $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->image('bukti2.png')], ['Accept' => 'application/json'])->assertOk();
+
+    $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->image('besar.jpg')->size(3000)], ['Accept' => 'application/json'])
+        ->assertUnprocessable()->assertJsonPath('errors.photo.0', 'Ukuran foto maksimal 2 MB.');
+    $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->create('dok.pdf', 100, 'application/pdf')], ['Accept' => 'application/json'])
+        ->assertUnprocessable();
+
+    $this->deleteJson("{$this->base}/items/{$item->id}/photo")->assertOk()->assertJsonPath('data.sessions.0.items.0.photo', null);
+});
+
+test('items of another project are not found', function () {
+    $other = Project::create(['name' => 'Lain', 'status' => 'active', 'start_date' => '2026-01-01', 'end_date' => '2026-12-31']);
+    $session = ProjectUatSession::create(['project_id' => $other->id, 'round' => 1, 'status' => 'revision']);
+    $item = $session->items()->create(['type' => 'finding', 'description' => 'x']);
+
+    $this->patchJson("{$this->base}/items/{$item->id}/resolve", ['resolved' => true])->assertNotFound();
+    $this->deleteJson("{$this->base}/items/{$item->id}/photo")->assertNotFound();
+});
+
+test('one UAT can run in several places at the same time, and items say where they came from', function () {
+    $response = $this->postJson("{$this->base}/sessions", [
+        'date' => '2026-11-10',
+        'status' => 'revision',
+        'locations' => [
+            ['location' => 'Kantor Klien – Jakarta', 'date' => '2026-11-10', 'time' => '09:00', 'participants' => 'Andi, Budi'],
+            ['location' => 'Cabang Surabaya', 'date' => '2026-11-10', 'time' => '09:00'],
+        ],
+        'items' => [
+            ['type' => 'finding', 'description' => 'Tombol simpan', 'location_index' => 0],
+            ['type' => 'finding', 'description' => 'Laporan cabang', 'location_index' => 1],
+            ['type' => 'note', 'description' => 'Umum'],
+        ],
+    ])->assertCreated();
+
+    $response->assertJsonPath('data.sessions.0.round', 1)
+        ->assertJsonCount(2, 'data.sessions.0.locations')
+        ->assertJsonPath('data.sessions.0.locations.0.location', 'Kantor Klien – Jakarta')
+        ->assertJsonPath('data.sessions.0.locations.0.time', '09:00')
+        ->assertJsonPath('data.sessions.0.locations.1.items_count', 1)
+        ->assertJsonPath('data.sessions.0.items.0.location', 'Kantor Klien – Jakarta')
+        ->assertJsonPath('data.sessions.0.items.1.location', 'Cabang Surabaya')
+        ->assertJsonPath('data.sessions.0.items.2.location', null);
+
+    $session = ProjectUatSession::sole();
+    [$jakarta, $surabaya] = $session->locations()->pluck('id')->all();
+
+    // Editing only the round's fields keeps places and the items' places.
+    $this->putJson("{$this->base}/sessions/{$session->id}", ['status' => 'passed'])
+        ->assertJsonPath('data.sessions.0.items.1.location', 'Cabang Surabaya');
+
+    // Removing a place keeps its items, without a place.
+    $this->putJson("{$this->base}/sessions/{$session->id}", ['locations' => [['id' => $jakarta, 'location' => 'Kantor Klien – Jakarta']]])
+        ->assertOk()
+        ->assertJsonCount(1, 'data.sessions.0.locations')
+        ->assertJsonCount(3, 'data.sessions.0.items')
+        ->assertJsonPath('data.sessions.0.items.1.location', null)
+        ->assertJsonPath('data.sessions.0.items.0.location', 'Kantor Klien – Jakarta');
+
+    // Still one UAT round: the places don't count as extra rounds.
+    expect(ProjectUatSession::count())->toBe(1);
+
+    $this->putJson("{$this->base}/sessions/{$session->id}", ['locations' => [['location' => '']]])->assertUnprocessable();
+    $this->putJson("{$this->base}/sessions/{$session->id}", ['locations' => [['location' => 'X', 'time' => '25:00']]])->assertUnprocessable();
 });
