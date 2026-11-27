@@ -54,6 +54,13 @@ class ProjectUatSessionResource extends JsonResource
             ])->values(),
             // A UAT past the number agreed with the client.
             'over_plan' => $this->planned !== null && $this->round > $this->planned,
+            // The generated Berita Acara (numbered letter), if any.
+            'berita_acara' => $this->ba_letter_id && $this->beritaAcara ? [
+                'id' => $this->beritaAcara->id,
+                'letter_number' => $this->beritaAcara->letter_number,
+                'date' => $this->beritaAcara->date?->toDateString(),
+                'status' => $this->beritaAcara->status,
+            ] : null,
             'attachment' => $this->attachment_path ? [
                 'url' => CloudinaryUrl::raw($this->attachment_path),
                 'name' => $this->attachment_name,
@@ -77,10 +84,26 @@ class ProjectUatSessionResource extends JsonResource
             'is_resolved' => (bool) $item->is_resolved,
             'resolved_at' => $item->resolved_at,
             'resolved_by' => $item->resolver?->name,
-            'photo' => $item->photo_path ? [
-                'url' => CloudinaryUrl::image($item->photo_path),
-                'name' => $item->photo_name,
-            ] : null,
+            // Revision proof (next to "Sudah direvisi").
+            'photo' => self::file($item->photo_path, $item->photo_name, $item->photo_kind),
+            // File showing the issue, attached with the finding/note.
+            'attachment' => self::file($item->evidence_path, $item->evidence_name, $item->evidence_kind),
+        ];
+    }
+
+    /** @return array{url: ?string, name: ?string, kind: string, is_image: bool}|null */
+    private static function file(?string $path, ?string $name, ?string $kind): ?array
+    {
+        if (! $path) {
+            return null;
+        }
+        $isFile = $kind === 'file';
+
+        return [
+            'url' => $isFile ? CloudinaryUrl::raw($path) : CloudinaryUrl::image($path),
+            'name' => $name,
+            'kind' => $isFile ? 'file' : 'image',
+            'is_image' => ! $isFile,
         ];
     }
 }

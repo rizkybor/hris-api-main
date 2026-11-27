@@ -8,9 +8,11 @@ use App\Models\Project;
 use App\Models\ProjectUatItem;
 use App\Models\ProjectUatLocation;
 use App\Models\ProjectUatSession;
+use App\Services\BeritaAcaraService;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\CoverLetterService;
+use App\Services\Pdf\LetterPdfService;
 use App\Services\Pdf\UatReportService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -34,7 +36,8 @@ class ProjectUatController extends Controller implements HasMiddleware
     public static function middleware()
     {
         return [
-            new Middleware(PermissionMiddleware::using(['project-list|project-create|project-edit|project-delete']), only: ['index']),
+            new Middleware(PermissionMiddleware::using(['project-list|project-create|project-edit|project-delete']), only: ['index', 'beritaAcaraOptions', 'beritaAcaraPdf']),
+            new Middleware(PermissionMiddleware::using(['project-edit']), only: ['generateBeritaAcara']),
             new Middleware(PermissionMiddleware::using(['project-export']), only: ['exportOptions', 'export']),
             new Middleware(PermissionMiddleware::using(['project-edit']), only: ['updatePlan', 'store', 'update', 'storeItem', 'updateItem', 'destroyItem', 'resolveItem', 'uploadItemPhoto', 'deleteItemPhoto']),
             new Middleware(PermissionMiddleware::using(['project-delete']), only: ['destroy']),
@@ -98,7 +101,7 @@ class ProjectUatController extends Controller implements HasMiddleware
     private function findUat(string $projectId, string $sessionId): ?ProjectUatSession
     {
         return ProjectUatSession::query()->where('project_id', $projectId)
-            ->with(['project.client', 'locations.items'])
+            ->with(['project.client', 'locations.items', 'beritaAcara'])
             ->find($sessionId);
     }
 
@@ -142,6 +145,47 @@ class ProjectUatController extends Controller implements HasMiddleware
             .CoverLetterService::table($rows)
             .'<p>Seluruh temuan dan catatan tercantum pada laporan terlampir dan akan segera kami tindak lanjuti. Hasil revisinya akan kami sampaikan kepada Bapak/Ibu setelah selesai.</p>'
             .'<p>Demikian surat pengantar ini kami sampaikan. Atas perhatian dan kerja sama Bapak/Ibu, kami ucapkan terima kasih.</p>';
+    }
+
+    // ------------------------------------------------------------ berita acara
+
+    /** Draft for the Berita Acara dialog (and the existing one, if any). */
+    public function beritaAcaraOptions(Request $request, string $projectId, string $sessionId, BeritaAcaraService $service)
+    {
+        $uat = $this->findUat($projectId, $sessionId);
+        if (! $uat) {
+            return ResponseHelper::jsonResponse(false, 'UAT Round Not Found', null, 404);
+        }
+
+        return ResponseHelper::jsonResponse(true, 'Berita Acara Options Retrieved Successfully', $service->options($uat, $request->user()), 200);
+    }
+
+    /** Generate the UAT's Berita Acara (a numbered BA letter), or refresh it. */
+    public function generateBeritaAcara(Request $request, string $projectId, string $sessionId, BeritaAcaraService $service)
+    {
+        $uat = $this->findUat($projectId, $sessionId);
+        if (! $uat) {
+            return ResponseHelper::jsonResponse(false, 'UAT Round Not Found', null, 404);
+        }
+        abort_unless($request->user()->can('letter-create'), 403, 'You do not have permission to create letters.');
+        $letter = $service->generate($uat, $request->validate($service->rules()), $request->user()->id);
+
+        return ResponseHelper::jsonResponse(true, 'Berita Acara Generated Successfully', [
+            'letter' => ['id' => $letter->id, 'letter_number' => $letter->letter_number],
+            'uat' => $this->payload($uat->project),
+        ], 200);
+    }
+
+    /** The Berita Acara as PDF (company letterhead, both parties' signatures). */
+    public function beritaAcaraPdf(string $projectId, string $sessionId, LetterPdfService $letters)
+    {
+        $uat = $this->findUat($projectId, $sessionId);
+        $letter = $uat?->beritaAcara;
+        if (! $letter) {
+            return ResponseHelper::jsonResponse(false, 'Berita Acara Not Found', null, 404);
+        }
+
+        return $letters->make($letter)->stream(LetterPdfService::filename($letter));
     }
 
     /** Set (or clear) how many UAT rounds were agreed. */
@@ -240,8 +284,8 @@ class ProjectUatController extends Controller implements HasMiddleware
 
         $project = $session->project;
         $path = $session->attachment_path;
-        // Items go with the round (cascade); their proof photos are removed below.
-        $photos = $session->items()->whereNotNull('photo_path')->pluck('photo_path');
+        // Items go with the round (cascade); their files are removed below.
+        $files = $session->items()->get(['photo_path', 'photo_kind', 'evidence_path', 'evidence_kind']);
         DB::transaction(function () use ($session, $project) {
             $round = $session->round;
             $session->delete();
@@ -252,14 +296,17 @@ class ProjectUatController extends Controller implements HasMiddleware
         if ($path) {
             $this->cloudinary->delete($path, 'raw');
         }
-        $photos->each(fn ($photo) => $this->cloudinary->delete($photo));
+        $files->each(function ($item) {
+            $this->deleteFile($item->photo_path, $item->photo_kind);
+            $this->deleteFile($item->evidence_path, $item->evidence_kind);
+        });
 
         return ResponseHelper::jsonResponse(true, 'UAT Round Deleted Successfully', $this->payload($project->fresh()), 200);
     }
 
     private function payload(Project $project): array
     {
-        $sessions = $project->uatSessions()->with(['locations.items.resolver:id,name'])->orderBy('round')->get();
+        $sessions = $project->uatSessions()->with(['locations.items.resolver:id,name', 'beritaAcara'])->orderBy('round')->get();
         $planned = $project->uat_rounds_planned;
         $done = $sessions->whereIn('status', ProjectUatSession::DONE_STATUSES)->count();
         $passed = $sessions->firstWhere('status', ProjectUatSession::STATUS_PASSED);
@@ -336,11 +383,14 @@ class ProjectUatController extends Controller implements HasMiddleware
         if (! $location) {
             return ResponseHelper::jsonResponse(false, 'UAT Session Not Found', null, 404);
         }
-        $data = $request->validate($this->itemRules());
-        $location->session->items()->create($this->itemValues($data) + [
+        $data = $request->validate($this->itemRules(), $this->fileMessages('attachment'));
+        $item = $location->session->items()->create($this->itemValues($data) + [
             'project_uat_location_id' => $location->id,
             'position' => (int) $location->items()->max('position') + 1,
         ]);
+        if ($request->hasFile('attachment')) {
+            $this->replaceEvidence($item, $request->file('attachment'));
+        }
 
         return ResponseHelper::jsonResponse(true, 'UAT Item Added Successfully', $this->payload($location->session->project), 201);
     }
@@ -352,7 +402,7 @@ class ProjectUatController extends Controller implements HasMiddleware
         if (! $item) {
             return ResponseHelper::jsonResponse(false, 'UAT Item Not Found', null, 404);
         }
-        $data = $request->validate($this->itemRules() + ['location_id' => ['sometimes', 'integer']]);
+        $data = $request->validate($this->itemRules() + ['location_id' => ['sometimes', 'integer'], 'remove_attachment' => ['nullable', 'boolean']], $this->fileMessages('attachment'));
         $values = $this->itemValues($data);
         if (isset($data['location_id'])) {
             $target = $item->session->locations()->whereKey($data['location_id'])->first();
@@ -365,6 +415,12 @@ class ProjectUatController extends Controller implements HasMiddleware
             }
         }
         $item->update($values);
+        if ($request->hasFile('attachment')) {
+            $this->replaceEvidence($item, $request->file('attachment'));
+        } elseif (! empty($data['remove_attachment']) && $item->evidence_path) {
+            $this->deleteFile($item->evidence_path, $item->evidence_kind);
+            $item->update(['evidence_path' => null, 'evidence_name' => null, 'evidence_kind' => null]);
+        }
 
         return ResponseHelper::jsonResponse(true, 'UAT Item Updated Successfully', $this->payload($item->session->project), 200);
     }
@@ -383,10 +439,48 @@ class ProjectUatController extends Controller implements HasMiddleware
 
     private function deleteItemModel(ProjectUatItem $item): void
     {
-        if ($item->photo_path) {
-            $this->cloudinary->delete($item->photo_path);
-        }
+        $this->deleteFile($item->photo_path, $item->photo_kind);
+        $this->deleteFile($item->evidence_path, $item->evidence_kind);
         $item->delete();
+    }
+
+    /**
+     * Item files (issue evidence, revision proof): images go up as images
+     * (the browser already shrank them), PDFs as raw files.
+     *
+     * @return array{0: string, 1: string} public id and kind (image | file)
+     */
+    private function uploadItemFile(ProjectUatItem $item, UploadedFile $file, string $suffix): array
+    {
+        $project = $item->session->project;
+        $name = CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($project->name, $project->id).'-uat'.$item->session->round.'-'.$suffix);
+        $isPdf = strtolower($file->getClientOriginalExtension()) === 'pdf' || $file->getMimeType() === 'application/pdf';
+
+        return $isPdf
+            ? [$this->cloudinary->uploadRaw($file, CloudinaryFolders::projectFiles(), $name), 'file']
+            : [$this->cloudinary->uploadImage($file, CloudinaryFolders::projectFiles(), $name), 'image'];
+    }
+
+    private function deleteFile(?string $path, ?string $kind): void
+    {
+        if ($path) {
+            $this->cloudinary->delete($path, $kind === 'file' ? 'raw' : 'image');
+        }
+    }
+
+    private function replaceEvidence(ProjectUatItem $item, UploadedFile $file): void
+    {
+        [$path, $kind] = $this->uploadItemFile($item, $file, 'temuan');
+        $this->deleteFile($item->evidence_path, $item->evidence_kind);
+        $item->update(['evidence_path' => $path, 'evidence_name' => mb_substr($file->getClientOriginalName(), 0, 255), 'evidence_kind' => $kind]);
+    }
+
+    private function fileMessages(string $field): array
+    {
+        return [
+            $field.'.mimes' => 'Lampiran harus berupa foto (JPG, PNG, WebP) atau PDF.',
+            $field.'.max' => 'Ukuran lampiran maksimal '.(ProjectUatItem::PHOTO_MAX_KB / 1024).' MB.',
+        ];
     }
 
     private function itemRules(): array
@@ -396,6 +490,8 @@ class ProjectUatController extends Controller implements HasMiddleware
             'feature' => ['nullable', 'string', 'max:150'],
             'menu' => ['nullable', 'string', 'max:150'],
             'description' => ['required', 'string', 'max:2000'],
+            // Optional file showing the issue: image or PDF, kept small.
+            'attachment' => ['nullable', 'file', 'mimes:'.ProjectUatItem::FILE_MIMES, 'max:'.ProjectUatItem::PHOTO_MAX_KB],
         ];
     }
 
@@ -431,26 +527,16 @@ class ProjectUatController extends Controller implements HasMiddleware
         if (! $item) {
             return ResponseHelper::jsonResponse(false, 'UAT Item Not Found', null, 404);
         }
+        // Revision proof: a photo/screenshot or a PDF, kept small.
         $request->validate(
-            ['photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.ProjectUatItem::PHOTO_MAX_KB]],
-            [
-                'photo.image' => 'Lampiran harus berupa foto (JPG, PNG, atau WebP).',
-                'photo.mimes' => 'Lampiran harus berupa foto (JPG, PNG, atau WebP).',
-                'photo.max' => 'Ukuran foto maksimal '.(ProjectUatItem::PHOTO_MAX_KB / 1024).' MB.',
-            ]
+            ['photo' => ['required', 'file', 'mimes:'.ProjectUatItem::FILE_MIMES, 'max:'.ProjectUatItem::PHOTO_MAX_KB]],
+            $this->fileMessages('photo')
         );
         $file = $request->file('photo');
         $project = $item->session->project;
-        $old = $item->photo_path;
-        $publicId = $this->cloudinary->uploadImage(
-            $file,
-            CloudinaryFolders::projectFiles(),
-            CloudinaryFolders::filename(CloudinaryFolders::projectPrefix($project->name, $project->id).'-uat'.$item->session->round.'-bukti')
-        );
-        $item->update(['photo_path' => $publicId, 'photo_name' => mb_substr($file->getClientOriginalName(), 0, 255)]);
-        if ($old && $old !== $publicId) {
-            $this->cloudinary->delete($old);
-        }
+        [$path, $kind] = $this->uploadItemFile($item, $file, 'revisi');
+        $this->deleteFile($item->photo_path, $item->photo_kind);
+        $item->update(['photo_path' => $path, 'photo_name' => mb_substr($file->getClientOriginalName(), 0, 255), 'photo_kind' => $kind]);
 
         return ResponseHelper::jsonResponse(true, 'UAT Item Photo Uploaded Successfully', $this->payload($project), 200);
     }
@@ -462,8 +548,8 @@ class ProjectUatController extends Controller implements HasMiddleware
             return ResponseHelper::jsonResponse(false, 'UAT Item Not Found', null, 404);
         }
         if ($item->photo_path) {
-            $this->cloudinary->delete($item->photo_path);
-            $item->update(['photo_path' => null, 'photo_name' => null]);
+            $this->deleteFile($item->photo_path, $item->photo_kind);
+            $item->update(['photo_path' => null, 'photo_name' => null, 'photo_kind' => 'image']);
         }
 
         return ResponseHelper::jsonResponse(true, 'UAT Item Photo Removed Successfully', $this->payload($item->session->project), 200);
