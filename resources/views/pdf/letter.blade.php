@@ -138,6 +138,7 @@
                  after the longest label ("Lampiran") instead of far out. --}}
             @php
                 $isCoverLetter = $letter->project_id && ($letter->letterCode?->code === 'SPG');
+                $enclosure = $letter->enclosure ?: ($isCoverLetter ? '1 (satu) berkas Laporan Progres Proyek' : null);
             @endphp
             <table style="margin-bottom: 6mm; width: auto;">
                 <tr>
@@ -145,11 +146,11 @@
                     <td style="border: none; width: 4mm; padding: 1px 0; vertical-align: top;">:</td>
                     <td style="border: none; padding: 1px 0;">{{ $letter->letter_number }}</td>
                 </tr>
-                @if($isCoverLetter)
+                @if($enclosure)
                     <tr>
                         <td style="border: none; padding: 1px 0; vertical-align: top;">Lampiran</td>
                         <td style="border: none; padding: 1px 0; vertical-align: top;">:</td>
-                        <td style="border: none; padding: 1px 0;">1 (satu) berkas Laporan Progres Proyek</td>
+                        <td style="border: none; padding: 1px 0;">{{ $enclosure }}</td>
                     </tr>
                 @endif
                 <tr>
