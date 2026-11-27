@@ -10,6 +10,9 @@ use App\Models\ProjectUatLocation;
 use App\Models\ProjectUatSession;
 use App\Services\Cloudinary\CloudinaryFolders;
 use App\Services\Cloudinary\CloudinaryManager;
+use App\Services\CoverLetterService;
+use App\Services\Pdf\UatReportService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -32,7 +35,8 @@ class ProjectUatController extends Controller implements HasMiddleware
     {
         return [
             new Middleware(PermissionMiddleware::using(['project-list|project-create|project-edit|project-delete']), only: ['index']),
-            new Middleware(PermissionMiddleware::using(['project-edit']), only: ['updatePlan', 'store', 'update', 'resolveItem', 'uploadItemPhoto', 'deleteItemPhoto']),
+            new Middleware(PermissionMiddleware::using(['project-export']), only: ['exportOptions', 'export']),
+            new Middleware(PermissionMiddleware::using(['project-edit']), only: ['updatePlan', 'store', 'update', 'storeItem', 'updateItem', 'destroyItem', 'resolveItem', 'uploadItemPhoto', 'deleteItemPhoto']),
             new Middleware(PermissionMiddleware::using(['project-delete']), only: ['destroy']),
         ];
     }
@@ -45,6 +49,99 @@ class ProjectUatController extends Controller implements HasMiddleware
         }
 
         return ResponseHelper::jsonResponse(true, 'Project UAT Retrieved Successfully', $this->payload($project), 200);
+    }
+
+    /**
+     * Export dialog data for one UAT document (kind = result | revision):
+     * earlier cover letters, divisions, signatories and a drafted letter.
+     */
+    public function exportOptions(Request $request, string $projectId, string $sessionId, CoverLetterService $covers)
+    {
+        $uat = $this->findUat($projectId, $sessionId);
+        if (! $uat) {
+            return ResponseHelper::jsonResponse(false, 'UAT Round Not Found', null, 404);
+        }
+        $kind = $request->validate(['kind' => ['required', Rule::in(UatReportService::KINDS)]])['kind'];
+
+        return ResponseHelper::jsonResponse(true, 'UAT Export Options Retrieved Successfully', $covers->options($uat->project, $request->user(), [
+            'subject' => UatReportService::title($uat, $kind).' – '.$uat->project->name,
+            'body' => $this->coverBody($uat, $kind),
+        ]), 200);
+    }
+
+    /**
+     * The UAT result or revision document, optionally behind a cover letter
+     * (Surat Pengantar), as one PDF for the client.
+     */
+    public function export(Request $request, string $projectId, string $sessionId, UatReportService $reports, CoverLetterService $covers)
+    {
+        $uat = $this->findUat($projectId, $sessionId);
+        if (! $uat) {
+            return ResponseHelper::jsonResponse(false, 'UAT Round Not Found', null, 404);
+        }
+        $data = $request->validate($covers->rules() + ['kind' => ['required', Rule::in(UatReportService::KINDS)]]);
+        $kind = $data['kind'];
+        $letter = $covers->resolve($data, $uat->project, $request->user(), '1 (satu) berkas '.UatReportService::title($uat, $kind));
+
+        [$pdf, $temp] = $reports->make($uat, $kind);
+        try {
+            $bytes = $pdf->output();
+        } finally {
+            foreach ($temp as $file) {
+                @unlink($file);
+            }
+        }
+
+        return $covers->respond($bytes, $letter, UatReportService::filename($uat, $kind), UatReportService::title($uat, $kind).' '.$uat->project->name);
+    }
+
+    private function findUat(string $projectId, string $sessionId): ?ProjectUatSession
+    {
+        return ProjectUatSession::query()->where('project_id', $projectId)
+            ->with(['project.client', 'locations.items'])
+            ->find($sessionId);
+    }
+
+    /** Indonesian cover letter text for a UAT result / revision document. */
+    private function coverBody(ProjectUatSession $uat, string $kind): string
+    {
+        $fmt = fn ($date) => $date ? Carbon::parse($date)->locale('id')->translatedFormat('d F Y') : '-';
+        $items = $uat->locations->flatMap(fn ($location) => $location->items);
+        $findings = $items->where('type', ProjectUatItem::TYPE_FINDING)->count();
+        $notes = $items->where('type', ProjectUatItem::TYPE_NOTE)->count();
+        $resolved = $items->where('is_resolved', true)->count();
+        $places = $uat->locations->map(fn ($place, $i) => e($place->location ?: 'Sesi '.($i + 1)))->implode(', ');
+        $name = '<strong>'.e($uat->project->name).'</strong>';
+
+        if ($kind === 'revision') {
+            $rows = [
+                'Proyek' => e($uat->project->name),
+                'UAT' => 'Ke-'.$uat->round.', '.$fmt($uat->date),
+                'Jumlah temuan & catatan' => $items->count().' ('.$findings.' temuan, '.$notes.' catatan)',
+                'Sudah direvisi / diupdate' => $resolved.' dari '.$items->count(),
+                'Masih dalam proses' => (string) ($items->count() - $resolved),
+            ];
+
+            return '<p>Dengan hormat,</p>'
+                .'<p>Menindaklanjuti hasil User Acceptance Test (UAT) ke-'.$uat->round.' proyek '.$name.', bersama surat ini kami sampaikan laporan hasil revisi atas temuan dan catatan tersebut, dengan ringkasan sebagai berikut:</p>'
+                .CoverLetterService::table($rows)
+                .'<p>Rincian setiap revisi beserta foto buktinya dapat Bapak/Ibu lihat pada laporan terlampir. Kami mohon kesediaan Bapak/Ibu untuk memeriksa kembali hasil revisi tersebut.</p>'
+                .'<p>Demikian surat pengantar ini kami sampaikan. Atas perhatian dan kerja sama Bapak/Ibu, kami ucapkan terima kasih.</p>';
+        }
+
+        $rows = [
+            'Proyek' => e($uat->project->name),
+            'UAT' => 'Ke-'.$uat->round.', '.$fmt($uat->date),
+            'Sesi / lokasi' => $uat->locations->count().' sesi'.($places ? ' ('.$places.')' : ''),
+            'Jumlah temuan' => (string) $findings,
+            'Jumlah catatan' => (string) $notes,
+        ];
+
+        return '<p>Dengan hormat,</p>'
+            .'<p>Bersama surat ini, kami sampaikan Laporan Hasil User Acceptance Test (UAT) ke-'.$uat->round.' proyek '.$name.' yang telah dilaksanakan pada '.$fmt($uat->date).', dengan ringkasan sebagai berikut:</p>'
+            .CoverLetterService::table($rows)
+            .'<p>Seluruh temuan dan catatan tercantum pada laporan terlampir dan akan segera kami tindak lanjuti. Hasil revisinya akan kami sampaikan kepada Bapak/Ibu setelah selesai.</p>'
+            .'<p>Demikian surat pengantar ini kami sampaikan. Atas perhatian dan kerja sama Bapak/Ibu, kami ucapkan terima kasih.</p>';
     }
 
     /** Set (or clear) how many UAT rounds were agreed. */
@@ -76,10 +173,10 @@ class ProjectUatController extends Controller implements HasMiddleware
 
         $data = $request->validate($this->rules(), $this->messages());
         $file = $data['attachment'] ?? null;
-        [$data, $items, $locations] = $this->splitItems($data);
+        [$data, $locations] = $this->splitLocations($data);
         unset($data['attachment'], $data['remove_attachment']);
 
-        $session = DB::transaction(function () use ($project, $data, $items, $locations, $request) {
+        $session = DB::transaction(function () use ($project, $data, $locations, $request) {
             $round = (int) $project->uatSessions()->lockForUpdate()->max('round') + 1;
 
             $session = $project->uatSessions()->create($data + [
@@ -87,8 +184,8 @@ class ProjectUatController extends Controller implements HasMiddleware
                 'status' => $data['status'] ?? ProjectUatSession::STATUS_SCHEDULED,
                 'created_by' => $request->user()?->id,
             ]);
-            $places = $this->syncLocations($session, $locations ?? []);
-            $this->syncItems($session, $items ?? [], $places);
+            // Every UAT has at least one session.
+            $this->syncLocations($session, $locations ?: [['date' => $session->date?->format('Y-m-d')]]);
 
             return $session;
         });
@@ -114,16 +211,13 @@ class ProjectUatController extends Controller implements HasMiddleware
         $data = $request->validate($rules, $this->messages());
         $file = $data['attachment'] ?? null;
         $remove = (bool) ($data['remove_attachment'] ?? false);
-        [$data, $items, $locations] = $this->splitItems($data);
+        [$data, $locations] = $this->splitLocations($data);
         unset($data['attachment'], $data['remove_attachment']);
 
-        DB::transaction(function () use ($session, $data, $items, $locations) {
+        DB::transaction(function () use ($session, $data, $locations) {
             $session->update($data);
-            $places = $locations !== null
-                ? $this->syncLocations($session, $locations)
-                : $session->locations()->pluck('id')->all();
-            if ($items !== null) {
-                $this->syncItems($session, $items, $places);
+            if ($locations !== null) {
+                $this->syncLocations($session, $locations ?: [['date' => $session->date?->format('Y-m-d')]]);
             }
         });
         if ($file) {
@@ -165,7 +259,7 @@ class ProjectUatController extends Controller implements HasMiddleware
 
     private function payload(Project $project): array
     {
-        $sessions = $project->uatSessions()->with(['locations', 'items.resolver:id,name'])->orderBy('round')->get();
+        $sessions = $project->uatSessions()->with(['locations.items.resolver:id,name'])->orderBy('round')->get();
         $planned = $project->uat_rounds_planned;
         $done = $sessions->whereIn('status', ProjectUatSession::DONE_STATUSES)->count();
         $passed = $sessions->firstWhere('status', ProjectUatSession::STATUS_PASSED);
@@ -184,71 +278,33 @@ class ProjectUatController extends Controller implements HasMiddleware
     }
 
     /**
-     * The round's own fields, and its items: null when the items weren't
-     * sent (leave them as they are), a list (possibly empty) when they were.
+     * The UAT's own fields, and its sessions: null when not sent (leave
+     * them), a list when sent (locations_sent=1 marks an emptied list).
      *
-     * @return array{0: array, 1: ?array, 2: ?array}
+     * @return array{0: array, 1: ?array}
      */
-    private function splitItems(array $data): array
+    private function splitLocations(array $data): array
     {
-        $sent = array_key_exists('items', $data) || ! empty($data['items_sent']);
-        $items = $sent ? array_values($data['items'] ?? []) : null;
-        $locationsSent = array_key_exists('locations', $data) || ! empty($data['locations_sent']);
-        $locations = $locationsSent ? array_values($data['locations'] ?? []) : null;
-        unset($data['items'], $data['items_sent'], $data['locations'], $data['locations_sent']);
+        $sent = array_key_exists('locations', $data) || ! empty($data['locations_sent']);
+        $locations = $sent ? array_values($data['locations'] ?? []) : null;
+        unset($data['locations'], $data['locations_sent']);
 
-        return [$data, $items, $locations];
+        return [$data, $locations];
     }
 
     /**
-     * Makes the round's findings / notes match the list, in order: items
-     * sent with their id are updated (keeping their check-off and photo),
-     * new ones are created, and the rest removed (with their photos).
+     * Makes the UAT's sessions match the list, in order: sessions sent with
+     * their id are updated (keeping their findings/notes), new ones created,
+     * and the rest removed together with their findings/notes and photos.
      */
-    private function syncItems(ProjectUatSession $session, array $items, array $places = []): void
-    {
-        $existing = $session->items()->get()->keyBy('id');
-        $kept = [];
-        foreach ($items as $position => $item) {
-            $values = [
-                'position' => $position,
-                'type' => $item['type'],
-                'feature' => filled($item['feature'] ?? null) ? trim($item['feature']) : null,
-                'menu' => filled($item['menu'] ?? null) ? trim($item['menu']) : null,
-                'description' => trim($item['description']),
-                'project_uat_location_id' => isset($item['location_index']) ? ($places[(int) $item['location_index']] ?? null) : null,
-            ];
-            $model = isset($item['id']) ? $existing->get((int) $item['id']) : null;
-            if ($model) {
-                $model->update($values);
-                $kept[] = $model->id;
-            } else {
-                $kept[] = $session->items()->create($values)->id;
-            }
-        }
-        $existing->except($kept)->each(function (ProjectUatItem $removed) {
-            if ($removed->photo_path) {
-                $this->cloudinary->delete($removed->photo_path);
-            }
-            $removed->delete();
-        });
-    }
-
-    /**
-     * Makes the round's places match the list, in order (same upsert rule
-     * as the items). Returns the place ids by list position, so items can
-     * point at a place by its index (new places have no id yet).
-     *
-     * @return list<int>
-     */
-    private function syncLocations(ProjectUatSession $session, array $locations): array
+    private function syncLocations(ProjectUatSession $session, array $locations): void
     {
         $existing = $session->locations()->get()->keyBy('id');
-        $ids = [];
+        $kept = [];
         foreach ($locations as $position => $location) {
             $values = [
                 'position' => $position,
-                'location' => trim($location['location']),
+                'location' => filled($location['location'] ?? null) ? trim($location['location']) : null,
                 'held_on' => $location['date'] ?? null,
                 'start_time' => filled($location['time'] ?? null) ? $location['time'] : null,
                 'participants' => filled($location['participants'] ?? null) ? trim($location['participants']) : null,
@@ -256,15 +312,101 @@ class ProjectUatController extends Controller implements HasMiddleware
             $model = isset($location['id']) ? $existing->get((int) $location['id']) : null;
             if ($model) {
                 $model->update($values);
-                $ids[] = $model->id;
+                $kept[] = $model->id;
             } else {
-                $ids[] = $session->locations()->create($values)->id;
+                $kept[] = $session->locations()->create($values)->id;
             }
         }
-        // Items of a removed place stay, just without a place (nullOnDelete).
-        $existing->except($ids)->each->delete();
+        $existing->except($kept)->each(function (ProjectUatLocation $removed) {
+            $removed->items()->get()->each(fn (ProjectUatItem $item) => $this->deleteItemModel($item));
+            $removed->delete();
+        });
+    }
 
-        return $ids;
+    // ------------------------------------------------------------ findings & notes
+
+    /** Add a finding or note straight to a session (no need to edit the UAT). */
+    public function storeItem(Request $request, string $projectId, string $locationId)
+    {
+        $location = ProjectUatLocation::query()
+            ->whereKey($locationId)
+            ->whereHas('session', fn ($query) => $query->where('project_id', $projectId))
+            ->with('session.project')
+            ->first();
+        if (! $location) {
+            return ResponseHelper::jsonResponse(false, 'UAT Session Not Found', null, 404);
+        }
+        $data = $request->validate($this->itemRules());
+        $location->session->items()->create($this->itemValues($data) + [
+            'project_uat_location_id' => $location->id,
+            'position' => (int) $location->items()->max('position') + 1,
+        ]);
+
+        return ResponseHelper::jsonResponse(true, 'UAT Item Added Successfully', $this->payload($location->session->project), 201);
+    }
+
+    /** Edit a finding/note; location_id moves it to another session of the same UAT. */
+    public function updateItem(Request $request, string $projectId, string $itemId)
+    {
+        $item = $this->findItem($projectId, $itemId);
+        if (! $item) {
+            return ResponseHelper::jsonResponse(false, 'UAT Item Not Found', null, 404);
+        }
+        $data = $request->validate($this->itemRules() + ['location_id' => ['sometimes', 'integer']]);
+        $values = $this->itemValues($data);
+        if (isset($data['location_id'])) {
+            $target = $item->session->locations()->whereKey($data['location_id'])->first();
+            if (! $target) {
+                return ResponseHelper::jsonResponse(false, 'UAT Session Not Found', null, 404);
+            }
+            if ($target->id !== $item->project_uat_location_id) {
+                $values['project_uat_location_id'] = $target->id;
+                $values['position'] = (int) $target->items()->max('position') + 1;
+            }
+        }
+        $item->update($values);
+
+        return ResponseHelper::jsonResponse(true, 'UAT Item Updated Successfully', $this->payload($item->session->project), 200);
+    }
+
+    public function destroyItem(string $projectId, string $itemId)
+    {
+        $item = $this->findItem($projectId, $itemId);
+        if (! $item) {
+            return ResponseHelper::jsonResponse(false, 'UAT Item Not Found', null, 404);
+        }
+        $project = $item->session->project;
+        $this->deleteItemModel($item);
+
+        return ResponseHelper::jsonResponse(true, 'UAT Item Deleted Successfully', $this->payload($project), 200);
+    }
+
+    private function deleteItemModel(ProjectUatItem $item): void
+    {
+        if ($item->photo_path) {
+            $this->cloudinary->delete($item->photo_path);
+        }
+        $item->delete();
+    }
+
+    private function itemRules(): array
+    {
+        return [
+            'type' => ['required', Rule::in(ProjectUatItem::TYPES)],
+            'feature' => ['nullable', 'string', 'max:150'],
+            'menu' => ['nullable', 'string', 'max:150'],
+            'description' => ['required', 'string', 'max:2000'],
+        ];
+    }
+
+    private function itemValues(array $data): array
+    {
+        return [
+            'type' => $data['type'],
+            'feature' => filled($data['feature'] ?? null) ? trim($data['feature']) : null,
+            'menu' => filled($data['menu'] ?? null) ? trim($data['menu']) : null,
+            'description' => trim($data['description']),
+        ];
     }
 
     /** Check an item off as revised / updated, or undo it. */
@@ -361,25 +503,13 @@ class ProjectUatController extends Controller implements HasMiddleware
             'date' => ['nullable', 'date_format:Y-m-d'],
             'status' => ['nullable', 'string', Rule::in(ProjectUatSession::STATUSES)],
             'notes' => ['nullable', 'string', 'max:5000'],
-            // Findings / notes of the round. The client always sends
-            // items_sent=1 so an empty list (all removed) can be told apart
+            // Sessions of the UAT (same time, different places). The client
+            // sends locations_sent=1 so an emptied list can be told apart
             // from "not sent" (a multipart form can't carry an empty array).
-            'items_sent' => ['nullable', 'boolean'],
-            'items' => ['nullable', 'array', 'max:100'],
-            // An existing item keeps its id (and with it its check-off and photo).
-            'items.*.id' => ['nullable', 'integer'],
-            'items.*.type' => ['required', Rule::in(ProjectUatItem::TYPES)],
-            'items.*.feature' => ['nullable', 'string', 'max:150'],
-            'items.*.menu' => ['nullable', 'string', 'max:150'],
-            'items.*.description' => ['required', 'string', 'max:2000'],
-            // Which place (index into "locations") the item came from.
-            'items.*.location_index' => ['nullable', 'integer', 'min:0'],
-            // Places held at the same time (optional); locations_sent works
-            // like items_sent.
             'locations_sent' => ['nullable', 'boolean'],
             'locations' => ['nullable', 'array', 'max:'.ProjectUatLocation::MAX_PER_ROUND],
             'locations.*.id' => ['nullable', 'integer'],
-            'locations.*.location' => ['required', 'string', 'max:150'],
+            'locations.*.location' => ['nullable', 'string', 'max:150'],
             'locations.*.date' => ['nullable', 'date_format:Y-m-d'],
             'locations.*.time' => ['nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'locations.*.participants' => ['nullable', 'string', 'max:500'],

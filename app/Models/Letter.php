@@ -29,6 +29,7 @@ class Letter extends Model
         'sequence',
         'date',
         'subject',
+        'enclosure',
         'recipient',
         'employee_id',
         'project_id',

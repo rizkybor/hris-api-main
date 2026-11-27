@@ -214,10 +214,15 @@ Route::prefix('v1')
 
             // UAT rounds agreed with the client and each round held
             Route::get('projects/{projectId}/uat', [ProjectUatController::class, 'index']);
+            Route::get('projects/{projectId}/uat/sessions/{sessionId}/export-options', [ProjectUatController::class, 'exportOptions']);
+            Route::post('projects/{projectId}/uat/sessions/{sessionId}/export', [ProjectUatController::class, 'export']);
             Route::put('projects/{projectId}/uat/plan', [ProjectUatController::class, 'updatePlan']);
             Route::post('projects/{projectId}/uat/sessions', [ProjectUatController::class, 'store']);
             Route::put('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'update']);
             Route::delete('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'destroy']);
+            Route::post('projects/{projectId}/uat/locations/{locationId}/items', [ProjectUatController::class, 'storeItem']);
+            Route::put('projects/{projectId}/uat/items/{itemId}', [ProjectUatController::class, 'updateItem']);
+            Route::delete('projects/{projectId}/uat/items/{itemId}', [ProjectUatController::class, 'destroyItem']);
             Route::patch('projects/{projectId}/uat/items/{itemId}/resolve', [ProjectUatController::class, 'resolveItem']);
             Route::post('projects/{projectId}/uat/items/{itemId}/photo', [ProjectUatController::class, 'uploadItemPhoto']);
             Route::delete('projects/{projectId}/uat/items/{itemId}/photo', [ProjectUatController::class, 'deleteItemPhoto']);
