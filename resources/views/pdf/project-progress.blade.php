@@ -32,6 +32,9 @@
     $showExpected = $timeline['expectedProgress'] !== null && ! in_array($timeline['status'], ['Completed', 'Cancelled', 'In Retention', 'Retention Ended'], true);
     $section = 0;
     $no = 0;
+    $uatItemCount = $uat['sessions']->sum(fn ($session) => $session->items->count());
+    // Short sections stay on one page (heading + table header never left alone at a page end).
+    $keepTasksTogether = $totalTasks <= 18;
 @endphp
 
     @include('pdf.partials.report-masthead', ['docType' => 'Laporan Progres Proyek', 'docDate' => $generatedAt])
@@ -121,10 +124,13 @@
             <table class="data">
                 <thead>
                     <tr>
-                        <th style="width: 10%;">Sesi</th>
-                        <th style="width: 18%;">Tanggal</th>
-                        <th style="width: 16%;">Hasil</th>
-                        <th style="width: 56%;">Temuan</th>
+                        <th style="width: 7%;">UAT</th>
+                        <th style="width: 14%;">Tanggal</th>
+                        <th style="width: 23%;">Lokasi</th>
+                        <th style="width: 13%;">Hasil</th>
+                        <th class="c" style="width: 10%;">Temuan</th>
+                        <th class="c" style="width: 10%;">Catatan</th>
+                        <th style="width: 23%;">Kesimpulan</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -132,22 +138,76 @@
                         <tr>
                             <td>{{ $session->round }}@if($uat['planned'] && $session->round > $uat['planned'])<br><span class="small warn">tambahan</span>@endif</td>
                             <td>{{ $fmt($session->date) }}</td>
-                            <td class="{{ $uatTone[$session->status] ?? '' }}">{{ $uatResult[$session->status] ?? $session->status }}</td>
                             <td>
-                                @forelse($session->findingList() as $i => $finding)
-                                    {{ $i + 1 }}. {{ $finding }}@if(! $loop->last)<br>@endif
+                                @forelse($session->locations as $place)
+                                    {{ $place->location }}@if($place->start_time || ($place->held_on && $place->held_on->toDateString() !== $session->date?->toDateString()))<br><span class="small muted">{{ $place->held_on && $place->held_on->toDateString() !== $session->date?->toDateString() ? $fmt($place->held_on).' ' : '' }}{{ $place->start_time }}</span>@endif
+                                    @if(! $loop->last)<br>@endif
                                 @empty
-                                    <span class="muted">Tidak ada temuan</span>
+                                    <span class="muted">—</span>
                                 @endforelse
                             </td>
+                            <td class="{{ $uatTone[$session->status] ?? '' }}">{{ $uatResult[$session->status] ?? $session->status }}</td>
+                            <td class="c">{{ $session->items->where('type', 'finding')->count() }}</td>
+                            <td class="c">{{ $session->items->where('type', 'note')->count() }}</td>
+                            <td>{{ $session->notes ?: '—' }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+
+            @if($uatItemCount > 0)
+                <div style="{{ $uatItemCount <= 18 ? 'page-break-inside: avoid;' : '' }}">
+                <p style="margin: 5mm 0 2mm 0; font-weight: bold; color: #0b1d51;">Rincian temuan dan catatan</p>
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th style="width: 6%;">No</th>
+                            <th style="width: 12%;">Jenis</th>
+                            <th style="width: 22%;">Fitur / Menu</th>
+                            <th style="width: 42%;">Uraian</th>
+                            <th style="width: 18%;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($uat['sessions'] as $session)
+                            @if($session->items->count())
+                                <tr class="group"><td colspan="5">UAT {{ $session->round }} &middot; {{ $fmt($session->date, 'd F Y') }}</td></tr>
+                                @foreach($session->items as $item)
+                                    <tr>
+                                        <td class="muted">{{ $loop->iteration }}</td>
+                                        <td class="{{ $item->type === 'finding' ? 'warn' : 'muted' }}">{{ $item->type === 'finding' ? 'Temuan' : 'Catatan' }}</td>
+                                        <td>
+                                            @if($item->feature || $item->menu)
+                                                {{ $item->feature ?: '—' }}@if($item->menu)<br><span class="small muted">Menu: {{ $item->menu }}</span>@endif
+                                            @else
+                                                <span class="muted">—</span>
+                                            @endif
+                                            @if($session->locations->count() > 1 && $item->project_uat_location_id)
+                                                <br><span class="small muted">Lokasi: {{ $session->locations->firstWhere('id', $item->project_uat_location_id)?->location }}</span>
+                                            @endif
+                                        </td>
+                                        <td>{{ $item->description }}@if($item->photo_path)<br><span class="small muted">Dilampiri foto bukti</span>@endif</td>
+                                        <td class="{{ $item->is_resolved ? 'ok' : 'muted' }}">
+                                            @if($item->is_resolved)
+                                                {{ $item->type === 'finding' ? 'Sudah direvisi' : 'Sudah diupdate' }}
+                                                @if($item->resolved_at)<br><span class="small muted">{{ $fmt($item->resolved_at->copy()->tz('Asia/Jakarta')) }}</span>@endif
+                                            @else
+                                                Belum
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @endif
+                        @endforeach
+                    </tbody>
+                </table>
+                </div>
+            @endif
         @endif
     @endif
 
     {{-- Pekerjaan --}}
+    <div style="{{ $keepTasksTogether ? 'page-break-inside: avoid;' : '' }}">
     <h2><span class="n">{{ ++$section }}.</span>Rincian Pekerjaan</h2>
     <p style="margin-bottom: 2.5mm;" class="muted">
         {{ $totalTasks }} pekerjaan: {{ $doneTasks->count() }} selesai, {{ $ongoingTasks->count() }} sedang dikerjakan, {{ $pendingTasks->count() }} belum dimulai{{ $cancelledTasks->count() ? ', '.$cancelledTasks->count().' dibatalkan' : '' }}.
@@ -181,5 +241,6 @@
     @else
         <p class="muted">Belum ada pekerjaan yang dicatat.</p>
     @endif
+    </div>
 </body>
 </html>

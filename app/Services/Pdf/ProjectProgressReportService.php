@@ -26,6 +26,8 @@ class ProjectProgressReportService
             'tasks.assignee.user',
             'tasks.assignees.user',
             'uatSessions' => fn ($query) => $query->orderBy('round'),
+            'uatSessions.items',
+            'uatSessions.locations',
         ])->findOrFail($id);
     }
 
