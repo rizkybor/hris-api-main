@@ -14,6 +14,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class ProjectUatSessionResource extends JsonResource
 {
+    /** Items per session sent with the UAT; more are fetched on scroll. */
+    public const FIRST_PAGE = 5;
+
     private ?int $planned = null;
 
     public function withPlan(?int $planned): static
@@ -50,7 +53,10 @@ class ProjectUatSessionResource extends JsonResource
                 'findings_count' => $location->items->where('type', ProjectUatItem::TYPE_FINDING)->count(),
                 'notes_count' => $location->items->where('type', ProjectUatItem::TYPE_NOTE)->count(),
                 'resolved_count' => $location->items->where('is_resolved', true)->count(),
-                'items' => $location->items->map(fn (ProjectUatItem $item) => self::item($item))->values(),
+                // Only the first page; the rest is fetched while scrolling
+                // (GET .../uat/locations/{id}/items?offset=&limit=).
+                'items' => $location->items->take(self::FIRST_PAGE)->map(fn (ProjectUatItem $item) => self::item($item))->values(),
+                'items_total' => $location->items->count(),
             ])->values(),
             // A UAT past the number agreed with the client.
             'over_plan' => $this->planned !== null && $this->round > $this->planned,

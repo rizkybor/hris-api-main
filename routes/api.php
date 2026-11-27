@@ -223,6 +223,7 @@ Route::prefix('v1')
             Route::post('projects/{projectId}/uat/sessions', [ProjectUatController::class, 'store']);
             Route::put('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'update']);
             Route::delete('projects/{projectId}/uat/sessions/{sessionId}', [ProjectUatController::class, 'destroy']);
+            Route::get('projects/{projectId}/uat/locations/{locationId}/items', [ProjectUatController::class, 'locationItems']);
             Route::post('projects/{projectId}/uat/locations/{locationId}/items', [ProjectUatController::class, 'storeItem']);
             Route::put('projects/{projectId}/uat/items/{itemId}', [ProjectUatController::class, 'updateItem']);
             Route::delete('projects/{projectId}/uat/items/{itemId}', [ProjectUatController::class, 'destroyItem']);
