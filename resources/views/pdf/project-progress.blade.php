@@ -140,7 +140,7 @@
                             <td>{{ $fmt($session->date) }}</td>
                             <td>
                                 @forelse($session->locations as $place)
-                                    {{ $place->location }}@if($place->start_time || ($place->held_on && $place->held_on->toDateString() !== $session->date?->toDateString()))<br><span class="small muted">{{ $place->held_on && $place->held_on->toDateString() !== $session->date?->toDateString() ? $fmt($place->held_on).' ' : '' }}{{ $place->start_time }}</span>@endif
+                                    {{ $place->location ?: 'Sesi '.$loop->iteration }}@if($place->start_time || ($place->held_on && $place->held_on->toDateString() !== $session->date?->toDateString()))<br><span class="small muted">{{ $place->held_on && $place->held_on->toDateString() !== $session->date?->toDateString() ? $fmt($place->held_on).' ' : '' }}{{ $place->start_time }}</span>@endif
                                     @if(! $loop->last)<br>@endif
                                 @empty
                                     <span class="muted">—</span>
@@ -170,34 +170,33 @@
                     </thead>
                     <tbody>
                         @foreach($uat['sessions'] as $session)
-                            @if($session->items->count())
-                                <tr class="group"><td colspan="5">UAT {{ $session->round }} &middot; {{ $fmt($session->date, 'd F Y') }}</td></tr>
-                                @foreach($session->items as $item)
-                                    <tr>
-                                        <td class="muted">{{ $loop->iteration }}</td>
-                                        <td class="{{ $item->type === 'finding' ? 'warn' : 'muted' }}">{{ $item->type === 'finding' ? 'Temuan' : 'Catatan' }}</td>
-                                        <td>
-                                            @if($item->feature || $item->menu)
-                                                {{ $item->feature ?: '—' }}@if($item->menu)<br><span class="small muted">Menu: {{ $item->menu }}</span>@endif
-                                            @else
-                                                <span class="muted">—</span>
-                                            @endif
-                                            @if($session->locations->count() > 1 && $item->project_uat_location_id)
-                                                <br><span class="small muted">Lokasi: {{ $session->locations->firstWhere('id', $item->project_uat_location_id)?->location }}</span>
-                                            @endif
-                                        </td>
-                                        <td>{{ $item->description }}@if($item->photo_path)<br><span class="small muted">Dilampiri foto bukti</span>@endif</td>
-                                        <td class="{{ $item->is_resolved ? 'ok' : 'muted' }}">
-                                            @if($item->is_resolved)
-                                                {{ $item->type === 'finding' ? 'Sudah direvisi' : 'Sudah diupdate' }}
-                                                @if($item->resolved_at)<br><span class="small muted">{{ $fmt($item->resolved_at->copy()->tz('Asia/Jakarta')) }}</span>@endif
-                                            @else
-                                                Belum
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @endif
+                            @foreach($session->locations as $place)
+                                @if($place->items->count())
+                                    <tr class="group"><td colspan="5">UAT {{ $session->round }} &middot; Sesi {{ $loop->iteration }}{{ $place->location ? ' — '.$place->location : '' }} &middot; {{ $fmt($place->held_on ?? $session->date, 'd F Y') }}</td></tr>
+                                    @foreach($place->items as $item)
+                                        <tr>
+                                            <td class="muted">{{ $loop->iteration }}</td>
+                                            <td class="{{ $item->type === 'finding' ? 'warn' : 'muted' }}">{{ $item->type === 'finding' ? 'Temuan' : 'Catatan' }}</td>
+                                            <td>
+                                                @if($item->feature || $item->menu)
+                                                    {{ $item->feature ?: '—' }}@if($item->menu)<br><span class="small muted">Menu: {{ $item->menu }}</span>@endif
+                                                @else
+                                                    <span class="muted">—</span>
+                                                @endif
+                                            </td>
+                                            <td>{{ $item->description }}@if($item->photo_path)<br><span class="small muted">Dilampiri foto bukti</span>@endif</td>
+                                            <td class="{{ $item->is_resolved ? 'ok' : 'muted' }}">
+                                                @if($item->is_resolved)
+                                                    {{ $item->type === 'finding' ? 'Sudah direvisi' : 'Sudah diupdate' }}
+                                                    @if($item->resolved_at)<br><span class="small muted">{{ $fmt($item->resolved_at->copy()->tz('Asia/Jakarta')) }}</span>@endif
+                                                @else
+                                                    Belum
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @endif
+                            @endforeach
                         @endforeach
                     </tbody>
                 </table>
