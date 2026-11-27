@@ -191,9 +191,19 @@ class Project extends Model
             ->values();
     }
 
+    /**
+     * Development tasks: what the project progress counts. Tasks that come
+     * from UAT findings/notes are kept apart (see uatTasks()).
+     */
     public function tasks()
     {
-        return $this->hasMany(ProjectTask::class);
+        return $this->hasMany(ProjectTask::class)->whereNull('project_uat_item_id');
+    }
+
+    /** Board tasks created from UAT findings/notes (To Do / Done only). */
+    public function uatTasks()
+    {
+        return $this->hasMany(ProjectTask::class)->whereNotNull('project_uat_item_id');
     }
 
     public function documents()
