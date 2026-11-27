@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\Client;
+use App\Models\DivisionCode;
+use App\Models\Letter;
 use App\Models\Project;
 use App\Models\ProjectUatItem;
 use App\Models\ProjectUatSession;
@@ -234,19 +237,19 @@ test('a proof photo can be attached, replaced and removed, and is kept small', f
         ->assertOk()
         ->assertJsonPath('data.sessions.0.locations.0.items.0.photo.name', 'bukti.jpg');
 
-    $this->cloudinary->shouldReceive('delete')->once()->with('hris/project-files/bukti-1');
+    $this->cloudinary->shouldReceive('delete')->once()->with('hris/project-files/bukti-1', 'image');
     $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->image('bukti2.png')], ['Accept' => 'application/json'])->assertOk();
 
     $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->image('besar.jpg')->size(3000)], ['Accept' => 'application/json'])
-        ->assertUnprocessable()->assertJsonPath('errors.photo.0', 'Ukuran foto maksimal 2 MB.');
-    $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->create('dok.pdf', 100, 'application/pdf')], ['Accept' => 'application/json'])
+        ->assertUnprocessable()->assertJsonPath('errors.photo.0', 'Ukuran lampiran maksimal 2 MB.');
+    $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->create('dok.xlsx', 100)], ['Accept' => 'application/json'])
         ->assertUnprocessable();
 
     $this->deleteJson("{$this->base}/items/{$item->id}/photo")->assertOk()->assertJsonPath('data.sessions.0.locations.0.items.0.photo', null);
 
     // Deleting the item removes its photo too.
     $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->image('lagi.jpg')], ['Accept' => 'application/json']);
-    $this->cloudinary->shouldReceive('delete')->once()->with('hris/project-files/bukti-2');
+    $this->cloudinary->shouldReceive('delete')->once()->with('hris/project-files/bukti-2', 'image');
     $this->deleteJson("{$this->base}/items/{$item->id}")->assertOk();
 });
 
@@ -283,4 +286,82 @@ test('the migration gives every UAT a session and moves loose items into it', fu
         ->and($uat->items()->first()->project_uat_location_id)->toBe($uat->locations()->first()->id)
         ->and($withPlaces->locations()->count())->toBe(2)
         ->and($withPlaces->items()->first()->project_uat_location_id)->toBe($first->id);
+});
+
+test('a finding can carry a file showing the issue, and the revision proof may be a PDF', function () {
+    $uat = newUat($this);
+    $location = $uat['locations'][0]['id'];
+    $this->cloudinary->shouldReceive('uploadImage')->andReturn('hris/temuan-1')->byDefault();
+
+    $this->post("{$this->base}/locations/{$location}/items", [
+        'type' => 'finding', 'description' => 'Tombol simpan', 'attachment' => UploadedFile::fake()->image('layar.png'),
+    ], ['Accept' => 'application/json'])
+        ->assertCreated()
+        ->assertJsonPath('data.sessions.0.locations.0.items.0.attachment.name', 'layar.png')
+        ->assertJsonPath('data.sessions.0.locations.0.items.0.attachment.is_image', true);
+    $item = ProjectUatItem::sole();
+
+    // Replace it with a PDF (raw upload), then remove it.
+    $this->cloudinary->shouldReceive('delete')->once()->with('hris/temuan-1', 'image');
+    $this->post("{$this->base}/items/{$item->id}", ['_method' => 'PUT', 'type' => 'finding', 'description' => 'Tombol simpan', 'attachment' => UploadedFile::fake()->create('langkah.pdf', 200, 'application/pdf')], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('data.sessions.0.locations.0.items.0.attachment.kind', 'file');
+    $this->putJson("{$this->base}/items/{$item->id}", ['type' => 'finding', 'description' => 'Tombol simpan', 'remove_attachment' => true])
+        ->assertOk()->assertJsonPath('data.sessions.0.locations.0.items.0.attachment', null);
+
+    // Revision proof as PDF.
+    $this->post("{$this->base}/items/{$item->id}/photo", ['photo' => UploadedFile::fake()->create('hasil-revisi.pdf', 300, 'application/pdf')], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('data.sessions.0.locations.0.items.0.photo.kind', 'file')
+        ->assertJsonPath('data.sessions.0.locations.0.items.0.photo.name', 'hasil-revisi.pdf');
+
+    // Too big / wrong type.
+    $this->post("{$this->base}/locations/{$location}/items", ['type' => 'note', 'description' => 'x', 'attachment' => UploadedFile::fake()->create('besar.pdf', 3000, 'application/pdf')], ['Accept' => 'application/json'])
+        ->assertUnprocessable()->assertJsonPath('errors.attachment.0', 'Ukuran lampiran maksimal 2 MB.');
+    $this->post("{$this->base}/locations/{$location}/items", ['type' => 'note', 'description' => 'x', 'attachment' => UploadedFile::fake()->create('data.xlsx', 10)], ['Accept' => 'application/json'])
+        ->assertUnprocessable();
+});
+
+test('a Berita Acara is generated per UAT as a numbered BA letter, and refreshed under the same number', function () {
+    Permission::firstOrCreate(['name' => 'letter-create', 'guard_name' => 'sanctum']);
+    $this->user->givePermissionTo('letter-create');
+    $division = DivisionCode::firstOrCreate(['code' => 'PRJ'], ['name' => 'Project']);
+    $client = Client::create(['name' => 'PT Contoh', 'pic_name' => 'Andi', 'pic_phone' => '0812', 'email' => 'a@example.com']);
+    $this->project->update(['client_id' => $client->id]);
+    $uat = newUat($this, ['date' => '2026-11-26', 'locations' => [['location' => 'Kantor Jakarta', 'time' => '09:00', 'participants' => 'Andi, Budi']]]);
+    $this->postJson("{$this->base}/locations/{$uat['locations'][0]['id']}/items", ['type' => 'finding', 'feature' => 'Order', 'description' => 'Tombol simpan']);
+
+    $this->getJson("{$this->base}/sessions/{$uat['id']}/berita-acara/options")
+        ->assertOk()
+        ->assertJsonPath('data.existing', null)
+        ->assertJsonPath('data.draft.second_party_name', 'PT Contoh')
+        ->assertJsonPath('data.draft.second_party_signatory_name', 'Andi')
+        ->assertJsonPath('data.draft.template', 'secondary');
+
+    $form = ['date' => '2026-11-26', 'template' => 'secondary', 'division_code_id' => $division->id, 'signatory_name' => 'Rizky', 'signatory_title' => 'Direktur', 'second_party_name' => 'PT Contoh', 'second_party_signatory_name' => 'Andi'];
+    $first = $this->postJson("{$this->base}/sessions/{$uat['id']}/berita-acara", $form)->assertOk();
+    $number = $first->json('data.letter.letter_number');
+    expect($number)->toBe('001/E/BA-JCD/PRJ/XI/2026');
+
+    $letter = Letter::sole();
+    expect($letter->letterCode->code)->toBe('BA')
+        ->and($letter->body)->toContain('Pada hari ini, Kamis, tanggal 26 November 2026')
+        ->and($letter->body)->toContain('Kantor Jakarta (26 November 2026, pukul 09:00)')
+        ->and($letter->body)->toContain('Tombol simpan')
+        ->and($letter->second_party_signatory_name)->toBe('Andi');
+    $first->assertJsonPath('data.uat.sessions.0.berita_acara.letter_number', $number);
+
+    // Refresh after a new finding: same letter, same number, new content.
+    $this->postJson("{$this->base}/locations/{$uat['locations'][0]['id']}/items", ['type' => 'note', 'description' => 'Warna grafik']);
+    $this->postJson("{$this->base}/sessions/{$uat['id']}/berita-acara", $form)->assertOk()->assertJsonPath('data.letter.letter_number', $number);
+    expect(Letter::count())->toBe(1)->and(Letter::sole()->body)->toContain('Warna grafik');
+
+    $this->get("{$this->base}/sessions/{$uat['id']}/berita-acara")->assertOk()->assertHeader('Content-Type', 'application/pdf');
+});
+
+test('generating a Berita Acara needs letter-create', function () {
+    $uat = newUat($this);
+    $division = DivisionCode::firstOrCreate(['code' => 'PRJ'], ['name' => 'Project']);
+    $this->postJson("{$this->base}/sessions/{$uat['id']}/berita-acara", ['date' => '2026-11-26', 'template' => 'primary', 'division_code_id' => $division->id, 'second_party_name' => 'X'])->assertForbidden();
+    $this->get("{$this->base}/sessions/{$uat['id']}/berita-acara")->assertNotFound();
 });

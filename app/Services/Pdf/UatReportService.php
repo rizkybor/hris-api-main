@@ -2,7 +2,6 @@
 
 namespace App\Services\Pdf;
 
-use App\Models\ProjectUatItem;
 use App\Models\ProjectUatSession;
 use App\Services\Cloudinary\CloudinaryUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -33,10 +32,13 @@ class UatReportService
         $uat->loadMissing(['project.client', 'project.projectLeader.user', 'locations.items.resolver:id,name']);
         $temp = [];
         $photos = [];
+        // Result: the file showing the issue; revision: the revision proof.
+        // Only images are drawn; PDFs are named in the report.
         foreach ($uat->locations as $location) {
             foreach ($location->items as $item) {
-                if ($item->photo_path && ($path = $this->photo($item, $temp))) {
-                    $photos[$item->id] = $path;
+                [$path, $fileKind] = $kind === 'revision' ? [$item->photo_path, $item->photo_kind] : [$item->evidence_path, $item->evidence_kind];
+                if ($path && $fileKind !== 'file' && ($local = $this->photo($path, $item->id, $temp))) {
+                    $photos[$item->id] = $local;
                 }
             }
         }
@@ -63,9 +65,9 @@ class UatReportService
     }
 
     /** A small local copy of the item's photo, or null when it can't be fetched. */
-    private function photo(ProjectUatItem $item, array &$temp): ?string
+    private function photo(string $publicId, int $itemId, array &$temp): ?string
     {
-        $url = CloudinaryUrl::image($item->photo_path);
+        $url = CloudinaryUrl::image($publicId);
         if (! $url) {
             return null;
         }
@@ -81,7 +83,7 @@ class UatReportService
 
             return $path;
         } catch (\Throwable $e) {
-            Log::warning('UAT report: proof photo not fetched', ['item' => $item->id, 'error' => $e->getMessage()]);
+            Log::warning('UAT report: photo not fetched', ['item' => $itemId, 'error' => $e->getMessage()]);
 
             return null;
         }

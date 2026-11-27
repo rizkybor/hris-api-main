@@ -215,6 +215,9 @@ Route::prefix('v1')
             // UAT rounds agreed with the client and each round held
             Route::get('projects/{projectId}/uat', [ProjectUatController::class, 'index']);
             Route::get('projects/{projectId}/uat/sessions/{sessionId}/export-options', [ProjectUatController::class, 'exportOptions']);
+            Route::get('projects/{projectId}/uat/sessions/{sessionId}/berita-acara/options', [ProjectUatController::class, 'beritaAcaraOptions']);
+            Route::post('projects/{projectId}/uat/sessions/{sessionId}/berita-acara', [ProjectUatController::class, 'generateBeritaAcara']);
+            Route::get('projects/{projectId}/uat/sessions/{sessionId}/berita-acara', [ProjectUatController::class, 'beritaAcaraPdf']);
             Route::post('projects/{projectId}/uat/sessions/{sessionId}/export', [ProjectUatController::class, 'export']);
             Route::put('projects/{projectId}/uat/plan', [ProjectUatController::class, 'updatePlan']);
             Route::post('projects/{projectId}/uat/sessions', [ProjectUatController::class, 'store']);
