@@ -31,14 +31,21 @@ class UatReportService
     {
         $uat->loadMissing(['project.client', 'project.projectLeader.user', 'locations.items.resolver:id,name']);
         $temp = [];
+        // Per item: "before" = the file showing the issue (from the UAT),
+        // "after" = the revision proof. The result report shows "before";
+        // the revision report shows both side by side. Only images are
+        // drawn (PDFs are named in the report).
         $photos = [];
-        // Result: the file showing the issue; revision: the revision proof.
-        // Only images are drawn; PDFs are named in the report.
         foreach ($uat->locations as $location) {
             foreach ($location->items as $item) {
-                [$path, $fileKind] = $kind === 'revision' ? [$item->photo_path, $item->photo_kind] : [$item->evidence_path, $item->evidence_kind];
-                if ($path && $fileKind !== 'file' && ($local = $this->photo($path, $item->id, $temp))) {
-                    $photos[$item->id] = $local;
+                $files = ['before' => [$item->evidence_path, $item->evidence_kind]];
+                if ($kind === 'revision') {
+                    $files['after'] = [$item->photo_path, $item->photo_kind];
+                }
+                foreach ($files as $slot => [$path, $fileKind]) {
+                    if ($path && $fileKind !== 'file' && ($image = $this->photo($path, $item->id))) {
+                        $photos[$item->id][$slot] = $image;
+                    }
                 }
             }
         }
@@ -64,8 +71,12 @@ class UatReportService
         return ($kind === 'revision' ? 'Laporan-Revisi-UAT-' : 'Laporan-UAT-').$uat->round.'-'.str_replace([' ', '/'], '-', $uat->project->name).'.pdf';
     }
 
-    /** A small local copy of the item's photo, or null when it can't be fetched. */
-    private function photo(string $publicId, int $itemId, array &$temp): ?string
+    /**
+     * The item's photo, fetched small, as a data URI: dompdf only reads
+     * local files inside its chroot (the project folder), so a temp file
+     * would show as a broken image.
+     */
+    private function photo(string $publicId, int $itemId): ?string
     {
         $url = CloudinaryUrl::image($publicId);
         if (! $url) {
@@ -74,14 +85,12 @@ class UatReportService
         $url = str_replace('/image/upload/', '/image/upload/'.self::PHOTO_TRANSFORM.'/', $url);
         try {
             $response = Http::timeout(10)->get($url);
-            if (! $response->successful() || ! str_starts_with((string) $response->header('Content-Type'), 'image/')) {
+            $type = strtolower(trim(explode(';', (string) $response->header('Content-Type'))[0]));
+            if (! $response->successful() || ! in_array($type, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], true)) {
                 return null;
             }
-            $path = tempnam(sys_get_temp_dir(), 'uat-photo-').'.jpg';
-            file_put_contents($path, $response->body());
-            $temp[] = $path;
 
-            return $path;
+            return 'data:'.$type.';base64,'.base64_encode($response->body());
         } catch (\Throwable $e) {
             Log::warning('UAT report: photo not fetched', ['item' => $itemId, 'error' => $e->getMessage()]);
 

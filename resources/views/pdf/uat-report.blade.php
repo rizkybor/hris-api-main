@@ -5,6 +5,10 @@
     @include('pdf.partials.report-style')
     <style>
         .photo { width: 32mm; height: auto; margin-top: 1.5mm; border: 0.4pt solid #cbd2d9; }
+        table.shots { width: auto; margin-top: 2mm; border-collapse: collapse; }
+        table.shots td { width: 32mm; padding: 0 3mm 0 0; border: 0; vertical-align: top; }
+        table.shots .photo { width: 29mm; margin-top: 0.8mm; }
+        .shot-label { margin: 0; font-size: 7.5pt; font-weight: bold; letter-spacing: 0.4pt; text-transform: uppercase; color: #52606d; }
         .sign td { padding: 0; vertical-align: top; }
         .sign .line { border-top: 0.6pt solid #1f2933; display: inline-block; min-width: 55mm; padding-top: 1mm; }
     </style>
@@ -115,10 +119,38 @@
                             </td>
                             <td>
                                 {{ $item->description }}
-                                @if(isset($photos[$item->id]))
-                                    <br><img class="photo" src="{{ $photos[$item->id] }}">
-                                @elseif($isRevision ? ($item->photo_path && $item->photo_kind === 'file') : ($item->evidence_path && $item->evidence_kind === 'file'))
-                                    <br><span class="small muted">Lampiran: {{ $isRevision ? $item->photo_name : $item->evidence_name }}</span>
+                                @if($isRevision)
+                                    {{-- Before (from the UAT) and after (the revision proof) --}}
+                                    @if(isset($photos[$item->id]) || ($item->evidence_kind === 'file' && $item->evidence_path) || ($item->photo_kind === 'file' && $item->photo_path))
+                                        <table class="shots">
+                                            <tr>
+                                                <td>
+                                                    <p class="shot-label">Sebelum</p>
+                                                    @if(isset($photos[$item->id]['before']))
+                                                        <img class="photo" src="{{ $photos[$item->id]['before'] }}">
+                                                    @elseif($item->evidence_path && $item->evidence_kind === 'file')
+                                                        <span class="small muted">Lampiran: {{ $item->evidence_name }}</span>
+                                                    @else
+                                                        <span class="small muted">Tidak ada gambar</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    <p class="shot-label">Sesudah</p>
+                                                    @if(isset($photos[$item->id]['after']))
+                                                        <img class="photo" src="{{ $photos[$item->id]['after'] }}">
+                                                    @elseif($item->photo_path && $item->photo_kind === 'file')
+                                                        <span class="small muted">Lampiran: {{ $item->photo_name }}</span>
+                                                    @else
+                                                        <span class="small muted">Belum ada bukti revisi</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    @endif
+                                @elseif(isset($photos[$item->id]['before']))
+                                    <br><img class="photo" src="{{ $photos[$item->id]['before'] }}">
+                                @elseif($item->evidence_path && $item->evidence_kind === 'file')
+                                    <br><span class="small muted">Lampiran: {{ $item->evidence_name }}</span>
                                 @endif
                             </td>
                             @if($isRevision)
