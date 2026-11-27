@@ -16,6 +16,7 @@ use App\Services\CoverLetterService;
 use App\Services\Pdf\LetterPdfService;
 use App\Services\Pdf\UatReportService;
 use App\Services\UatTaskSync;
+use App\Support\SignatureImage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -23,6 +24,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 /**
@@ -68,10 +70,21 @@ class ProjectUatController extends Controller implements HasMiddleware
         }
         $kind = $request->validate(['kind' => ['required', Rule::in(UatReportService::KINDS)]])['kind'];
 
-        return ResponseHelper::jsonResponse(true, 'UAT Export Options Retrieved Successfully', $covers->options($uat->project, $request->user(), [
+        $options = $covers->options($uat->project, $request->user(), [
             'subject' => UatReportService::title($uat, $kind).' – '.$uat->project->name,
             'body' => $this->coverBody($uat, $kind),
-        ]), 200);
+        ]);
+        // Who signs the report's "Disiapkan oleh": the project leader by
+        // default; a scanned signature only for people who may sign letters.
+        $leader = $uat->project->projectLeader?->user?->name;
+        $options['report'] = [
+            'signatories' => $request->user()->can('letter-create') ? SignatureImage::signatories() : [],
+            'signatory_name' => $leader,
+            'signatory_title' => $leader ? 'Pemimpin Proyek' : null,
+            'use_signature' => false,
+        ];
+
+        return ResponseHelper::jsonResponse(true, 'UAT Export Options Retrieved Successfully', $options, 200);
     }
 
     /**
@@ -84,11 +97,29 @@ class ProjectUatController extends Controller implements HasMiddleware
         if (! $uat) {
             return ResponseHelper::jsonResponse(false, 'UAT Round Not Found', null, 404);
         }
-        $data = $request->validate($covers->rules() + ['kind' => ['required', Rule::in(UatReportService::KINDS)]]);
+        $data = $request->validate($covers->rules() + [
+            'kind' => ['required', Rule::in(UatReportService::KINDS)],
+            'report_signatory_name' => ['nullable', 'string', 'max:255'],
+            'report_signatory_title' => ['nullable', 'string', 'max:255'],
+            'report_use_signature' => ['sometimes', 'boolean'],
+        ]);
         $kind = $data['kind'];
+        $signer = [
+            'name' => filled($data['report_signatory_name'] ?? null) ? trim($data['report_signatory_name']) : null,
+            'title' => filled($data['report_signatory_title'] ?? null) ? trim($data['report_signatory_title']) : null,
+            'use_signature' => (bool) ($data['report_use_signature'] ?? false),
+        ];
+        if ($signer['use_signature']) {
+            if (! $request->user()->can('letter-create')) {
+                return ResponseHelper::jsonResponse(false, 'Tidak memiliki akses untuk memakai tanda tangan.', null, 403);
+            }
+            if (! SignatureImage::pathFor($signer['name'])) {
+                throw ValidationException::withMessages(['report_signatory_name' => 'Pilih penanda tangan yang tanda tangannya tersedia.']);
+            }
+        }
         $letter = $covers->resolve($data, $uat->project, $request->user(), '1 (satu) berkas '.UatReportService::title($uat, $kind));
 
-        [$pdf, $temp] = $reports->make($uat, $kind);
+        [$pdf, $temp] = $reports->make($uat, $kind, $signer);
         try {
             $bytes = $pdf->output();
         } finally {
