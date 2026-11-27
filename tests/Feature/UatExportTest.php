@@ -117,3 +117,33 @@ test('exporting needs the project export permission', function () {
     $this->getJson("{$this->url}/export-options?kind=result")->assertForbidden();
     $this->postJson("{$this->url}/export", ['kind' => 'result', 'cover' => 'none'])->assertForbidden();
 });
+
+test('the report is signed by whoever is picked under "Disiapkan oleh", with or without the scanned signature', function () {
+    $options = $this->getJson("{$this->url}/export-options?kind=result")->assertOk();
+    expect($options->json('data.report.signatories'))->not->toBeEmpty()
+        ->and($options->json('data.report.use_signature'))->toBeFalse();
+    $person = $options->json('data.report.signatories.0');
+
+    $signed = $this->postJson("{$this->url}/export", ['kind' => 'revision', 'cover' => 'none', 'report_signatory_name' => $person['name'], 'report_signatory_title' => 'Direktur', 'report_use_signature' => true])->assertOk();
+    $text = uatPdfText($signed->getContent());
+    expect($text)->toContain(mb_strtolower($person['name']))->toContain('direktur');
+
+    // Name only, no scan.
+    $plain = $this->postJson("{$this->url}/export", ['kind' => 'result', 'cover' => 'none', 'report_signatory_name' => 'Budi Santoso', 'report_signatory_title' => 'QA Lead'])->assertOk();
+    expect(uatPdfText($plain->getContent()))->toContain('budi santoso')->toContain('qa lead');
+
+    // A signature needs someone whose scan is on file.
+    $this->postJson("{$this->url}/export", ['kind' => 'result', 'cover' => 'none', 'report_signatory_name' => 'Budi Santoso', 'report_use_signature' => true])
+        ->assertUnprocessable()->assertJsonValidationErrors('report_signatory_name');
+})->skip(fn () => ! trim((string) shell_exec('command -v pdftotext')), 'pdftotext not installed');
+
+test('only people who may sign letters can put a scanned signature on the report', function () {
+    Role::firstOrCreate(['name' => 'exporter', 'guard_name' => 'sanctum'])->givePermissionTo(['project-list', 'project-export']);
+    $exporter = User::factory()->create();
+    $exporter->assignRole('exporter');
+    Sanctum::actingAs($exporter);
+
+    expect($this->getJson("{$this->url}/export-options?kind=result")->assertOk()->json('data.report.signatories'))->toBe([]);
+    $this->postJson("{$this->url}/export", ['kind' => 'result', 'cover' => 'none', 'report_signatory_name' => 'Andy Saputra', 'report_use_signature' => true])->assertForbidden();
+    $this->postJson("{$this->url}/export", ['kind' => 'result', 'cover' => 'none', 'report_signatory_name' => 'Andy Saputra'])->assertOk();
+});

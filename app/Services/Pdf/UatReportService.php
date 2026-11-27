@@ -27,7 +27,10 @@ class UatReportService
      */
     public const KINDS = ['result', 'revision'];
 
-    public function make(ProjectUatSession $uat, string $kind = 'result'): array
+    /**
+     * @param  array{name?: ?string, title?: ?string, use_signature?: bool}  $signer  who signs "Disiapkan oleh" (default: the project leader)
+     */
+    public function make(ProjectUatSession $uat, string $kind = 'result', array $signer = []): array
     {
         $uat->loadMissing(['project.client', 'project.projectLeader.user', 'locations.items.resolver:id,name']);
         $temp = [];
@@ -55,6 +58,7 @@ class UatReportService
             'project' => $uat->project,
             'photos' => $photos,
             'kind' => $kind,
+            'signer' => $signer + ['name' => null, 'title' => null, 'use_signature' => false],
             'generatedAt' => Carbon::now('Asia/Jakarta'),
         ])->setPaper('a4');
 

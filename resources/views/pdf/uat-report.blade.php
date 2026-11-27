@@ -182,17 +182,21 @@
         @endif
     @endforeach
 
-    {{-- Pengesahan --}}
+    {{-- Pengesahan: our side on the left (optionally with a scanned signature), the client's on the right --}}
+    @php
+        $preparedName = $signer['name'] ?? $project->projectLeader?->user?->name;
+        $preparedTitle = $signer['name'] ? ($signer['title'] ?: null) : ($project->projectLeader?->user?->name ? 'Pemimpin Proyek' : null);
+    @endphp
     <table class="sign" style="margin-top: 14mm; page-break-inside: avoid;">
         <tr>
             <td style="width: 50%;">
                 <p>Disiapkan oleh,</p>
                 <p style="font-weight: bold;">PT. Jendela Cakra Digital</p>
-                <div style="height: 20mm;"></div>
-                <p class="line">{{ $project->projectLeader?->user?->name ?? ' ' }}</p>
-                <p class="muted">{{ $project->projectLeader?->user?->name ? 'Pemimpin Proyek' : 'Nama & jabatan' }}</p>
+                @include('pdf.partials.signature', ['name' => $preparedName, 'enabled' => $signer['use_signature'] ?? false, 'space' => 20])
+                <p class="line">{{ $preparedName ?: ' ' }}</p>
+                <p class="muted">{{ $preparedName ? ($preparedTitle ?: ' ') : 'Nama & jabatan' }}</p>
             </td>
-            <td style="width: 50%;">
+            <td style="width: 50%; text-align: right;">
                 <p>{{ $isRevision ? 'Diperiksa dan disetujui oleh,' : 'Diketahui oleh,' }}</p>
                 <p style="font-weight: bold;">{{ $project->client?->name ?? 'Klien' }}</p>
                 <div style="height: 20mm;"></div>
