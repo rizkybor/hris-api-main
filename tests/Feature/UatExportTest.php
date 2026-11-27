@@ -40,7 +40,7 @@ beforeEach(function () {
     $this->uat = ProjectUatSession::create(['project_id' => $this->project->id, 'round' => 1, 'status' => 'revision', 'date' => '2026-11-10', 'notes' => 'Perlu revisi kecil']);
     $jakarta = $this->uat->locations()->create(['position' => 0, 'location' => 'Kantor Jakarta', 'start_time' => '09:00']);
     $surabaya = $this->uat->locations()->create(['position' => 1, 'location' => 'Cabang Surabaya']);
-    $this->uat->items()->create(['project_uat_location_id' => $jakarta->id, 'type' => 'finding', 'feature' => 'Order', 'description' => 'Tombol simpan', 'is_resolved' => true, 'resolved_at' => now(), 'photo_path' => 'hris/bukti-1']);
+    $this->uat->items()->create(['project_uat_location_id' => $jakarta->id, 'type' => 'finding', 'feature' => 'Order', 'description' => 'Tombol simpan', 'is_resolved' => true, 'resolved_at' => now(), 'photo_path' => 'hris/bukti-1', 'evidence_path' => 'hris/temuan-1']);
     $this->uat->items()->create(['project_uat_location_id' => $surabaya->id, 'type' => 'note', 'description' => 'Warna grafik']);
     $this->division = DivisionCode::firstOrCreate(['code' => 'PRJ'], ['name' => 'Project']);
     $this->url = "/api/v1/projects/{$this->project->id}/uat/sessions/{$this->uat->id}";

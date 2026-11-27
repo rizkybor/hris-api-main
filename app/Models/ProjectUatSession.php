@@ -41,6 +41,7 @@ class ProjectUatSession extends Model
         'attachment_name',
         'attachment_type',
         'attachment_size',
+        'ba_letter_id',
         'created_by',
     ];
 
@@ -64,6 +65,12 @@ class ProjectUatSession extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /** The generated Berita Acara (a numbered letter, code BA). */
+    public function beritaAcara()
+    {
+        return $this->belongsTo(Letter::class, 'ba_letter_id');
     }
 
     public function creator()

@@ -117,6 +117,8 @@
                                 {{ $item->description }}
                                 @if(isset($photos[$item->id]))
                                     <br><img class="photo" src="{{ $photos[$item->id] }}">
+                                @elseif($isRevision ? ($item->photo_path && $item->photo_kind === 'file') : ($item->evidence_path && $item->evidence_kind === 'file'))
+                                    <br><span class="small muted">Lampiran: {{ $isRevision ? $item->photo_name : $item->evidence_name }}</span>
                                 @endif
                             </td>
                             @if($isRevision)
