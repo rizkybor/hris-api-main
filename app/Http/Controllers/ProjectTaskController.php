@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\ProjectTaskStoreRequest;
 use App\Http\Requests\ProjectTaskUpdateRequest;
 use App\Http\Resources\PaginateResource;
 use App\Http\Resources\ProjectTaskResource;
 use App\Interfaces\ProjectTaskRepositoryInterface;
+use App\Models\ProjectTask;
+use App\Services\UatTaskSync;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -145,10 +148,33 @@ class ProjectTaskController extends Controller implements HasMiddleware
      */
     public function update(ProjectTaskUpdateRequest $request, string $id)
     {
+        $user = $request->user();
         $request = $request->validated();
 
         try {
+            $uatTask = ProjectTask::whereKey($id)->whereNotNull('project_uat_item_id')->first();
+            if ($uatTask) {
+                // A UAT task only reads To Do / Done; its text follows the
+                // finding/note and is edited in the UAT tab.
+                if (isset($request['status']) && ! in_array($request['status'], UatTaskSync::STATUSES, true)) {
+                    return ResponseHelper::jsonResponse(false, 'Task dari UAT hanya bisa berstatus To Do atau Done.', null, 422);
+                }
+                unset($request['name'], $request['description'], $request['type'], $request['color']);
+            }
+
             $task = $this->projectTaskRepository->update($id, $request);
+
+            // Done on the board = checked off as revised in UAT (and back).
+            if ($uatTask && isset($request['status']) && $request['status'] !== $uatTask->status) {
+                $item = $uatTask->uatItem;
+                $resolved = $request['status'] === TaskStatus::DONE->value;
+                if ($item && $item->is_resolved !== $resolved) {
+                    $item->update($resolved
+                        ? ['is_resolved' => true, 'resolved_at' => now(), 'resolved_by' => $user?->id]
+                        : ['is_resolved' => false, 'resolved_at' => null, 'resolved_by' => null]);
+                }
+                $task->refresh();
+            }
 
             return ResponseHelper::jsonResponse(true, 'Task Updated Successfully', new ProjectTaskResource($task), 200);
         } catch (ModelNotFoundException $e) {
@@ -164,6 +190,9 @@ class ProjectTaskController extends Controller implements HasMiddleware
     public function destroy(string $id)
     {
         try {
+            if (ProjectTask::whereKey($id)->whereNotNull('project_uat_item_id')->exists()) {
+                return ResponseHelper::jsonResponse(false, 'Task dari UAT dihapus lewat tab UAT (hapus temuan/catatannya).', null, 422);
+            }
             $this->projectTaskRepository->delete($id);
 
             return ResponseHelper::jsonResponse(true, 'Task Deleted Successfully', null, 200);

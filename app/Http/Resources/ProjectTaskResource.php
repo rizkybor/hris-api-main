@@ -27,6 +27,10 @@ class ProjectTaskResource extends JsonResource
         return [
             'id' => $this->id,
             'project_id' => $this->project_id,
+            // Set when the task mirrors a UAT finding/note: the board then
+            // only moves it between To Do and Done, and it isn't counted in
+            // the development progress.
+            'uat_item_id' => $this->project_uat_item_id,
             'name' => $this->name,
             'description' => $this->description,
             'image' => CloudinaryUrl::image($this->image),

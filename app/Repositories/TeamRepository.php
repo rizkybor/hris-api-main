@@ -310,6 +310,7 @@ class TeamRepository implements TeamRepositoryInterface
                 ->join('projects', 'project_tasks.project_id', '=', 'projects.id')
                 ->join('project_teams', 'projects.id', '=', 'project_teams.project_id')
                 ->where('project_teams.team_id', $teamId)
+                ->whereNull('project_tasks.project_uat_item_id')
                 ->selectRaw('
                     COUNT(*) as total_tasks,
                     COUNT(CASE WHEN project_tasks.status = ? THEN 1 END) as completed_tasks,
@@ -373,6 +374,7 @@ class TeamRepository implements TeamRepositoryInterface
                 ->join('projects', 'project_tasks.project_id', '=', 'projects.id')
                 ->join('project_teams', 'projects.id', '=', 'project_teams.project_id')
                 ->where('project_teams.team_id', $teamId)
+                ->whereNull('project_tasks.project_uat_item_id')
                 ->whereIn(DB::raw('DATE_FORMAT(project_tasks.created_at, "%Y-%m")'), array_keys($months))
                 ->selectRaw('DATE_FORMAT(project_tasks.created_at, "%Y-%m") as month, COUNT(*) as count')
                 ->groupBy('month')

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\UatTaskSync;
 use Illuminate\Database\Eloquent\Model;
 
 /** One finding (temuan) or note (catatan) of a UAT round. */
@@ -19,6 +20,18 @@ class ProjectUatItem extends Model
     public const FILE_MIMES = 'jpg,jpeg,png,webp,pdf';
 
     protected $fillable = ['project_uat_session_id', 'project_uat_location_id', 'position', 'type', 'feature', 'menu', 'description', 'is_resolved', 'resolved_at', 'resolved_by', 'photo_path', 'photo_name', 'photo_kind', 'evidence_path', 'evidence_name', 'evidence_kind'];
+
+    /** Each finding/note shows up on the project board (To Do / Done). */
+    protected static function booted(): void
+    {
+        static::saved(fn (self $item) => app(UatTaskSync::class)->syncItem($item));
+        static::deleted(fn (self $item) => ProjectTask::withTrashed()->where('project_uat_item_id', $item->id)->forceDelete());
+    }
+
+    public function task()
+    {
+        return $this->hasOne(ProjectTask::class, 'project_uat_item_id');
+    }
 
     protected function casts(): array
     {
