@@ -8,6 +8,7 @@
         table.shots { width: auto; margin-top: 2mm; border-collapse: collapse; }
         table.shots td { width: 32mm; padding: 0 3mm 0 0; border: 0; vertical-align: top; }
         table.shots .photo { width: 29mm; margin-top: 0.8mm; }
+        .shot-empty { width: 26mm; margin: 0.8mm 0 0; padding: 4mm 1.5mm; border: 0.5pt dashed #cbd2d9; font-size: 7.5pt; line-height: 1.3; color: #7b8794; text-align: center; }
         .shot-label { margin: 0; font-size: 7.5pt; font-weight: bold; letter-spacing: 0.4pt; text-transform: uppercase; color: #52606d; }
         .sign td { padding: 0; vertical-align: top; }
         .sign .line { border-top: 0.6pt solid #1f2933; display: inline-block; min-width: 55mm; padding-top: 1mm; }
@@ -120,32 +121,41 @@
                             <td>
                                 {{ $item->description }}
                                 @if($isRevision)
-                                    {{-- Before (from the UAT) and after (the revision proof) --}}
-                                    @if(isset($photos[$item->id]) || ($item->evidence_kind === 'file' && $item->evidence_path) || ($item->photo_kind === 'file' && $item->photo_path))
+                                    {{-- Before (from the UAT) and after (the revision proof); a missing side says why --}}
+                                    @php
+                                        $hasBefore = isset($photos[$item->id]['before']) || ($item->evidence_path && $item->evidence_kind === 'file');
+                                        $hasAfter = isset($photos[$item->id]['after']) || ($item->photo_path && $item->photo_kind === 'file');
+                                        $doneWord = $item->type === 'finding' ? 'direvisi' : 'diupdate';
+                                    @endphp
+                                    @if($hasBefore || $hasAfter)
                                         <table class="shots">
                                             <tr>
                                                 <td>
                                                     <p class="shot-label">Sebelum</p>
                                                     @if(isset($photos[$item->id]['before']))
                                                         <img class="photo" src="{{ $photos[$item->id]['before'] }}">
-                                                    @elseif($item->evidence_path && $item->evidence_kind === 'file')
-                                                        <span class="small muted">Lampiran: {{ $item->evidence_name }}</span>
+                                                    @elseif($hasBefore)
+                                                        <p class="shot-empty">Lampiran PDF: {{ $item->evidence_name }}</p>
                                                     @else
-                                                        <span class="small muted">Tidak ada gambar</span>
+                                                        <p class="shot-empty">Tidak ada foto saat UAT</p>
                                                     @endif
                                                 </td>
                                                 <td>
                                                     <p class="shot-label">Sesudah</p>
                                                     @if(isset($photos[$item->id]['after']))
                                                         <img class="photo" src="{{ $photos[$item->id]['after'] }}">
-                                                    @elseif($item->photo_path && $item->photo_kind === 'file')
-                                                        <span class="small muted">Lampiran: {{ $item->photo_name }}</span>
+                                                    @elseif($hasAfter)
+                                                        <p class="shot-empty">Lampiran PDF: {{ $item->photo_name }}</p>
+                                                    @elseif($item->is_resolved)
+                                                        <p class="shot-empty">Tanpa bukti foto &mdash; sudah {{ $doneWord }}</p>
                                                     @else
-                                                        <span class="small muted">Belum ada bukti revisi</span>
+                                                        <p class="shot-empty">Belum ada bukti revisi</p>
                                                     @endif
                                                 </td>
                                             </tr>
                                         </table>
+                                    @else
+                                        <br><span class="small muted">Tanpa foto sebelum &amp; sesudah{{ $item->is_resolved ? '; sudah '.$doneWord.' tanpa bukti foto' : '' }}</span>
                                     @endif
                                 @elseif(isset($photos[$item->id]['before']))
                                     <br><img class="photo" src="{{ $photos[$item->id]['before'] }}">

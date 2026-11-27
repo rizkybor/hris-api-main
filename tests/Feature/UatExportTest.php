@@ -92,7 +92,9 @@ test('photos are really drawn: the issue photo in the result, before and after i
 
     $revision = $this->postJson("{$this->url}/export", ['kind' => 'revision', 'cover' => 'none'])->assertOk();
     expect(uatPdfImages($revision->getContent()))->toBe(2)
-        ->and(uatPdfText($revision->getContent()))->toContain('sebelum')->toContain('sesudah');
+        ->and(uatPdfText($revision->getContent()))->toContain('sebelum')->toContain('sesudah')
+        // An item with no photo on either side says so.
+        ->toContain('tanpa foto sebelum & sesudah');
 })->skip(fn () => ! trim((string) shell_exec('command -v pdfimages')), 'pdfimages not installed');
 
 test('a new cover letter goes in front, with the document as its enclosure', function () {
