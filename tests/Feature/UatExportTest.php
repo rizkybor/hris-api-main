@@ -25,6 +25,17 @@ function uatPdfText(string $bytes): string
     return mb_strtolower($text);
 }
 
+/** How many JPEG photos the PDF really embeds (a broken image embeds none; the logo is a PNG). */
+function uatPdfImages(string $bytes): int
+{
+    $path = tempnam(sys_get_temp_dir(), 'uat-pdf-');
+    file_put_contents($path, $bytes);
+    $list = (string) shell_exec('pdfimages -list '.escapeshellarg($path).' 2>/dev/null');
+    @unlink($path);
+
+    return preg_match_all('/\s+image\s+.*\sjpeg\s/', $list);
+}
+
 beforeEach(function () {
     foreach (['project-list', 'project-export', 'letter-create', 'letter-list'] as $permission) {
         Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'sanctum']);
@@ -74,6 +85,15 @@ test('the UAT result and revision documents export as PDFs', function () {
 
     Http::assertSent(fn ($request) => str_contains($request->url(), 'w_500'));
 })->skip(fn () => ! trim((string) shell_exec('command -v pdftotext')), 'pdftotext not installed');
+
+test('photos are really drawn: the issue photo in the result, before and after in the revision report', function () {
+    $result = $this->postJson("{$this->url}/export", ['kind' => 'result', 'cover' => 'none'])->assertOk();
+    expect(uatPdfImages($result->getContent()))->toBe(1);
+
+    $revision = $this->postJson("{$this->url}/export", ['kind' => 'revision', 'cover' => 'none'])->assertOk();
+    expect(uatPdfImages($revision->getContent()))->toBe(2)
+        ->and(uatPdfText($revision->getContent()))->toContain('sebelum')->toContain('sesudah');
+})->skip(fn () => ! trim((string) shell_exec('command -v pdfimages')), 'pdfimages not installed');
 
 test('a new cover letter goes in front, with the document as its enclosure', function () {
     $response = $this->postJson("{$this->url}/export", [
