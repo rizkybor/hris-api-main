@@ -288,7 +288,9 @@ class ProjectRepository implements ProjectRepositoryInterface
             ])->first();
 
             // Get task statistics in a single optimized query
+            // Development tasks only: UAT findings/notes are tracked apart.
             $taskStats = DB::table('project_tasks')
+                ->whereNull('project_uat_item_id')
                 ->selectRaw('
                     COUNT(*) as total_tasks,
                     COUNT(CASE WHEN status = ? THEN 1 END) as completed_tasks,

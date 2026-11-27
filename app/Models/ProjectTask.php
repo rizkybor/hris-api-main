@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -23,6 +24,7 @@ class ProjectTask extends Model
 
     protected $fillable = [
         'project_id',
+        'project_uat_item_id',
         'name',
         'description',
         'image',
@@ -48,6 +50,23 @@ class ProjectTask extends Model
         return $this->belongsTo(Project::class);
     }
 
+    /** The UAT finding/note this task mirrors, when it came from UAT. */
+    public function uatItem()
+    {
+        return $this->belongsTo(ProjectUatItem::class, 'project_uat_item_id');
+    }
+
+    public function isFromUat(): bool
+    {
+        return $this->project_uat_item_id !== null;
+    }
+
+    /** Development tasks only (what progress counts). */
+    public function scopeDevelopment($query)
+    {
+        return $query->whereNull($this->getTable().'.project_uat_item_id');
+    }
+
     /** The first (primary) assignee; the full list is assignees(). */
     public function assignee()
     {
@@ -70,7 +89,7 @@ class ProjectTask extends Model
     /** Subquery of the ids of the tasks an employee is assigned to. */
     public static function assigneeTaskIds(int $employeeId)
     {
-        return \Illuminate\Support\Facades\DB::table('project_task_assignees')
+        return DB::table('project_task_assignees')
             ->select('project_task_id')
             ->where('employee_id', $employeeId);
     }

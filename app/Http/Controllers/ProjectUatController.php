@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\ResponseHelper;
 use App\Http\Resources\ProjectUatSessionResource;
 use App\Models\Project;
+use App\Models\ProjectTask;
 use App\Models\ProjectUatItem;
 use App\Models\ProjectUatLocation;
 use App\Models\ProjectUatSession;
@@ -14,6 +15,7 @@ use App\Services\Cloudinary\CloudinaryManager;
 use App\Services\CoverLetterService;
 use App\Services\Pdf\LetterPdfService;
 use App\Services\Pdf\UatReportService;
+use App\Services\UatTaskSync;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -271,6 +273,9 @@ class ProjectUatController extends Controller implements HasMiddleware
             $session->update(['attachment_path' => null, 'attachment_name' => null, 'attachment_type' => null, 'attachment_size' => null]);
         }
 
+        // Round number / session names appear in the board tasks.
+        app(UatTaskSync::class)->syncProject($session->project_id);
+
         return ResponseHelper::jsonResponse(true, 'UAT Round Updated Successfully', $this->payload($session->project), 200);
     }
 
@@ -288,6 +293,8 @@ class ProjectUatController extends Controller implements HasMiddleware
         $files = $session->items()->get(['photo_path', 'photo_kind', 'evidence_path', 'evidence_kind']);
         DB::transaction(function () use ($session, $project) {
             $round = $session->round;
+            // Their board tasks too (the items go by cascade, without events).
+            ProjectTask::withTrashed()->whereIn('project_uat_item_id', $session->items()->select('id'))->forceDelete();
             $session->delete();
             // One by one, in order, so the (project_id, round) unique key holds.
             $project->uatSessions()->where('round', '>', $round)->orderBy('round')->get()
@@ -300,6 +307,8 @@ class ProjectUatController extends Controller implements HasMiddleware
             $this->deleteFile($item->photo_path, $item->photo_kind);
             $this->deleteFile($item->evidence_path, $item->evidence_kind);
         });
+        // The round's tasks went with its items; later rounds were renumbered.
+        app(UatTaskSync::class)->syncProject($project->id);
 
         return ResponseHelper::jsonResponse(true, 'UAT Round Deleted Successfully', $this->payload($project->fresh()), 200);
     }

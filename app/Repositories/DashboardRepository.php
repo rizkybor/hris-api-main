@@ -93,6 +93,7 @@ class DashboardRepository implements DashboardRepositoryInterface
 
             // Single query for task stats
             $taskStats = DB::table('project_tasks')
+                ->whereNull('project_uat_item_id')
                 ->selectRaw("
                     COUNT(*) as total_tasks,
                     COUNT(CASE WHEN status = 'done' THEN 1 END) as total_completed,
