@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -36,7 +37,6 @@ class ProjectUatSession extends Model
         'date',
         'status',
         'notes',
-        'findings',
         'attachment_path',
         'attachment_name',
         'attachment_type',
@@ -55,7 +55,7 @@ class ProjectUatSession extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['round', 'date', 'status', 'notes', 'findings', 'attachment_name'])
+            ->logOnly(['round', 'date', 'status', 'notes', 'attachment_name'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->useLogName('Project');
@@ -71,9 +71,21 @@ class ProjectUatSession extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** @return list<string> */
-    public function findingList(): array
+    /** Places the round was held at (same time, different locations). */
+    public function locations()
     {
-        return array_values(array_filter(array_map('trim', preg_split('/\R/', (string) $this->findings))));
+        return $this->hasMany(ProjectUatLocation::class)->orderBy('position')->orderBy('id');
+    }
+
+    /** Findings and notes, in the order they were entered. */
+    public function items()
+    {
+        return $this->hasMany(ProjectUatItem::class)->orderBy('position')->orderBy('id');
+    }
+
+    /** @return Collection<int, ProjectUatItem> */
+    public function findingItems()
+    {
+        return $this->items->where('type', ProjectUatItem::TYPE_FINDING)->values();
     }
 }

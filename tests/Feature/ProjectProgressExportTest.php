@@ -36,7 +36,9 @@ beforeEach(function () {
         'start_date' => '2026-07-01', 'end_date' => '2026-10-31',
         'retention_start_date' => '2026-11-01', 'retention_end_date' => '2027-01-31', 'uat_rounds_planned' => 2,
     ]);
-    ProjectUatSession::create(['project_id' => $this->project->id, 'round' => 1, 'status' => 'revision', 'date' => '2026-10-20', 'findings' => "Tombol simpan\nLaporan"]);
+    $first = ProjectUatSession::create(['project_id' => $this->project->id, 'round' => 1, 'status' => 'revision', 'date' => '2026-10-20']);
+    $first->items()->create(['type' => 'finding', 'feature' => 'Order', 'menu' => 'Daftar Order', 'description' => 'Tombol simpan']);
+    $first->items()->create(['type' => 'note', 'description' => 'Laporan']);
     ProjectUatSession::create(['project_id' => $this->project->id, 'round' => 2, 'status' => 'passed', 'date' => '2026-10-28']);
     $this->url = "/api/v1/projects/{$this->project->id}";
 });
